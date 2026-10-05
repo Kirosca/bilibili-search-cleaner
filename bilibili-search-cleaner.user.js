@@ -2,7 +2,7 @@
 // @name         Bilibili 去掉搜索无关视频（fuse.js）
 // @namespace    http://tampermonkey.net/
 // @version      2.1.0
-// @description  自动隐藏 Bilibili 搜索结果中不包含关键词的无关视频，支持 Fuse.js 模糊匹配与 bge-small-zh 本地语义向量模型、@UP主 定向筛选、-排除词 与 #Tag 专项筛选，彻底净化搜索体验。（支持简繁与测试模式预览）
+// @description  自动隐藏 Bilibili 搜索结果中不包含关键词的无关视频，支持官方搜索联想与相关词扩展、Fuse.js 模糊匹配与 bge-small-zh 本地语义向量模型、@UP主 定向筛选、-排除词 与 #Tag 专项筛选，彻底净化搜索体验。（支持简繁与测试模式预览）
 // @author       Kirosca
 // @match        *://search.bilibili.com/*
 // @icon         https://www.bilibili.com/favicon.ico
@@ -211,7 +211,7 @@
         return toSimplified(searchTerms.join(' '));
     }
 
-    // 5. 数据层：首屏 Pinia 状态扫描 + 翻页网络拦截（存储 标签 + 全级分区，严格不匹配简介）
+    // 5. 数据层：首屏 Pinia 状态扫描 + 翻页网络拦截 + 搜索响应嗅探（存储 标签 + 全级分区，严格不匹配简介）
     const videoTagMap = new Map();
     let hasScannedInitial = false;
 
@@ -221,6 +221,7 @@
             const pinia = window.__pinia;
             if (pinia && typeof pinia === 'object') {
                 const prevSize = videoTagMap.size;
+                const piniaExtractedTerms = [];
                 function traverse(node, depth = 0) {
                     if (!node || depth > 8) return;
                     if (Array.isArray(node)) {
@@ -240,6 +241,15 @@
                             }
                         }
                     } else if (typeof node === 'object') {
+                        if (typeof node.suggest_keyword === 'string' && node.suggest_keyword.trim()) {
+                            piniaExtractedTerms.push(cleanText(node.suggest_keyword));
+                        }
+                        if (Array.isArray(node.rq)) {
+                            for (const rqItem of node.rq) {
+                                const t = typeof rqItem === 'string' ? rqItem : (rqItem?.keyword || '');
+                                if (t) piniaExtractedTerms.push(cleanText(t));
+                            }
+                        }
                         for (const key of Object.keys(node)) {
                             traverse(node[key], depth + 1);
                         }
@@ -255,6 +265,10 @@
                         });
                     }
                 }
+                if (piniaExtractedTerms.length > 0) {
+                    ingestTermsFromList(piniaExtractedTerms);
+                }
+                refreshCoOccurringTags();
             }
         } catch {}
     }
@@ -306,6 +320,9 @@
         try {
             const clone = response.clone();
             const data = await clone.json();
+            if (data?.data) {
+                ingestSearchResponseIntelligence(data.data);
+            }
             if (data?.data?.result) {
                 if (Array.isArray(data.data.result)) {
                     if (data.data.result.length > 0 && data.data.result[0].data && Array.isArray(data.data.result[0].data)) {
@@ -318,6 +335,8 @@
                         data.data.result = cleanAdsOnly(data.data.result);
                     }
                 }
+
+                refreshCoOccurringTags();
 
                 return new Response(JSON.stringify(data), {
                     status: response.status,
@@ -386,7 +405,243 @@
         };
     }
 
-    // 7. 本地 AI 语义向量引擎（基于 Transformers.js + bge-small-zh-v1.5 模型）
+    // 7. 方案 A：B站官方实时搜索联想与相关词嗅探扩展引擎 (Query Expansion Engine)
+    // 专治网络黑话/隐喻（如“大肥鱼”->“DeepSeek”）、跨领域关联（如“侏罗纪”->“恐龙”）、专有角色全名（如“崔斯特”->“英雄联盟/卡牌大师”）
+    // 多路嗅探机制：
+    // ① B站官方 Suggest 实时联想接口（毫秒级提取推荐短语与专有实体词）
+    // ② 官方检索结果高频共现视频标签深度嗅探（Top Co-occurring Tags）
+    // ③ 翻页/检索网络响应中的纠错词 (suggest_keyword) 与相关搜索 (rq)
+    // ④ DOM 渲染的“大家还在搜 / 相关搜索”微件嗅探
+    const queryExpansionCache = new Map(); // queryText -> Set<string>
+    let currentExpandedWords = new Set();
+    let isExpandingQuery = false;
+    let lastExpandedQuery = '';
+
+    const EXPANSION_STOPWORDS = new Set([
+        // 代词与人称
+        '我', '你', '他', '她', '它', '我们', '你们', '他们', '咱们', '自己', '人家', '大家', '别人',
+        // 连词与介词
+        '因为', '所以', '如果', '但是', '然后', '而且', '并且', '或者', '关于', '对于', '从', '向', '到', '到底',
+        // 语气与情态动词
+        '不是', '就是', '没有', '没了', '太高', '太强', '不行', '可以', '应该', '必须', '能够', '可能', '觉得', '以为', '知道',
+        '为什么', '怎么', '怎样', '什么', '哪里', '谁是', '如何', '多少', '哪个', '是否',
+        // 通用媒体与视频制作格式词
+        '视频', '动画', '电影', '电视剧', '纪录片', '短片', '剪辑', '录播', '实况', '官方', '预告', '花絮', '片段', '合集',
+        '全集', '原声', '音乐', '歌曲', '广播剧', '漫画', '解说', '教学', '介绍', '盘点', '吐槽', '反应', '攻略', '测评',
+        '评测', '分享', '记录', '自制', '搬运', '搬运工', '推荐', '杂谈', '讨论', '观看', '播放', '体验', '挑战', '好看',
+        '精彩', '搞笑', '经典', '最新', '最新版', '完整版', '高清', '超清', '画质', '免费', '简单', '轻松', '详细', '顶级',
+        '第一', '最好', '最强', '纯享', '买前必看', '开箱', '活动',
+        // 泛化领域大词与平台名
+        'b站', '哔哩哔哩', 'bilibili', '微博', '抖音', '快手', '贴吧', '知乎', '小红书', '游戏', '日常', '生活', '娱乐',
+        '综合', '现场', '新闻', '热点', '资讯', '知识', '科学', '学习', '校园', '职业', '时代', '世界', '历史', '中国', '全国', '个人'
+    ]);
+
+    function extractTopCoOccurringTags(queryText) {
+        if (videoTagMap.size === 0) return [];
+        const tagCount = new Map();
+        let totalSamples = 0;
+
+        for (const rawTags of videoTagMap.values()) {
+            totalSamples++;
+            const tokens = rawTags.split(/[\s,，、]+/).map(t => cleanText(t)).filter(t => t.length >= 2);
+            const uniqueTokens = new Set(tokens);
+            for (const tok of uniqueTokens) {
+                if (!tok) continue;
+                if (tok === queryText || tok.includes(queryText) || queryText.includes(tok)) continue;
+                if (EXPANSION_STOPWORDS.has(tok)) continue;
+                if (/^\d+$/.test(tok)) continue;
+                tagCount.set(tok, (tagCount.get(tok) || 0) + 1);
+            }
+        }
+
+        if (totalSamples < 3) return [];
+
+        // 筛选出现频次 >= 2 且在样本中占比 >= 15% 的高置信度共现标签，最多取前 4 个
+        const sorted = Array.from(tagCount.entries())
+            .filter(([_, count]) => count >= 2 && (count / totalSamples) >= 0.15)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 4)
+            .map(([tag]) => tag);
+
+        return sorted;
+    }
+
+    function scanDOMRelatedSearches() {
+        const list = [];
+        try {
+            const elements = document.querySelectorAll(
+                '.search-bottom-related a, .bili-search-related a, .related-search a, [class*="related"] a, [class*="recommend"] a, [class*="suggest"] a'
+            );
+            for (const el of elements) {
+                const text = cleanText(el.textContent);
+                if (text && text.length >= 2 && text.length <= 16 && !EXPANSION_STOPWORDS.has(text)) {
+                    list.push(text);
+                }
+            }
+        } catch {}
+        return list;
+    }
+
+    function ingestTermsFromList(terms) {
+        const currentQuery = getCleanApiKeyword();
+        if (!currentQuery || !Array.isArray(terms)) return;
+
+        let cached = queryExpansionCache.get(currentQuery);
+        if (!cached) {
+            cached = new Set();
+            queryExpansionCache.set(currentQuery, cached);
+        }
+
+        let addedCount = 0;
+        for (const t of terms) {
+            const clean = cleanText(t);
+            if (clean && clean !== currentQuery && clean.length >= 2 && !EXPANSION_STOPWORDS.has(clean)) {
+                if (!cached.has(clean)) {
+                    cached.add(clean);
+                    addedCount++;
+                }
+            }
+        }
+
+        if (addedCount > 0) {
+            currentExpandedWords = cached;
+            document.querySelectorAll('.bili-purified-hidden[data-purified-query]').forEach(el => {
+                delete el.dataset.purifiedQuery;
+            });
+            filterDOMElements();
+        }
+    }
+
+    function ingestSearchResponseIntelligence(data) {
+        if (!data || typeof data !== 'object') return;
+        const currentQuery = getCleanApiKeyword();
+        if (!currentQuery) return;
+
+        const newTerms = [];
+        if (data.suggest_keyword && typeof data.suggest_keyword === 'string') {
+            newTerms.push(cleanText(data.suggest_keyword));
+        }
+        if (Array.isArray(data.rq)) {
+            for (const item of data.rq) {
+                const text = typeof item === 'string' ? item : (item?.keyword || item?.word || '');
+                if (text) newTerms.push(cleanText(text));
+            }
+        }
+        if (Array.isArray(data.exp_list)) {
+            for (const exp of data.exp_list) {
+                if (exp && typeof exp.word === 'string') {
+                    newTerms.push(cleanText(exp.word));
+                }
+            }
+        }
+        if (newTerms.length > 0) {
+            ingestTermsFromList(newTerms);
+        }
+    }
+
+    function refreshCoOccurringTags() {
+        const currentQuery = getCleanApiKeyword();
+        if (!currentQuery) return;
+        const topTags = extractTopCoOccurringTags(currentQuery);
+        if (topTags.length > 0) {
+            ingestTermsFromList(topTags);
+        }
+    }
+
+    async function scheduleQueryExpansion(queryText) {
+        if (!queryText || isExpandingQuery) return;
+        if (lastExpandedQuery === queryText && currentExpandedWords.size > 0) return;
+
+        if (queryExpansionCache.has(queryText)) {
+            currentExpandedWords = queryExpansionCache.get(queryText);
+            lastExpandedQuery = queryText;
+            filterDOMElements();
+            return;
+        }
+
+        isExpandingQuery = true;
+        lastExpandedQuery = queryText;
+
+        try {
+            const expansions = new Set();
+
+            // 1. 嗅探 B 站官方 Suggest 联想接口
+            try {
+                const suggestUrl = `https://s.search.bilibili.com/main/suggest?func=suggest&suggest_type=accurate&sub_type=tag&main_ver=v1&highlight=&term=${encodeURIComponent(queryText)}`;
+                const res = await originFetch(suggestUrl);
+                if (res.ok) {
+                    const data = await res.json();
+                    const tags = data?.result?.tag || [];
+                    for (const item of tags) {
+                        const rawVal = (item.value || item.term || '').trim();
+                        const val = cleanText(rawVal);
+                        if (!val) continue;
+
+                        // 保留结构完整的精炼联想短语（如 侏罗纪世界, 侏罗纪公园, deepseek大肥鱼, 太空律动小小崔斯特）
+                        if (val.length >= 3 && val.length <= 15 && !/[\s,，。！!？?、]/.test(val) && val !== queryText) {
+                            expansions.add(val);
+                        }
+
+                        // 独立提取英文/数字专有名词实体（如 deepseek, lol, r1）
+                        const enTokens = val.match(/[A-Za-z0-9_]{2,}/g) || [];
+                        for (const en of enTokens) {
+                            const cleanEn = cleanText(en);
+                            if (cleanEn !== queryText && !EXPANSION_STOPWORDS.has(cleanEn) && !/^\d+$/.test(cleanEn)) {
+                                expansions.add(cleanEn);
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('[Bilibili 搜索净化] 联想接口嗅探异常：', e);
+            }
+
+            // 2. 嗅探当前页面结果高频共现视频标签（Top Co-occurring Tags）
+            try {
+                const coOccurring = extractTopCoOccurringTags(queryText);
+                for (const tag of coOccurring) {
+                    expansions.add(tag);
+                }
+            } catch (e) {
+                console.warn('[Bilibili 搜索净化] 标签共现嗅探异常：', e);
+            }
+
+            // 3. 嗅探页面 DOM 中的相关搜索链接（大家还在搜）
+            try {
+                const domRelated = scanDOMRelatedSearches();
+                for (const term of domRelated) {
+                    if (term !== queryText && !EXPANSION_STOPWORDS.has(term)) {
+                        expansions.add(term);
+                    }
+                }
+            } catch (e) {}
+
+            // 控制扩词集上限，精选前 12 个强关联词条
+            const validExpansions = new Set();
+            for (const word of expansions) {
+                if (word && word.length >= 2 && !EXPANSION_STOPWORDS.has(word)) {
+                    validExpansions.add(word);
+                    if (validExpansions.size >= 12) break;
+                }
+            }
+
+            currentExpandedWords = validExpansions;
+            queryExpansionCache.set(queryText, validExpansions);
+
+            if (validExpansions.size > 0) {
+                console.log(`[Bilibili 搜索净化] 方案 A 实时扩展词已就绪 [${queryText}] ->`, Array.from(validExpansions));
+                // 扩词就绪后，重置未放行卡片的判定标记并立即触发一轮筛选
+                document.querySelectorAll('.bili-purified-hidden[data-purified-query]').forEach(el => {
+                    delete el.dataset.purifiedQuery;
+                });
+                filterDOMElements();
+            }
+        } finally {
+            isExpandingQuery = false;
+        }
+    }
+
+    // 8. 本地 AI 语义向量引擎（基于 Transformers.js + bge-small-zh-v1.5 模型）
     const SEMANTIC_THRESHOLD = 0.60;
     const CHUNK_EVAL_MIN_THRESHOLD = 0.48; // 边缘临界区下界：高于此分的未命中长标题触发局部最大池化细算
     const BGE_QUERY_PREFIX = '为这个句子生成表示以用于检索相关文章：';
@@ -715,6 +970,27 @@
             const title = cleanText(rawTitle);
             if (!title) continue;
 
+            // 若卡片在排队期间命中了新到达的联想扩展词，直接放行，免去模型推理
+            if (currentExpandedWords.size > 0) {
+                const matchTitle = createMatcher(title);
+                let hitExp = '';
+                for (const expWord of currentExpandedWords) {
+                    if (matchTitle(expWord)) {
+                        hitExp = expWord;
+                        break;
+                    }
+                }
+                if (hitExp) {
+                    card.classList.remove('bili-purified-hidden');
+                    card.removeAttribute('data-purified-reason');
+                    card.dataset.purifiedSemantic = 'rescued';
+                    card.dataset.purifiedNote = `联想放行 [${hitExp}]`;
+                    card.dataset.purifiedSemanticQuery = currentSearchQuery;
+                    renderTogglePill();
+                    continue;
+                }
+            }
+
             try {
                 // 1. 先计算整句标题的语义向量
                 let titleVec = titleEmbeddingCache.get(title);
@@ -832,7 +1108,7 @@
         }
     }
 
-    // 9. DOM 层执行安检：支持高性能状态缓存、繁简归一化与模糊匹配
+    // 10. DOM 层执行安检：支持高性能状态缓存、繁简归一化、联想词放行与语义相似度多级漏斗
     let isProcessing = false;
 
     function filterDOMElements() {
@@ -873,6 +1149,12 @@
                 }
             }
             const queryWordList = Array.from(new Set(allQueryWords));
+
+            // 调度方案 A 实时搜索联想与相关词扩展
+            const queryText = getCleanApiKeyword() || normal.join(' ');
+            if (queryText && (!lastExpandedQuery || lastExpandedQuery !== queryText || currentExpandedWords.size === 0)) {
+                scheduleQueryExpansion(queryText);
+            }
 
             elements.forEach(el => {
                 // 放行特例：div.b-user-video-card 下的子元素 .video-list 内部展示的视频，直接保留不予过滤
@@ -942,7 +1224,8 @@
                 // 四道安检关卡：
                 // 1. 排除词保持严格判定（命中任一排除词即刻剔除）
                 // 2. 普通关键词采取 OR 逻辑（包含 em.keyword、拆分词匹配视频标签、或命中任一普通词及其 Fuse.js 模糊匹配即视为满足）
-                // 3. 标签与 UP 主保持严格约束（指定标签须全部满足，指定作者须符合）
+                // 3. 方案 A 实时扩展词放行（命中 B 站联想词、高频共现标签或相关搜索即放行）
+                // 4. 标签与 UP 主保持严格约束（指定标签须全部满足，指定作者须符合）
                 let filterReason = '';
                 const matchedExclude = exclude.find(k => title.includes(k));
 
@@ -952,11 +1235,27 @@
                     normal.some(k => author.includes(k) || k.includes(author))
                 ));
 
+                const hasNormalMatched = hasEmKeyword || hasTagMatched || authorHasMatched || normal.some(k => matchTitle(k));
+
+                let matchedExpWord = '';
+                if (!hasNormalMatched && currentExpandedWords.size > 0) {
+                    for (const expWord of currentExpandedWords) {
+                        if (matchTitle(expWord) || (allVideoTags && allVideoTags.includes(expWord))) {
+                            matchedExpWord = expWord;
+                            break;
+                        }
+                    }
+                }
+
                 if (matchedExclude) {
                     filterReason = `排除词: -${matchedExclude}`;
-                } else if (normal.length && !hasEmKeyword && !hasTagMatched && !authorHasMatched && !normal.some(k => matchTitle(k))) {
-                    // 词法未命中，检查内存缓存中是否已有该标题的语义向量
-                    if (currentQueryEmbedding && titleEmbeddingCache.has(title)) {
+                } else if (normal.length && !hasNormalMatched) {
+                    if (matchedExpWord) {
+                        // 命中方案 A 联想扩展词放行
+                        card.dataset.purifiedSemantic = 'rescued';
+                        card.dataset.purifiedNote = `联想放行 [${matchedExpWord}]`;
+                        card.dataset.purifiedSemanticQuery = currentSearchQuery;
+                    } else if (currentQueryEmbedding && titleEmbeddingCache.has(title)) {
                         const cachedVec = titleEmbeddingCache.get(title);
                         const sim = cosineSimilarity(currentQueryEmbedding, cachedVec);
                         card.dataset.purifiedSemanticQuery = currentSearchQuery;
@@ -964,7 +1263,6 @@
                         if (sim >= SEMANTIC_THRESHOLD) {
                             card.dataset.purifiedSemantic = 'rescued';
                             card.dataset.purifiedNote = `语义放行 (${sim.toFixed(2)})`;
-                            filterReason = '';
                         } else if (sim < CHUNK_EVAL_MIN_THRESHOLD) {
                             card.dataset.purifiedSemantic = 'filtered';
                             filterReason = `未命中关键词 (语义相似度: ${sim.toFixed(2)})`;
@@ -974,10 +1272,15 @@
                     } else {
                         filterReason = '未命中任一关键词或标签';
                     }
-                } else if (tags.length && !tags.every(k => matchTags(k))) {
-                    filterReason = '未匹配标签';
-                } else if (ups.length && !ups.some(k => matchAuthor(k))) {
-                    filterReason = '非目标UP主';
+                }
+
+                // 若上述普通词与联想词/语义判定通过，仍须满足用户显式指定的 #Tag 与 @UP主 条件
+                if (!filterReason) {
+                    if (tags.length && !tags.every(k => matchTags(k))) {
+                        filterReason = '未匹配标签';
+                    } else if (ups.length && !ups.some(k => matchAuthor(k))) {
+                        filterReason = '非目标UP主';
+                    }
                 }
 
                 if (filterReason) {
@@ -1000,7 +1303,7 @@
         }
     }
 
-    // 10. 帧级节流监听：使用 requestAnimationFrame 防抖
+    // 11. 帧级节流监听：使用 requestAnimationFrame 防抖
     let rafId = null;
     const observer = new MutationObserver(() => {
         if (rafId) cancelAnimationFrame(rafId);
@@ -1010,5 +1313,5 @@
     scanInitialState();
     renderTogglePill();
     initSemanticEngine();
-    console.log('[Bilibili 搜索净化] 2.1.0 (Fuse.js + bge-small-zh) 已启动。');
+    console.log('[Bilibili 搜索净化] 2.1.0 (Fuse.js + bge-small-zh + 搜索联想扩展) 已启动。');
 })();
