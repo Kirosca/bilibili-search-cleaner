@@ -719,7 +719,7 @@
     // 标题降噪分段抽取器：将长标题切分成具有独立特征的语义片段
     function splitTitleChunks(title) {
         if (!title || title.length < 8) return [];
-        const rawChunks = title.split(/[\s\[\]【】()（）|:：,，_—#\-·/]+/)
+        const rawChunks = title.split(/[\s[\]【】()（）|:：,，_—#\-·/]+/)
                                .map(t => t.trim())
                                .filter(t => t.length >= 3 && !/^\d+$/.test(t));
         if (rawChunks.length <= 1 && rawChunks[0] === title) return [];
