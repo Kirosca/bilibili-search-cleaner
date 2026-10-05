@@ -109,7 +109,7 @@
             box-shadow: 0 4px 12px rgba(0, 174, 236, 0.35);
             cursor: pointer;
             user-select: none;
-            display: none;
+            display: flex;
             align-items: center;
             gap: 6px;
             transition: all 0.2s ease;
@@ -120,6 +120,11 @@
         .bili-filter-toggle-pill:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 16px rgba(0, 174, 236, 0.45);
+        }
+
+        .bili-filter-toggle-pill.zero {
+            background: #10ac84;
+            box-shadow: 0 4px 12px rgba(16, 172, 132, 0.35);
         }
 
         .bili-filter-toggle-pill.active {
@@ -352,6 +357,8 @@
             togglePillEl = document.createElement('div');
             togglePillEl.className = 'bili-filter-toggle-pill';
             togglePillEl.addEventListener('click', () => {
+                const count = document.querySelectorAll('.bili-purified-hidden').length;
+                if (count === 0) return;
                 showFilteredMode = !showFilteredMode;
                 document.documentElement.classList.toggle('bili-show-filtered-mode', showFilteredMode);
                 togglePillEl.classList.toggle('active', showFilteredMode);
@@ -362,14 +369,18 @@
 
         const count = document.querySelectorAll('.bili-purified-hidden').length;
         if (count > 0) {
-            togglePillEl.style.display = 'flex';
+            togglePillEl.classList.remove('zero');
             if (showFilteredMode) {
+                togglePillEl.classList.add('active');
                 togglePillEl.textContent = `已显示过滤视频 (${count}) · 点击隐藏`;
             } else {
+                togglePillEl.classList.remove('active');
                 togglePillEl.textContent = `已过滤视频 (${count}) · 点击查看`;
             }
         } else {
-            togglePillEl.style.display = 'none';
+            togglePillEl.classList.remove('active');
+            togglePillEl.classList.add('zero');
+            togglePillEl.textContent = `净化生效中 · 已过滤 0 项`;
         }
     }
 
@@ -387,6 +398,11 @@
             const { normal, exclude, tags, ups } = getSearchKeywords();
             if (!normal.length && !exclude.length && !tags.length && !ups.length) {
                 renderTogglePill();
+                if (togglePillEl) {
+                    togglePillEl.classList.remove('active');
+                    togglePillEl.classList.add('zero');
+                    togglePillEl.textContent = '净化已就绪 · 未设关键词';
+                }
                 return;
             }
 
@@ -490,5 +506,6 @@
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
     scanInitialState();
+    renderTogglePill();
     console.log('[Bilibili 搜索净化] 2.1.0 (Fuse.js 模糊匹配) 已启动。');
 })();
