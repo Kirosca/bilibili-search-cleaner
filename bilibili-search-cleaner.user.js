@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Bilibili 去掉搜索无关视频
+// @name         Bilibili 去掉搜索无关视频（fuse.js）
 // @namespace    http://tampermonkey.net/
 // @version      2.1.0
 // @description  自动隐藏 Bilibili 搜索结果中不包含关键词的无关视频，支持 Fuse.js 模糊匹配、@UP主 定向筛选、-排除词 与 #Tag 专项筛选，彻底净化搜索体验。（支持简繁）
