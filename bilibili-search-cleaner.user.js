@@ -177,8 +177,44 @@
         return toSimplified(searchTerms.join(' '));
     }
 
-    // 5. 网络层拦截：存储 Tag 字典 + 接口层物理剔除广告
+    // 5. 数据层：首屏 Pinia 状态扫描 + 翻页网络拦截（存储 标签 + 分区，严格不匹配简介）
     const videoTagMap = new Map();
+    let hasScannedInitial = false;
+
+    function scanInitialState() {
+        if (hasScannedInitial && videoTagMap.size > 0) return;
+        try {
+            const pinia = window.__pinia;
+            if (pinia && typeof pinia === 'object') {
+                function traverse(node, depth = 0) {
+                    if (!node || depth > 8) return;
+                    if (Array.isArray(node)) {
+                        for (const item of node) {
+                            if (item && typeof item === 'object') {
+                                const id = item.bvid || item.aid || item.id;
+                                if (id) {
+                                    const rawTag = item.tag || item.keywords || item.tags || '';
+                                    const rawType = item.typename || item.cate_name || '';
+                                    const combined = cleanText(`${rawTag} ${rawType}`);
+                                    if (combined) {
+                                        videoTagMap.set(String(id), combined);
+                                    }
+                                } else {
+                                    traverse(item, depth + 1);
+                                }
+                            }
+                        }
+                    } else if (typeof node === 'object') {
+                        for (const key of Object.keys(node)) {
+                            traverse(node[key], depth + 1);
+                        }
+                    }
+                }
+                traverse(pinia);
+                if (videoTagMap.size > 0) hasScannedInitial = true;
+            }
+        } catch {}
+    }
 
     function cleanAdsOnly(list) {
         if (!Array.isArray(list)) return list;
@@ -187,8 +223,10 @@
             if (!v || typeof v !== 'object') return true;
 
             const id = v.bvid || v.aid || v.id || v.season_id || v.roomid;
-            const rawTags = cleanText(v.tag || v.keywords || v.tags || '');
-            if (id) videoTagMap.set(String(id), rawTags);
+            const rawTags = v.tag || v.keywords || v.tags || '';
+            const rawType = v.typename || v.cate_name || '';
+            const combined = cleanText(`${rawTags} ${rawType}`);
+            if (id) videoTagMap.set(String(id), combined);
 
             if (v.is_ad_loc || v.is_promoted || v.goto === 'ad' || v.type === 'ad') return false;
 
@@ -343,6 +381,9 @@
         isProcessing = true;
 
         try {
+            // 确保首屏 Pinia 状态在 DOM 过滤前完成抽取
+            if (!hasScannedInitial) scanInitialState();
+
             const { normal, exclude, tags, ups } = getSearchKeywords();
             if (!normal.length && !exclude.length && !tags.length && !ups.length) {
                 renderTogglePill();
@@ -448,6 +489,6 @@
         rafId = requestAnimationFrame(filterDOMElements);
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
-
+    scanInitialState();
     console.log('[Bilibili 搜索净化] 2.1.0 (Fuse.js 模糊匹配) 已启动。');
 })();
