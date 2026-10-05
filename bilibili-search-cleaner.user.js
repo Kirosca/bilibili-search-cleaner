@@ -2,7 +2,7 @@
 // @name         Bilibili 去掉搜索无关视频（fuse.js）
 // @namespace    http://tampermonkey.net/
 // @version      2.1.0
-// @description  自动隐藏 Bilibili 搜索结果中不包含关键词的无关视频，支持 Fuse.js 模糊匹配、@UP主 定向筛选、-排除词 与 #Tag 专项筛选，彻底净化搜索体验。（支持简繁与测试模式预览）
+// @description  自动隐藏 Bilibili 搜索结果中不包含关键词的无关视频，支持 Fuse.js 模糊匹配与 bge-small-zh 本地语义向量模型、@UP主 定向筛选、-排除词 与 #Tag 专项筛选，彻底净化搜索体验。（支持简繁与测试模式预览）
 // @author       Kirosca
 // @match        *://search.bilibili.com/*
 // @icon         https://www.bilibili.com/favicon.ico
@@ -95,6 +95,30 @@
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
         }
 
+        /* 测试模式：语义放行卡片（绿框与相似度徽标） */
+        html.bili-show-filtered-mode [data-purified-semantic="rescued"] {
+            position: relative !important;
+            outline: 2px dashed #10ac84 !important;
+            outline-offset: -2px !important;
+        }
+
+        html.bili-show-filtered-mode [data-purified-semantic="rescued"]::after {
+            content: "语义放行 (" attr(data-purified-similarity) ")";
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(16, 172, 132, 0.92);
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 500;
+            line-height: 1.2;
+            padding: 3px 7px;
+            border-radius: 4px;
+            z-index: 999;
+            pointer-events: none;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
         /* 测试模式浮动控制栏 */
         .bili-filter-toggle-pill {
             position: fixed;
@@ -120,6 +144,11 @@
         .bili-filter-toggle-pill:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 16px rgba(0, 174, 236, 0.45);
+        }
+
+        .bili-filter-toggle-pill.downloading {
+            background: #fa8c16 !important;
+            box-shadow: 0 4px 12px rgba(250, 140, 22, 0.35) !important;
         }
 
         .bili-filter-toggle-pill.zero {
@@ -357,7 +386,218 @@
         };
     }
 
-    // 7. 测试模式浮动控制栏管理
+    // 7. 本地 AI 语义向量引擎（基于 Transformers.js + bge-small-zh-v1.5 模型）
+    const SEMANTIC_THRESHOLD = 0.65;
+    const MODEL_NAME = 'Xenova/bge-small-zh-v1.5';
+
+    let semanticStage = 'idle'; // 'idle' | 'downloading' | 'ready' | 'error'
+    let semanticProgress = 0;
+    let lastRenderedProgress = -1;
+    let pipelineInstance = null;
+    let currentQueryEmbedding = null;
+    let currentQueryKey = '';
+
+    const fileProgressMap = new Map();
+    const titleEmbeddingCache = new Map();
+
+    function cosineSimilarity(vecA, vecB) {
+        if (!vecA || !vecB || vecA.length !== vecB.length) return 0;
+        let dot = 0, normA = 0, normB = 0;
+        for (let i = 0; i < vecA.length; i++) {
+            dot += vecA[i] * vecB[i];
+            normA += vecA[i] * vecA[i];
+            normB += vecB[i] * vecB[i];
+        }
+        const denom = Math.sqrt(normA) * Math.sqrt(normB);
+        return denom === 0 ? 0 : dot / denom;
+    }
+
+    function onModelProgress(data) {
+        if (!data) return;
+        if (data.status === 'initiate') {
+            if (semanticStage !== 'downloading') {
+                semanticStage = 'downloading';
+                renderTogglePill();
+            }
+        } else if (data.status === 'progress' && data.file) {
+            semanticStage = 'downloading';
+            fileProgressMap.set(data.file, {
+                loaded: data.loaded || 0,
+                total: data.total || 0,
+                progress: typeof data.progress === 'number' ? data.progress : 0
+            });
+
+            let totalLoaded = 0;
+            let totalBytes = 0;
+            for (const item of fileProgressMap.values()) {
+                if (item.total > 0) {
+                    totalLoaded += item.loaded;
+                    totalBytes += item.total;
+                }
+            }
+
+            let nextProgress = 0;
+            if (totalBytes > 0) {
+                nextProgress = Math.min(99, Math.floor((totalLoaded / totalBytes) * 100));
+            } else if (typeof data.progress === 'number') {
+                nextProgress = Math.min(99, Math.floor(data.progress));
+            }
+
+            if (nextProgress !== lastRenderedProgress) {
+                lastRenderedProgress = nextProgress;
+                semanticProgress = nextProgress;
+                renderTogglePill();
+            }
+        } else if (data.status === 'done') {
+            if (data.file && fileProgressMap.has(data.file)) {
+                const item = fileProgressMap.get(data.file);
+                item.progress = 100;
+                if (item.total > 0) item.loaded = item.total;
+            }
+        } else if (data.status === 'ready') {
+            semanticStage = 'ready';
+            semanticProgress = 100;
+            renderTogglePill();
+        }
+    }
+
+    async function initSemanticEngine() {
+        try {
+            semanticStage = 'downloading';
+            renderTogglePill();
+
+            const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
+            env.allowLocalModels = false;
+            env.useBrowserCache = true;
+            if (env.backends?.onnx?.wasm) {
+                env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/';
+                env.backends.onnx.wasm.numThreads = 1;
+            }
+
+            pipelineInstance = await pipeline('feature-extraction', MODEL_NAME, {
+                quantized: true,
+                progress_callback: onModelProgress
+            });
+
+            semanticStage = 'ready';
+            semanticProgress = 100;
+            renderTogglePill();
+
+            // 模型就绪后立即触发一轮语义评估
+            scheduleSemanticEvaluation();
+        } catch (err) {
+            semanticStage = 'error';
+            renderTogglePill();
+            console.warn('[Bilibili 搜索净化] bge-small-zh 语义模型载入失败，平滑降级至纯词法匹配模式：', err);
+        }
+    }
+
+    async function getQueryEmbedding(queryStr) {
+        if (!pipelineInstance || !queryStr) return null;
+        if (currentQueryKey === queryStr && currentQueryEmbedding) {
+            return currentQueryEmbedding;
+        }
+        try {
+            const output = await pipelineInstance(queryStr, { pooling: 'mean', normalize: true });
+            if (output && output.data) {
+                currentQueryEmbedding = new Float32Array(output.data);
+                currentQueryKey = queryStr;
+                return currentQueryEmbedding;
+            }
+        } catch (e) {
+            console.warn('[Bilibili 搜索净化] 检索词向量计算失败：', queryStr, e);
+        }
+        return null;
+    }
+
+    let isSemanticEvaluating = false;
+    let pendingSemanticRun = false;
+
+    async function scheduleSemanticEvaluation() {
+        if (!pipelineInstance || semanticStage !== 'ready') return;
+        if (isSemanticEvaluating) {
+            pendingSemanticRun = true;
+            return;
+        }
+        isSemanticEvaluating = true;
+        try {
+            await evaluatePendingCards();
+        } finally {
+            isSemanticEvaluating = false;
+            if (pendingSemanticRun) {
+                pendingSemanticRun = false;
+                scheduleSemanticEvaluation();
+            }
+        }
+    }
+
+    async function evaluatePendingCards() {
+        const { normal } = getSearchKeywords();
+        if (!normal.length) return;
+        const queryText = getCleanApiKeyword() || normal.join(' ');
+        if (!queryText) return;
+
+        const currentSearchQuery = window.location.search;
+        const queryVec = await getQueryEmbedding(queryText);
+        if (!queryVec) return;
+
+        // 获取所有因“未命中关键词”被过滤且尚未进行当前搜索词语义判定的卡片
+        const hiddenCards = Array.from(document.querySelectorAll('.bili-purified-hidden')).filter(card => {
+            const reason = card.getAttribute('data-purified-reason') || '';
+            const isLexicalMismatch = reason === '未命中任一关键词或标签' || reason.startsWith('未命中关键词 (语义相似度:');
+            const notYetEvaluated = card.dataset.purifiedSemanticQuery !== currentSearchQuery;
+            return isLexicalMismatch && notYetEvaluated;
+        });
+
+        if (hiddenCards.length === 0) return;
+
+        for (const card of hiddenCards) {
+            if (window.location.search !== currentSearchQuery) break;
+
+            const titleEl = card.querySelector('h3.bili-video-card__info--tit, h3.bili-live-card__info--tit, a[title], .bili-video-card__info--tit, h3');
+            if (!titleEl) continue;
+            const rawTitle = titleEl.getAttribute('title') || titleEl.textContent || '';
+            const title = cleanText(rawTitle);
+            if (!title) continue;
+
+            try {
+                let titleVec = titleEmbeddingCache.get(title);
+                if (!titleVec) {
+                    const output = await pipelineInstance(title, { pooling: 'mean', normalize: true });
+                    if (output && output.data) {
+                        titleVec = new Float32Array(output.data);
+                        if (titleEmbeddingCache.size > 2000) titleEmbeddingCache.clear();
+                        titleEmbeddingCache.set(title, titleVec);
+                    }
+                }
+
+                if (titleVec) {
+                    const sim = cosineSimilarity(queryVec, titleVec);
+                    card.dataset.purifiedSemanticQuery = currentSearchQuery;
+                    card.dataset.purifiedSimilarity = sim.toFixed(2);
+
+                    if (sim >= SEMANTIC_THRESHOLD) {
+                        card.classList.remove('bili-purified-hidden');
+                        card.removeAttribute('data-purified-reason');
+                        card.dataset.purifiedSemantic = 'rescued';
+                        renderTogglePill();
+                    } else {
+                        card.setAttribute('data-purified-reason', `未命中关键词 (语义相似度: ${sim.toFixed(2)})`);
+                        card.dataset.purifiedSemantic = 'filtered';
+                    }
+                }
+            } catch (err) {
+                console.warn('[Bilibili 搜索净化] 标题向量计算失败：', title, err);
+            }
+
+            // 保持微任务切片，防止连续推理造成主线程丢帧
+            await new Promise(r => setTimeout(r, 10));
+        }
+
+        renderTogglePill();
+    }
+
+    // 8. 测试模式浮动控制栏管理
     let showFilteredMode = false;
     let togglePillEl = null;
 
@@ -367,7 +607,7 @@
             togglePillEl.className = 'bili-filter-toggle-pill';
             togglePillEl.addEventListener('click', () => {
                 const count = document.querySelectorAll('.bili-purified-hidden').length;
-                if (count === 0) return;
+                if (count === 0 && !showFilteredMode) return;
                 showFilteredMode = !showFilteredMode;
                 document.documentElement.classList.toggle('bili-show-filtered-mode', showFilteredMode);
                 togglePillEl.classList.toggle('active', showFilteredMode);
@@ -376,24 +616,37 @@
             (document.body || document.documentElement).appendChild(togglePillEl);
         }
 
+        let prefix = '';
+        if (semanticStage === 'downloading') {
+            prefix = `[模型下载 ${semanticProgress}%] `;
+            togglePillEl.classList.add('downloading');
+        } else {
+            togglePillEl.classList.remove('downloading');
+            if (semanticStage === 'ready') {
+                prefix = `[语义就绪] `;
+            } else if (semanticStage === 'error') {
+                prefix = `[词法模式] `;
+            }
+        }
+
         const count = document.querySelectorAll('.bili-purified-hidden').length;
         if (count > 0) {
             togglePillEl.classList.remove('zero');
             if (showFilteredMode) {
                 togglePillEl.classList.add('active');
-                togglePillEl.textContent = `已显示过滤视频 (${count}) · 点击隐藏`;
+                togglePillEl.textContent = `${prefix}已显示过滤视频 (${count}) · 点击隐藏`;
             } else {
                 togglePillEl.classList.remove('active');
-                togglePillEl.textContent = `已过滤视频 (${count}) · 点击查看`;
+                togglePillEl.textContent = `${prefix}已过滤视频 (${count}) · 点击查看`;
             }
         } else {
             togglePillEl.classList.remove('active');
             togglePillEl.classList.add('zero');
-            togglePillEl.textContent = `净化生效中 · 已过滤 0 项`;
+            togglePillEl.textContent = `${prefix}净化生效中 · 已过滤 0 项`;
         }
     }
 
-    // 8. DOM 层执行安检：支持高性能状态缓存、繁简归一化与模糊匹配
+    // 9. DOM 层执行安检：支持高性能状态缓存、繁简归一化与模糊匹配
     let isProcessing = false;
 
     function filterDOMElements() {
@@ -410,7 +663,8 @@
                 if (togglePillEl) {
                     togglePillEl.classList.remove('active');
                     togglePillEl.classList.add('zero');
-                    togglePillEl.textContent = '净化已就绪 · 未设关键词';
+                    const prefix = semanticStage === 'downloading' ? `[模型下载 ${semanticProgress}%] ` : (semanticStage === 'ready' ? `[语义就绪] ` : '');
+                    togglePillEl.textContent = `${prefix}净化已就绪 · 未设关键词`;
                 }
                 return;
             }
@@ -438,6 +692,14 @@
                 }
 
                 const card = el.closest('[class*="col_"], .video-list-item, .bili-live-card') || el;
+
+                // 若之前已被语义判定放行，且属于当前搜索词，直接保留不予重新过滤
+                if (card.dataset.purifiedSemantic === 'rescued' && card.dataset.purifiedSemanticQuery === currentSearchQuery) {
+                    card.dataset.purifiedQuery = currentSearchQuery;
+                    card.classList.remove('bili-purified-hidden');
+                    card.removeAttribute('data-purified-reason');
+                    return;
+                }
 
                 // 性能缓存：当前卡片在本次搜索词下若已判定过，直接跳过，零重复计算
                 if (card.dataset.purifiedQuery === currentSearchQuery) return;
@@ -503,7 +765,22 @@
                 if (matchedExclude) {
                     filterReason = `排除词: -${matchedExclude}`;
                 } else if (normal.length && !hasEmKeyword && !hasTagMatched && !authorHasMatched && !normal.some(k => matchTitle(k))) {
-                    filterReason = '未命中任一关键词或标签';
+                    // 词法未命中，检查内存缓存中是否已有该标题的语义向量
+                    if (currentQueryEmbedding && titleEmbeddingCache.has(title)) {
+                        const cachedVec = titleEmbeddingCache.get(title);
+                        const sim = cosineSimilarity(currentQueryEmbedding, cachedVec);
+                        card.dataset.purifiedSemanticQuery = currentSearchQuery;
+                        card.dataset.purifiedSimilarity = sim.toFixed(2);
+                        if (sim >= SEMANTIC_THRESHOLD) {
+                            card.dataset.purifiedSemantic = 'rescued';
+                            filterReason = '';
+                        } else {
+                            card.dataset.purifiedSemantic = 'filtered';
+                            filterReason = `未命中关键词 (语义相似度: ${sim.toFixed(2)})`;
+                        }
+                    } else {
+                        filterReason = '未命中任一关键词或标签';
+                    }
                 } else if (tags.length && !tags.every(k => matchTags(k))) {
                     filterReason = '未匹配标签';
                 } else if (ups.length && !ups.some(k => matchAuthor(k))) {
@@ -520,12 +797,17 @@
             });
 
             renderTogglePill();
+
+            // 若语义引擎已就绪，调度后台异步评估队列
+            if (semanticStage === 'ready') {
+                scheduleSemanticEvaluation();
+            }
         } finally {
             isProcessing = false;
         }
     }
 
-    // 9. 帧级节流监听：使用 requestAnimationFrame 防抖
+    // 10. 帧级节流监听：使用 requestAnimationFrame 防抖
     let rafId = null;
     const observer = new MutationObserver(() => {
         if (rafId) cancelAnimationFrame(rafId);
@@ -534,5 +816,6 @@
     observer.observe(document.documentElement, { childList: true, subtree: true });
     scanInitialState();
     renderTogglePill();
-    console.log('[Bilibili 搜索净化] 2.1.0 (Fuse.js 模糊匹配) 已启动。');
+    initSemanticEngine();
+    console.log('[Bilibili 搜索净化] 2.1.0 (Fuse.js + bge-small-zh) 已启动。');
 })();
