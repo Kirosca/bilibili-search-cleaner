@@ -2,7 +2,7 @@
 // @name         Bilibili 去掉搜索无关视频（fuse.js）
 // @namespace    http://tampermonkey.net/
 // @version      2.1.0
-// @description  自动隐藏 Bilibili 搜索结果中不包含关键词的无关视频，支持官方搜索联想与相关词扩展、Fuse.js 模糊匹配与 bge-small-zh 本地语义向量模型、@UP主 定向筛选、-排除词 与 #Tag 专项筛选，彻底净化搜索体验。（支持简繁与测试模式预览）
+// @description  自动隐藏 Bilibili 搜索结果中不包含关键词的无关视频，支持官方搜索联想与相关词扩展、视频简介匹配、Fuse.js 模糊匹配与 bge-small-zh 本地语义向量模型、@UP主 定向筛选、-排除词 与 #Tag 专项筛选，彻底净化搜索体验。（支持简繁与测试模式预览）
 // @author       Kirosca
 // @match        *://search.bilibili.com/*
 // @icon         https://www.bilibili.com/favicon.ico
@@ -211,8 +211,9 @@
         return toSimplified(searchTerms.join(' '));
     }
 
-    // 5. 数据层：首屏 Pinia 状态扫描 + 翻页网络拦截 + 搜索响应嗅探（存储 标签 + 全级分区，严格不匹配简介）
+    // 5. 数据层：首屏 Pinia 状态扫描 + 翻页网络拦截 + 搜索响应嗅探（存储 标签 + 全级分区 + 视频简介）
     const videoTagMap = new Map();
+    const videoDescMap = new Map();
     let hasScannedInitial = false;
 
     function scanInitialState() {
@@ -234,6 +235,11 @@
                                     const combined = cleanText(`${rawTag} ${rawType}`);
                                     if (combined) {
                                         videoTagMap.set(String(id), combined);
+                                    }
+                                    const rawDesc = item.description || item.desc || '';
+                                    const cleanDesc = cleanText(rawDesc);
+                                    if (cleanDesc) {
+                                        videoDescMap.set(String(id), cleanDesc);
                                     }
                                 } else {
                                     traverse(item, depth + 1);
@@ -284,6 +290,10 @@
             const rawType = [v.parent_area_name, v.typename, v.cate_name].filter(Boolean).join(' ');
             const combined = cleanText(`${rawTags} ${rawType}`);
             if (id) videoTagMap.set(String(id), combined);
+
+            const rawDesc = v.description || v.desc || '';
+            const cleanDesc = cleanText(rawDesc);
+            if (id && cleanDesc) videoDescMap.set(String(id), cleanDesc);
 
             if (v.is_ad_loc || v.is_promoted || v.goto === 'ad' || v.type === 'ad') return false;
 
@@ -1209,6 +1219,12 @@
                     tagTokens.some(tag => queryWordList.some(w => w.includes(tag)))
                 ));
 
+                // 提取视频简介（网络拦截 + DOM 元素）
+                const videoDesc = cleanText(videoDescMap.get(id) || '');
+                const descEl = card.querySelector('.bili-video-card__info--desc, .bili-video-card__desc, .video-desc, p.desc, div[class*="desc"]');
+                const domDesc = descEl ? cleanText(descEl.getAttribute('title') || descEl.textContent || '') : '';
+                const allDesc = cleanText(`${videoDesc} ${domDesc}`);
+
                 // 纯净提取作者名字（提取第一署名作者）
                 const authorEl = card.querySelector('a[href*="space.bilibili.com"], .bili-video-card__info--author, .up-name, .bili-live-card__info--uname');
                 const rawAuthor = authorEl ? (authorEl.getAttribute('title') || authorEl.textContent || '') : '';
@@ -1220,10 +1236,11 @@
                 const matchTitle = createMatcher(title);
                 const matchTags = createMatcher(allVideoTags);
                 const matchAuthor = createMatcher(author);
+                const matchDesc = createMatcher(allDesc);
 
                 // 四道安检关卡：
                 // 1. 排除词保持严格判定（命中任一排除词即刻剔除）
-                // 2. 普通关键词采取 OR 逻辑（包含 em.keyword、拆分词匹配视频标签、或命中任一普通词及其 Fuse.js 模糊匹配即视为满足）
+                // 2. 普通关键词采取 OR 逻辑（包含 em.keyword、标题匹配、拆分词匹配视频标签、UP主匹配、或匹配视频简介）
                 // 3. 方案 A 实时扩展词放行（命中 B 站联想词、高频共现标签或相关搜索即放行）
                 // 4. 标签与 UP 主保持严格约束（指定标签须全部满足，指定作者须符合）
                 let filterReason = '';
@@ -1235,12 +1252,18 @@
                     normal.some(k => author.includes(k) || k.includes(author))
                 ));
 
-                const hasNormalMatched = hasEmKeyword || hasTagMatched || authorHasMatched || normal.some(k => matchTitle(k));
+                // 简介命中判定：视频简介包含搜索关键词时放行（OR 匹配备选条件）
+                const hasDescMatched = !!(allDesc && (
+                    normal.some(k => matchDesc(k)) ||
+                    queryWordList.some(w => allDesc.includes(w))
+                ));
+
+                const hasNormalMatched = hasEmKeyword || hasTagMatched || authorHasMatched || normal.some(k => matchTitle(k)) || hasDescMatched;
 
                 let matchedExpWord = '';
                 if (!hasNormalMatched && currentExpandedWords.size > 0) {
                     for (const expWord of currentExpandedWords) {
-                        if (matchTitle(expWord) || (allVideoTags && allVideoTags.includes(expWord))) {
+                        if (matchTitle(expWord) || (allVideoTags && allVideoTags.includes(expWord)) || (allDesc && allDesc.includes(expWord))) {
                             matchedExpWord = expWord;
                             break;
                         }
@@ -1272,6 +1295,11 @@
                     } else {
                         filterReason = '未命中任一关键词或标签';
                     }
+                } else if (hasNormalMatched && hasDescMatched && !hasEmKeyword && !normal.some(k => matchTitle(k)) && !hasTagMatched && !authorHasMatched) {
+                    // 若仅因简介命中而放行，在测试模式下标注徽标便于溯源
+                    card.dataset.purifiedSemantic = 'rescued';
+                    card.dataset.purifiedNote = '简介命中';
+                    card.dataset.purifiedSemanticQuery = currentSearchQuery;
                 }
 
                 // 若上述普通词与联想词/语义判定通过，仍须满足用户显式指定的 #Tag 与 @UP主 条件
