@@ -358,14 +358,17 @@
                 const matchTags = createMatcher(videoTags);
                 const matchAuthor = createMatcher(author);
 
-                // 四道安检关卡（排除词保持严格判定，普通词/标签/作者支持模糊容错）
+                // 四道安检关卡：
+                // 1. 排除词保持严格判定（命中任一排除词即刻剔除）
+                // 2. 普通关键词采取 OR 逻辑（命中任一关键词，无论是精确还是 Fuse.js 模糊匹配即视为满足）
+                // 3. 标签与 UP 主保持严格约束（指定标签须全部满足，指定作者须符合）
                 let filterReason = '';
                 const matchedExclude = exclude.find(k => title.includes(k));
 
                 if (matchedExclude) {
                     filterReason = `排除词: -${matchedExclude}`;
-                } else if (normal.length && !normal.every(k => matchTitle(k))) {
-                    filterReason = '未命中关键词';
+                } else if (normal.length && !normal.some(k => matchTitle(k))) {
+                    filterReason = '未命中任一关键词';
                 } else if (tags.length && !tags.every(k => matchTags(k))) {
                     filterReason = '未匹配标签';
                 } else if (ups.length && !ups.some(k => matchAuthor(k))) {
