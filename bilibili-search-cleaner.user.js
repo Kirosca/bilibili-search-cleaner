@@ -387,7 +387,7 @@
     }
 
     // 7. 本地 AI 语义向量引擎（基于 Transformers.js + bge-small-zh-v1.5 模型）
-    const SEMANTIC_THRESHOLD = 0.65;
+    const SEMANTIC_THRESHOLD = 0.60;
     const MODEL_NAME = 'Xenova/bge-small-zh-v1.5';
 
     // 基于 IndexedDB 的持久化模型缓存（彻底解决浏览器 Cache API 跨域限制与重新下载问题）
