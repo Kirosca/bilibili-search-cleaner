@@ -390,7 +390,139 @@
     const SEMANTIC_THRESHOLD = 0.65;
     const MODEL_NAME = 'Xenova/bge-small-zh-v1.5';
 
-    let semanticStage = 'idle'; // 'idle' | 'downloading' | 'ready' | 'error'
+    // 基于 IndexedDB 的持久化模型缓存（彻底解决浏览器 Cache API 跨域限制与重新下载问题）
+    const IDB_NAME = 'bili_semantic_cache';
+    const IDB_VERSION = 1;
+    const IDB_STORE = 'models';
+
+    function openIDB() {
+        return new Promise((resolve, reject) => {
+            if (typeof indexedDB === 'undefined') {
+                return reject(new Error('IndexedDB not supported'));
+            }
+            const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+            req.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(IDB_STORE)) {
+                    db.createObjectStore(IDB_STORE);
+                }
+            };
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async function idbGet(key) {
+        try {
+            const db = await openIDB();
+            return new Promise((resolve) => {
+                const tx = db.transaction(IDB_STORE, 'readonly');
+                const store = tx.objectStore(IDB_STORE);
+                const req = store.get(key);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => resolve(undefined);
+            });
+        } catch {
+            return undefined;
+        }
+    }
+
+    async function idbSet(key, value) {
+        try {
+            const db = await openIDB();
+            return new Promise((resolve) => {
+                const tx = db.transaction(IDB_STORE, 'readwrite');
+                const store = tx.objectStore(IDB_STORE);
+                store.put(value, key);
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => resolve();
+            });
+        } catch {}
+    }
+
+    // 实现 Web Cache API 标准的 customCache 适配器，向 Transformers.js 提供持久化读写
+    const customCache = {
+        async match(url) {
+            const urlStr = typeof url === 'string' ? url : (url?.url || '');
+            if (!urlStr) return undefined;
+
+            // 1. 优先读取 IndexedDB 本地持久化缓存
+            const record = await idbGet(urlStr);
+            if (record && record.buffer) {
+                return new Response(record.buffer.slice(0), {
+                    status: 200,
+                    headers: record.headers || {}
+                });
+            }
+
+            // 2. 兼容读取浏览器 Cache Storage 并在命中时迁移至 IndexedDB
+            if (typeof caches !== 'undefined') {
+                try {
+                    const c = await caches.open('transformers-cache');
+                    const matched = await c.match(urlStr);
+                    if (matched) {
+                        const clone = matched.clone();
+                        const buffer = await clone.arrayBuffer();
+                        const headers = {};
+                        if (matched.headers) {
+                            for (const [k, v] of matched.headers.entries()) headers[k] = v;
+                        }
+                        idbSet(urlStr, { buffer, headers });
+                        return matched;
+                    }
+                } catch {}
+            }
+
+            return undefined;
+        },
+
+        async put(url, response) {
+            const urlStr = typeof url === 'string' ? url : (url?.url || '');
+            if (!urlStr || !response) return;
+
+            try {
+                const clone = response.clone();
+                const buffer = await clone.arrayBuffer();
+                const headers = {};
+                if (response.headers) {
+                    for (const [k, v] of response.headers.entries()) {
+                        headers[k] = v;
+                    }
+                }
+                // 持久写入 IndexedDB，不受任何网络跨域或 HTTP Cache-Control 限制
+                await idbSet(urlStr, { buffer, headers });
+
+                // 同步尝试备份至 Cache Storage
+                if (typeof caches !== 'undefined') {
+                    try {
+                        const c = await caches.open('transformers-cache');
+                        await c.put(urlStr, new Response(buffer.slice(0), { headers }));
+                    } catch {}
+                }
+            } catch (e) {
+                console.warn('[Bilibili 搜索净化] 模型缓存持久化异常：', urlStr, e);
+            }
+        }
+    };
+
+    async function isModelCached() {
+        const onnxKey = `https://huggingface.co/${MODEL_NAME}/resolve/main/onnx/model_quantized.onnx`;
+        const idbRecord = await idbGet(onnxKey);
+        if (idbRecord && idbRecord.buffer && idbRecord.buffer.byteLength > 10000000) {
+            return true;
+        }
+        if (typeof caches !== 'undefined') {
+            try {
+                const c = await caches.open('transformers-cache');
+                const matched = await c.match(onnxKey);
+                if (matched) return true;
+            } catch {}
+        }
+        return false;
+    }
+
+    let semanticStage = 'idle'; // 'idle' | 'downloading' | 'loading_cache' | 'ready' | 'error'
+    let isLocalLoading = false;
     let semanticProgress = 0;
     let lastRenderedProgress = -1;
     let pipelineInstance = null;
@@ -415,12 +547,15 @@
     function onModelProgress(data) {
         if (!data) return;
         if (data.status === 'initiate') {
-            if (semanticStage !== 'downloading') {
+            if (!isLocalLoading && semanticStage !== 'downloading') {
                 semanticStage = 'downloading';
+                renderTogglePill();
+            } else if (isLocalLoading && semanticStage !== 'loading_cache') {
+                semanticStage = 'loading_cache';
                 renderTogglePill();
             }
         } else if (data.status === 'progress' && data.file) {
-            semanticStage = 'downloading';
+            semanticStage = isLocalLoading ? 'loading_cache' : 'downloading';
             fileProgressMap.set(data.file, {
                 loaded: data.loaded || 0,
                 total: data.total || 0,
@@ -457,18 +592,23 @@
         } else if (data.status === 'ready') {
             semanticStage = 'ready';
             semanticProgress = 100;
+            isLocalLoading = true;
             renderTogglePill();
         }
     }
 
     async function initSemanticEngine() {
         try {
-            semanticStage = 'downloading';
+            const cached = await isModelCached();
+            isLocalLoading = cached;
+            semanticStage = cached ? 'loading_cache' : 'downloading';
             renderTogglePill();
 
             const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
             env.allowLocalModels = false;
-            env.useBrowserCache = true;
+            env.useBrowserCache = false;
+            env.useCustomCache = true;
+            env.customCache = customCache;
             if (env.backends?.onnx?.wasm) {
                 env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/';
                 env.backends.onnx.wasm.numThreads = 1;
@@ -481,6 +621,7 @@
 
             semanticStage = 'ready';
             semanticProgress = 100;
+            isLocalLoading = true;
             renderTogglePill();
 
             // 模型就绪后立即触发一轮语义评估
@@ -620,6 +761,9 @@
         if (semanticStage === 'downloading') {
             prefix = `[模型下载 ${semanticProgress}%] `;
             togglePillEl.classList.add('downloading');
+        } else if (semanticStage === 'loading_cache') {
+            prefix = `[本地载入 ${semanticProgress}%] `;
+            togglePillEl.classList.remove('downloading');
         } else {
             togglePillEl.classList.remove('downloading');
             if (semanticStage === 'ready') {
@@ -663,7 +807,11 @@
                 if (togglePillEl) {
                     togglePillEl.classList.remove('active');
                     togglePillEl.classList.add('zero');
-                    const prefix = semanticStage === 'downloading' ? `[模型下载 ${semanticProgress}%] ` : (semanticStage === 'ready' ? `[语义就绪] ` : '');
+                    let prefix = '';
+                    if (semanticStage === 'downloading') prefix = `[模型下载 ${semanticProgress}%] `;
+                    else if (semanticStage === 'loading_cache') prefix = `[本地载入 ${semanticProgress}%] `;
+                    else if (semanticStage === 'ready') prefix = `[语义就绪] `;
+                    else if (semanticStage === 'error') prefix = `[词法模式] `;
                     togglePillEl.textContent = `${prefix}净化已就绪 · 未设关键词`;
                 }
                 return;
