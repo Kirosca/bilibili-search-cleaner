@@ -352,6 +352,18 @@
             const currentSearchQuery = window.location.search;
             const elements = document.querySelectorAll('.bili-video-card, .video-list-item, div[class*="col_"], .bili-live-card');
 
+            // 预提取普通搜索词及其拆分词集合（过滤单字虚词，保留用户显式单字搜索）
+            const allQueryWords = [];
+            for (const k of normal) {
+                if (!k) continue;
+                allQueryWords.push(k);
+                if (k.length > 1) {
+                    const segs = segmentText(k).filter(w => w.length >= 2);
+                    allQueryWords.push(...segs);
+                }
+            }
+            const queryWordList = Array.from(new Set(allQueryWords));
+
             elements.forEach(el => {
                 const card = el.closest('[class*="col_"], .video-list-item, .bili-live-card') || el;
 
@@ -379,6 +391,11 @@
                 else if (matchLive) id = matchLive[1];
 
                 const videoTags = cleanText(videoTagMap.get(id) || '');
+                const domTags = Array.from(card.querySelectorAll('.bili-video-card__info--tag, .bili-video-card__badge, .badge, .tag-item')).map(el => cleanText(el.textContent)).join(' ');
+                const allVideoTags = cleanText(`${videoTags} ${domTags}`);
+
+                // 拆分后的全部词匹配全部标签（包含关系，只要命中任一词即视为通过）
+                const hasTagMatched = !!(allVideoTags && queryWordList.some(w => allVideoTags.includes(w)));
 
                 // 纯净提取作者名字（提取第一署名作者）
                 const authorEl = card.querySelector('a[href*="space.bilibili.com"], .bili-video-card__info--author, .up-name, .bili-live-card__info--uname');
@@ -389,20 +406,20 @@
                 const hasEmKeyword = !!(titleEl.querySelector('em.keyword, em[class*="keyword"]') || card.querySelector('h3 em.keyword, .bili-video-card__info--tit em.keyword'));
 
                 const matchTitle = createMatcher(title);
-                const matchTags = createMatcher(videoTags);
+                const matchTags = createMatcher(allVideoTags);
                 const matchAuthor = createMatcher(author);
 
                 // 四道安检关卡：
                 // 1. 排除词保持严格判定（命中任一排除词即刻剔除）
-                // 2. 普通关键词采取 OR 逻辑（包含 em.keyword 官方高亮、或命中任一普通词及其 Fuse.js 模糊匹配即视为满足）
+                // 2. 普通关键词采取 OR 逻辑（包含 em.keyword、拆分词匹配视频标签、或命中任一普通词及其 Fuse.js 模糊匹配即视为满足）
                 // 3. 标签与 UP 主保持严格约束（指定标签须全部满足，指定作者须符合）
                 let filterReason = '';
                 const matchedExclude = exclude.find(k => title.includes(k));
 
                 if (matchedExclude) {
                     filterReason = `排除词: -${matchedExclude}`;
-                } else if (normal.length && !hasEmKeyword && !normal.some(k => matchTitle(k))) {
-                    filterReason = '未命中任一关键词';
+                } else if (normal.length && !hasEmKeyword && !hasTagMatched && !normal.some(k => matchTitle(k))) {
+                    filterReason = '未命中任一关键词或标签';
                 } else if (tags.length && !tags.every(k => matchTags(k))) {
                     filterReason = '未匹配标签';
                 } else if (ups.length && !ups.some(k => matchAuthor(k))) {
