@@ -2,17 +2,18 @@
 // @name         Bilibili 去掉搜索无关视频
 // @namespace    http://tampermonkey.net/
 // @version      2.1.0
-// @description  自动隐藏 Bilibili 搜索结果中不包含关键词的无关视频，支持 @UP主 定向筛选、-排除词 与 #Tag 专项筛选，彻底净化搜索体验。（支持简繁）
+// @description  自动隐藏 Bilibili 搜索结果中不包含关键词的无关视频，支持 Fuse.js 模糊匹配、@UP主 定向筛选、-排除词 与 #Tag 专项筛选，彻底净化搜索体验。（支持简繁）
 // @author       Kirosca
 // @match        *://search.bilibili.com/*
 // @icon         https://www.bilibili.com/favicon.ico
 // @require      https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js
+// @require      https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.basic.min.js
 // @run-at       document-start
 // @grant        none
 // @license      MIT
 // ==/UserScript==
 
-/* global OpenCC */
+/* global OpenCC, Fuse */
 
 (function() {
     'use strict';
@@ -177,7 +178,32 @@
         return response;
     };
 
-    // 6. DOM 层执行安检：支持高性能状态缓存与繁简归一化
+    // 6. 模糊匹配辅助工厂：优先快速包含，未命中时按需实例化 Fuse.js 进行模糊容错
+    function createMatcher(targetText) {
+        let fuseInstance = null;
+        return function(queryKeyword) {
+            if (!targetText || !queryKeyword) return false;
+            // 优先严格子串包含判定（无额外开销）
+            if (targetText.includes(queryKeyword)) return true;
+            // 严格未命中时，引入 Fuse.js 模糊距离检索
+            if (typeof Fuse !== 'undefined') {
+                try {
+                    if (!fuseInstance) {
+                        fuseInstance = new Fuse([targetText], {
+                            threshold: 0.5,
+                            ignoreLocation: true
+                        });
+                    }
+                    return fuseInstance.search(queryKeyword).length > 0;
+                } catch {
+                    return false;
+                }
+            }
+            return false;
+        };
+    }
+
+    // 7. DOM 层执行安检：支持高性能状态缓存、繁简归一化与模糊匹配
     let isProcessing = false;
 
     function filterDOMElements() {
@@ -224,16 +250,20 @@
                 const rawAuthor = authorEl ? (authorEl.getAttribute('title') || authorEl.textContent || '') : '';
                 const author = cleanText(rawAuthor.replace(/[\s·•].*$/, ''));
 
+                const matchTitle = createMatcher(title);
+                const matchTags = createMatcher(videoTags);
+                const matchAuthor = createMatcher(author);
+
                 let shouldHide = false;
 
-                // 四道安检关卡
+                // 四道安检关卡（排除词保持严格判定，普通词/标签/作者支持模糊容错）
                 if (exclude.some(k => title.includes(k))) {
                     shouldHide = true;
-                } else if (normal.length && !normal.every(k => title.includes(k))) {
+                } else if (normal.length && !normal.every(k => matchTitle(k))) {
                     shouldHide = true;
-                } else if (tags.length && !tags.every(k => videoTags.includes(k))) {
+                } else if (tags.length && !tags.every(k => matchTags(k))) {
                     shouldHide = true;
-                } else if (ups.length && !ups.some(k => author.includes(k))) {
+                } else if (ups.length && !ups.some(k => matchAuthor(k))) {
                     shouldHide = true;
                 }
 
@@ -248,7 +278,7 @@
         }
     }
 
-    // 7. 帧级节流监听：使用 requestAnimationFrame 防抖
+    // 8. 帧级节流监听：使用 requestAnimationFrame 防抖
     let rafId = null;
     const observer = new MutationObserver(() => {
         if (rafId) cancelAnimationFrame(rafId);
@@ -256,5 +286,5 @@
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
 
-    console.log('[Bilibili 搜索净化] 2.1.0 已启动。');
+    console.log('[Bilibili 搜索净化] 2.1.0 (Fuse.js 模糊匹配) 已启动。');
 })();
