@@ -431,6 +431,12 @@
             const queryWordList = Array.from(new Set(allQueryWords));
 
             elements.forEach(el => {
+                // 放行特例：div.b-user-video-card 下的子元素 .video-list 内部展示的视频，直接保留不予过滤
+                if (el.closest('.b-user-video-card, div[class*="b-user-video-card"]')?.querySelector('.video-list')?.contains(el) ||
+                    el.closest('.b-user-video-card .video-list, div[class*="b-user-video-card"] .video-list')) {
+                    return;
+                }
+
                 const card = el.closest('[class*="col_"], .video-list-item, .bili-live-card') || el;
 
                 // 性能缓存：当前卡片在本次搜索词下若已判定过，直接跳过，零重复计算
@@ -488,9 +494,15 @@
                 let filterReason = '';
                 const matchedExclude = exclude.find(k => title.includes(k));
 
+                // UP 主名字命中判定：UP 主名字包含搜索文字时也放行
+                const authorHasMatched = !!(author && (
+                    queryWordList.some(w => author.includes(w)) ||
+                    normal.some(k => author.includes(k) || k.includes(author))
+                ));
+
                 if (matchedExclude) {
                     filterReason = `排除词: -${matchedExclude}`;
-                } else if (normal.length && !hasEmKeyword && !hasTagMatched && !normal.some(k => matchTitle(k))) {
+                } else if (normal.length && !hasEmKeyword && !hasTagMatched && !authorHasMatched && !normal.some(k => matchTitle(k))) {
                     filterReason = '未命中任一关键词或标签';
                 } else if (tags.length && !tags.every(k => matchTags(k))) {
                     filterReason = '未匹配标签';
