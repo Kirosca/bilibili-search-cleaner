@@ -334,7 +334,7 @@
                         const words = segmentText(targetText);
                         const corpus = Array.from(new Set([targetText, ...words]));
                         fuseInstance = new Fuse(corpus, {
-                            threshold: 0.5,
+                            threshold: 0.3,
                             ignoreLocation: true
                         });
                     }
