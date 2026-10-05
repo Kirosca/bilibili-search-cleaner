@@ -29,7 +29,7 @@ global.document = {
     querySelectorAll: () => []
 };
 global.localStorage = {
-    store: { bili_cleaner_custom_synonyms: '深度求索=DeepSeek\n老任=任天堂\n大肥鱼=DeepSeek' },
+    store: {},
     getItem(k) { return this.store[k] || null; },
     setItem(k, v) { this.store[k] = v; }
 };
@@ -87,28 +87,6 @@ function initHitSynonymMap() {
             }
         }
     }
-    const customStr = global.localStorage.getItem('bili_cleaner_custom_synonyms') || '';
-    if (customStr.trim()) {
-        const lines = customStr.split(/\r?\n/);
-        for (const line of lines) {
-            const cleanLine = line.trim();
-            if (!cleanLine || cleanLine.startsWith('#')) continue;
-            const words = cleanLine.split(/[,，=]/).map(w => w.trim().toLowerCase()).filter(w => w.length > 0);
-            if (words.length >= 2) {
-                for (let j = 0; j < words.length; j++) {
-                    const w = words[j];
-                    let set = hitSynonymMap.get(w);
-                    if (!set) {
-                        set = new Set();
-                        hitSynonymMap.set(w, set);
-                    }
-                    for (let k = 0; k < words.length; k++) {
-                        if (j !== k) set.add(words[k]);
-                    }
-                }
-            }
-        }
-    }
 }
 
 function getHitSynonyms(keyword) {
@@ -129,8 +107,8 @@ const testCases = [
     { query: '话筒', targetTitle: '专业录音麦克风测评', shouldMatch: '麦克风' },
     { query: '发动机', targetTitle: '飞机引擎工作原理解析', shouldMatch: '引擎' },
     { query: '玉米', targetTitle: '东北苞谷丰收现场', shouldMatch: '苞谷' },
-    { query: '深度求索', targetTitle: 'DeepSeek 满血版部署教程', shouldMatch: 'deepseek' },
-    { query: '老任', targetTitle: '任天堂最新直面会汇总', shouldMatch: '任天堂' }
+    { query: '红薯', targetTitle: '冬季街头烤地瓜制作', shouldMatch: '地瓜' },
+    { query: '出租车', targetTitle: '深夜乘坐计程车经历', shouldMatch: '计程车' }
 ];
 
 let allPassed = true;
@@ -146,7 +124,7 @@ for (const tc of testCases) {
 }
 
 if (allPassed) {
-    console.log('\nAll 9 synonym tests PASSED with 100% precision!');
+    console.log('\nAll 9 pure HIT-SCIR synonym tests PASSED with 100% precision!');
 } else {
     process.exit(1);
 }
