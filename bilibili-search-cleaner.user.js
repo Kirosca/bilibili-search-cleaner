@@ -2,7 +2,7 @@
 // @name         Bilibili 去掉搜索无关视频（fuse.js）
 // @namespace    http://tampermonkey.net/
 // @version      2.1.0
-// @description  自动隐藏 Bilibili 搜索结果中不包含关键词的无关视频，支持 Fuse.js 模糊匹配、@UP主 定向筛选、-排除词 与 #Tag 专项筛选，彻底净化搜索体验。（支持简繁）
+// @description  自动隐藏 Bilibili 搜索结果中不包含关键词的无关视频，支持 Fuse.js 模糊匹配、@UP主 定向筛选、-排除词 与 #Tag 专项筛选，彻底净化搜索体验。（支持简繁与测试模式预览）
 // @author       Kirosca
 // @match        *://search.bilibili.com/*
 // @icon         https://www.bilibili.com/favicon.ico
@@ -48,12 +48,83 @@
             .toLowerCase();
     }
 
-    // 2. 预注入 CSS 规则：秒杀视频流中的商业推广与小火箭广告卡片
+    // 2. 预注入 CSS 规则：广告屏蔽、被过滤卡片状态控制与测试模式浮动栏
     const styleElement = document.createElement('style');
     styleElement.textContent = `
+        /* 商业广告卡片与推广流强制隐藏 */
         div[class*="col_"]:has(.bili-video-card__info--ad, svg.bili-video-card__info--ad-creative, a[href*="cm.bilibili.com"]),
         .video-list-item:has(.bili-video-card__info--ad, svg.bili-video-card__info--ad-creative, a[href*="cm.bilibili.com"]) {
             display: none !important;
+        }
+
+        /* 正常模式：被过滤卡片隐藏 */
+        .bili-purified-hidden {
+            display: none !important;
+        }
+
+        /* 测试模式：显示被过滤卡片，以虚线红框与半透明状态呈现，并附带过滤原因标识 */
+        html.bili-show-filtered-mode .bili-purified-hidden {
+            display: block !important;
+            opacity: 0.42 !important;
+            filter: grayscale(70%) !important;
+            position: relative !important;
+            outline: 2px dashed #ff4757 !important;
+            outline-offset: -2px !important;
+            transition: opacity 0.2s ease, filter 0.2s ease;
+        }
+
+        html.bili-show-filtered-mode .bili-purified-hidden:hover {
+            opacity: 0.95 !important;
+            filter: none !important;
+        }
+
+        html.bili-show-filtered-mode .bili-purified-hidden::after {
+            content: attr(data-purified-reason);
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(255, 71, 87, 0.92);
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 500;
+            line-height: 1.2;
+            padding: 3px 7px;
+            border-radius: 4px;
+            z-index: 999;
+            pointer-events: none;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 测试模式浮动控制栏 */
+        .bili-filter-toggle-pill {
+            position: fixed;
+            right: 24px;
+            bottom: 28px;
+            z-index: 100000;
+            background: #00aeec;
+            color: #ffffff;
+            font-size: 12px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            box-shadow: 0 4px 12px rgba(0, 174, 236, 0.35);
+            cursor: pointer;
+            user-select: none;
+            display: none;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        }
+
+        .bili-filter-toggle-pill:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 174, 236, 0.45);
+        }
+
+        .bili-filter-toggle-pill.active {
+            background: #ff4757;
+            box-shadow: 0 4px 12px rgba(255, 71, 87, 0.35);
         }
     `;
     (document.head || document.documentElement).appendChild(styleElement);
@@ -203,7 +274,37 @@
         };
     }
 
-    // 7. DOM 层执行安检：支持高性能状态缓存、繁简归一化与模糊匹配
+    // 7. 测试模式浮动控制栏管理
+    let showFilteredMode = false;
+    let togglePillEl = null;
+
+    function renderTogglePill() {
+        if (!togglePillEl) {
+            togglePillEl = document.createElement('div');
+            togglePillEl.className = 'bili-filter-toggle-pill';
+            togglePillEl.addEventListener('click', () => {
+                showFilteredMode = !showFilteredMode;
+                document.documentElement.classList.toggle('bili-show-filtered-mode', showFilteredMode);
+                togglePillEl.classList.toggle('active', showFilteredMode);
+                renderTogglePill();
+            });
+            (document.body || document.documentElement).appendChild(togglePillEl);
+        }
+
+        const count = document.querySelectorAll('.bili-purified-hidden').length;
+        if (count > 0) {
+            togglePillEl.style.display = 'flex';
+            if (showFilteredMode) {
+                togglePillEl.textContent = `已显示过滤视频 (${count}) · 点击隐藏`;
+            } else {
+                togglePillEl.textContent = `已过滤视频 (${count}) · 点击查看`;
+            }
+        } else {
+            togglePillEl.style.display = 'none';
+        }
+    }
+
+    // 8. DOM 层执行安检：支持高性能状态缓存、繁简归一化与模糊匹配
     let isProcessing = false;
 
     function filterDOMElements() {
@@ -212,7 +313,10 @@
 
         try {
             const { normal, exclude, tags, ups } = getSearchKeywords();
-            if (!normal.length && !exclude.length && !tags.length && !ups.length) return;
+            if (!normal.length && !exclude.length && !tags.length && !ups.length) {
+                renderTogglePill();
+                return;
+            }
 
             const currentSearchQuery = window.location.search;
             const elements = document.querySelectorAll('.bili-video-card, .video-list-item, div[class*="col_"], .bili-live-card');
@@ -254,31 +358,36 @@
                 const matchTags = createMatcher(videoTags);
                 const matchAuthor = createMatcher(author);
 
-                let shouldHide = false;
-
                 // 四道安检关卡（排除词保持严格判定，普通词/标签/作者支持模糊容错）
-                if (exclude.some(k => title.includes(k))) {
-                    shouldHide = true;
+                let filterReason = '';
+                const matchedExclude = exclude.find(k => title.includes(k));
+
+                if (matchedExclude) {
+                    filterReason = `排除词: -${matchedExclude}`;
                 } else if (normal.length && !normal.every(k => matchTitle(k))) {
-                    shouldHide = true;
+                    filterReason = '未命中关键词';
                 } else if (tags.length && !tags.every(k => matchTags(k))) {
-                    shouldHide = true;
+                    filterReason = '未匹配标签';
                 } else if (ups.length && !ups.some(k => matchAuthor(k))) {
-                    shouldHide = true;
+                    filterReason = '非目标UP主';
                 }
 
-                if (shouldHide) {
-                    card.style.setProperty('display', 'none', 'important');
+                if (filterReason) {
+                    card.classList.add('bili-purified-hidden');
+                    card.setAttribute('data-purified-reason', filterReason);
                 } else {
-                    card.style.removeProperty('display');
+                    card.classList.remove('bili-purified-hidden');
+                    card.removeAttribute('data-purified-reason');
                 }
             });
+
+            renderTogglePill();
         } finally {
             isProcessing = false;
         }
     }
 
-    // 8. 帧级节流监听：使用 requestAnimationFrame 防抖
+    // 9. 帧级节流监听：使用 requestAnimationFrame 防抖
     let rafId = null;
     const observer = new MutationObserver(() => {
         if (rafId) cancelAnimationFrame(rafId);
