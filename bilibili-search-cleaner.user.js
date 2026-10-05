@@ -182,7 +182,7 @@
         return toSimplified(searchTerms.join(' '));
     }
 
-    // 5. 数据层：首屏 Pinia 状态扫描 + 翻页网络拦截（存储 标签 + 分区，严格不匹配简介）
+    // 5. 数据层：首屏 Pinia 状态扫描 + 翻页网络拦截（存储 标签 + 全级分区，严格不匹配简介）
     const videoTagMap = new Map();
     let hasScannedInitial = false;
 
@@ -191,6 +191,7 @@
         try {
             const pinia = window.__pinia;
             if (pinia && typeof pinia === 'object') {
+                const prevSize = videoTagMap.size;
                 function traverse(node, depth = 0) {
                     if (!node || depth > 8) return;
                     if (Array.isArray(node)) {
@@ -199,7 +200,7 @@
                                 const id = item.bvid || item.aid || item.id;
                                 if (id) {
                                     const rawTag = item.tag || item.keywords || item.tags || '';
-                                    const rawType = item.typename || item.cate_name || '';
+                                    const rawType = [item.parent_area_name, item.typename, item.cate_name].filter(Boolean).join(' ');
                                     const combined = cleanText(`${rawTag} ${rawType}`);
                                     if (combined) {
                                         videoTagMap.set(String(id), combined);
@@ -216,7 +217,15 @@
                     }
                 }
                 traverse(pinia);
-                if (videoTagMap.size > 0) hasScannedInitial = true;
+                if (videoTagMap.size > 0) {
+                    hasScannedInitial = true;
+                    // 若首屏字典从无到有装载成功，清空之前过早判定的卡片缓存，确保立即重新判定
+                    if (prevSize === 0) {
+                        document.querySelectorAll('[data-purified-query]').forEach(el => {
+                            delete el.dataset.purifiedQuery;
+                        });
+                    }
+                }
             }
         } catch {}
     }
@@ -229,7 +238,7 @@
 
             const id = v.bvid || v.aid || v.id || v.season_id || v.roomid;
             const rawTags = v.tag || v.keywords || v.tags || '';
-            const rawType = v.typename || v.cate_name || '';
+            const rawType = [v.parent_area_name, v.typename, v.cate_name].filter(Boolean).join(' ');
             const combined = cleanText(`${rawTags} ${rawType}`);
             if (id) videoTagMap.set(String(id), combined);
 
@@ -451,8 +460,14 @@
                 const domTags = Array.from(card.querySelectorAll('.bili-video-card__info--tag, .bili-video-card__badge, .badge, .tag-item')).map(el => cleanText(el.textContent)).join(' ');
                 const allVideoTags = cleanText(`${videoTags} ${domTags}`);
 
-                // 拆分后的全部词匹配全部标签（包含关系，只要命中任一词即视为通过）
-                const hasTagMatched = !!(allVideoTags && queryWordList.some(w => allVideoTags.includes(w)));
+                // 双向标签与分区匹配：
+                // 1. 标签/分区串包含任一搜索词（如搜索词“绘画”，标签“绘画过程” -> 包含命中）
+                // 2. 搜索词包含具体标签/分区（如搜索词“绿龙major”，独立标签“绿龙” -> 包含命中）
+                const tagTokens = allVideoTags.split(/[\s,，、]+/).filter(t => t.length >= 2);
+                const hasTagMatched = !!(allVideoTags && (
+                    queryWordList.some(w => allVideoTags.includes(w)) ||
+                    tagTokens.some(tag => queryWordList.some(w => w.includes(tag)))
+                ));
 
                 // 纯净提取作者名字（提取第一署名作者）
                 const authorEl = card.querySelector('a[href*="space.bilibili.com"], .bili-video-card__info--author, .up-name, .bili-live-card__info--uname');
