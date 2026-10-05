@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Bilibili 去掉搜索无关视频（fuse.js）
+// @name         Bilibili 去掉搜索无关视频（模糊搜索测试版）
 // @namespace    http://tampermonkey.net/
-// @version      2.1.0
+// @version      0.0.5
 // @description  自动隐藏 Bilibili 搜索结果中不包含关键词的无关视频，支持哈工大《同义词词林》纯异素同义词扩展、官方搜索联想与相关词扩展、视频简介匹配、Fuse.js 模糊匹配与 bge-small-zh 本地语义向量模型、@UP主 定向筛选、-排除词 与 #Tag 专项筛选，彻底净化搜索体验。（支持简繁与测试模式预览）
 // @author       Kirosca
 // @match        *://search.bilibili.com/*
@@ -1421,5 +1421,5 @@
     scanInitialState();
     renderTogglePill();
     initSemanticEngine();
-    console.log('[Bilibili 搜索净化] 2.1.0 (Fuse.js + bge-small-zh + 搜索联想扩展) 已启动。');
+    console.log('[Bilibili 搜索净化] 0.0.5 (Fuse.js + bge-small-zh + 搜索联想扩展) 已启动。');
 })();
