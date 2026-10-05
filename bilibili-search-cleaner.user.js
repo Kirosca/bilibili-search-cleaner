@@ -354,20 +354,23 @@
                 const rawAuthor = authorEl ? (authorEl.getAttribute('title') || authorEl.textContent || '') : '';
                 const author = cleanText(rawAuthor.replace(/[\s·•].*$/, ''));
 
+                // 检查标题是否包含 B 站官方搜索高亮的 em.keyword 标签
+                const hasEmKeyword = !!(titleEl.querySelector('em.keyword, em[class*="keyword"]') || card.querySelector('h3 em.keyword, .bili-video-card__info--tit em.keyword'));
+
                 const matchTitle = createMatcher(title);
                 const matchTags = createMatcher(videoTags);
                 const matchAuthor = createMatcher(author);
 
                 // 四道安检关卡：
                 // 1. 排除词保持严格判定（命中任一排除词即刻剔除）
-                // 2. 普通关键词采取 OR 逻辑（命中任一关键词，无论是精确还是 Fuse.js 模糊匹配即视为满足）
+                // 2. 普通关键词采取 OR 逻辑（包含 em.keyword 官方高亮、或命中任一普通词及其 Fuse.js 模糊匹配即视为满足）
                 // 3. 标签与 UP 主保持严格约束（指定标签须全部满足，指定作者须符合）
                 let filterReason = '';
                 const matchedExclude = exclude.find(k => title.includes(k));
 
                 if (matchedExclude) {
                     filterReason = `排除词: -${matchedExclude}`;
-                } else if (normal.length && !normal.some(k => matchTitle(k))) {
+                } else if (normal.length && !hasEmKeyword && !normal.some(k => matchTitle(k))) {
                     filterReason = '未命中任一关键词';
                 } else if (tags.length && !tags.every(k => matchTags(k))) {
                     filterReason = '未匹配标签';
