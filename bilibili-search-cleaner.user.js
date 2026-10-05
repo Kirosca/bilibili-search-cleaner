@@ -249,23 +249,54 @@
         return response;
     };
 
-    // 6. 模糊匹配辅助工厂：优先快速包含，未命中时按需实例化 Fuse.js 进行模糊容错
+    // 6. 浏览器原生分词与 Fuse.js 模糊匹配辅助工厂
+    let zhSegmenter = null;
+    function segmentText(text) {
+        if (!text) return [];
+        try {
+            if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+                if (!zhSegmenter) {
+                    zhSegmenter = new Intl.Segmenter('zh-CN', { granularity: 'word' });
+                }
+                return Array.from(zhSegmenter.segment(text))
+                    .filter(x => x.isWordLike)
+                    .map(x => x.segment.trim())
+                    .filter(w => w.length > 0);
+            }
+        } catch {}
+        return [];
+    }
+
     function createMatcher(targetText) {
         let fuseInstance = null;
         return function(queryKeyword) {
             if (!targetText || !queryKeyword) return false;
             // 优先严格子串包含判定（无额外开销）
             if (targetText.includes(queryKeyword)) return true;
-            // 严格未命中时，引入 Fuse.js 模糊距离检索
+
+            // 严格未命中时，引入中文分词与 Fuse.js 模糊检索
             if (typeof Fuse !== 'undefined') {
                 try {
                     if (!fuseInstance) {
-                        fuseInstance = new Fuse([targetText], {
+                        // 将原始文本与拆词结果共同作为语料喂给 Fuse.js
+                        const words = segmentText(targetText);
+                        const corpus = Array.from(new Set([targetText, ...words]));
+                        fuseInstance = new Fuse(corpus, {
                             threshold: 0.5,
                             ignoreLocation: true
                         });
                     }
-                    return fuseInstance.search(queryKeyword).length > 0;
+
+                    // 先以完整关键词检索
+                    if (fuseInstance.search(queryKeyword).length > 0) return true;
+
+                    // 若完整词未命中且长度大于 2，对其进行分词并逐词喂给 Fuse.js 检索（过滤单字虚词）
+                    if (queryKeyword.length > 2) {
+                        const queryWords = segmentText(queryKeyword).filter(w => w.length >= 2);
+                        if (queryWords.length > 0 && queryWords.some(w => fuseInstance.search(w).length > 0)) {
+                            return true;
+                        }
+                    }
                 } catch {
                     return false;
                 }
