@@ -103,7 +103,7 @@
         }
 
         html.bili-show-filtered-mode [data-purified-semantic="rescued"]::after {
-            content: "语义放行 (" attr(data-purified-similarity) ")";
+            content: attr(data-purified-note);
             position: absolute;
             top: 8px;
             right: 8px;
@@ -388,7 +388,19 @@
 
     // 7. 本地 AI 语义向量引擎（基于 Transformers.js + bge-small-zh-v1.5 模型）
     const SEMANTIC_THRESHOLD = 0.60;
+    const CHUNK_EVAL_MIN_THRESHOLD = 0.48; // 边缘临界区下界：高于此分的未命中长标题触发局部最大池化细算
+    const BGE_QUERY_PREFIX = '为这个句子生成表示以用于检索相关文章：';
     const MODEL_NAME = 'Xenova/bge-small-zh-v1.5';
+
+    // 标题降噪分段抽取器：将长标题切分成具有独立特征的语义片段
+    function splitTitleChunks(title) {
+        if (!title || title.length < 8) return [];
+        const rawChunks = title.split(/[\s\[\]【】()（）|:：,，_—#\-·/]+/)
+                               .map(t => t.trim())
+                               .filter(t => t.length >= 3 && !/^\d+$/.test(t));
+        if (rawChunks.length <= 1 && rawChunks[0] === title) return [];
+        return rawChunks.slice(0, 3);
+    }
 
     // 基于 IndexedDB 的持久化模型缓存（彻底解决浏览器 Cache API 跨域限制与重新下载问题）
     const IDB_NAME = 'bili_semantic_cache';
@@ -639,7 +651,9 @@
             return currentQueryEmbedding;
         }
         try {
-            const output = await pipelineInstance(queryStr, { pooling: 'mean', normalize: true });
+            // 使用 BGE 官方非对称检索 Prompt 增强特征对齐
+            const prompt = `${BGE_QUERY_PREFIX}${queryStr}`;
+            const output = await pipelineInstance(prompt, { pooling: 'mean', normalize: true });
             if (output && output.data) {
                 currentQueryEmbedding = new Float32Array(output.data);
                 currentQueryKey = queryStr;
@@ -702,6 +716,7 @@
             if (!title) continue;
 
             try {
+                // 1. 先计算整句标题的语义向量
                 let titleVec = titleEmbeddingCache.get(title);
                 if (!titleVec) {
                     const output = await pipelineInstance(title, { pooling: 'mean', normalize: true });
@@ -713,17 +728,44 @@
                 }
 
                 if (titleVec) {
-                    const sim = cosineSimilarity(queryVec, titleVec);
-                    card.dataset.purifiedSemanticQuery = currentSearchQuery;
-                    card.dataset.purifiedSimilarity = sim.toFixed(2);
+                    let bestSim = cosineSimilarity(queryVec, titleVec);
+                    let bestChunk = '';
 
-                    if (sim >= SEMANTIC_THRESHOLD) {
+                    // 2. 局部最大池化策略（仅在整句处于边缘临界区时触发子片段细算）
+                    if (bestSim >= CHUNK_EVAL_MIN_THRESHOLD && bestSim < SEMANTIC_THRESHOLD) {
+                        const chunks = splitTitleChunks(title);
+                        for (const chunk of chunks) {
+                            let chunkVec = titleEmbeddingCache.get(chunk);
+                            if (!chunkVec) {
+                                const chunkOutput = await pipelineInstance(chunk, { pooling: 'mean', normalize: true });
+                                if (chunkOutput && chunkOutput.data) {
+                                    chunkVec = new Float32Array(chunkOutput.data);
+                                    if (titleEmbeddingCache.size > 2000) titleEmbeddingCache.clear();
+                                    titleEmbeddingCache.set(chunk, chunkVec);
+                                }
+                            }
+                            if (chunkVec) {
+                                const chunkSim = cosineSimilarity(queryVec, chunkVec);
+                                if (chunkSim > bestSim) {
+                                    bestSim = chunkSim;
+                                    bestChunk = chunk;
+                                }
+                                if (bestSim >= SEMANTIC_THRESHOLD) break;
+                            }
+                        }
+                    }
+
+                    card.dataset.purifiedSemanticQuery = currentSearchQuery;
+                    card.dataset.purifiedSimilarity = bestSim.toFixed(2);
+
+                    if (bestSim >= SEMANTIC_THRESHOLD) {
                         card.classList.remove('bili-purified-hidden');
                         card.removeAttribute('data-purified-reason');
                         card.dataset.purifiedSemantic = 'rescued';
+                        card.dataset.purifiedNote = bestChunk ? `语义放行 [${bestChunk}] (${bestSim.toFixed(2)})` : `语义放行 (${bestSim.toFixed(2)})`;
                         renderTogglePill();
                     } else {
-                        card.setAttribute('data-purified-reason', `未命中关键词 (语义相似度: ${sim.toFixed(2)})`);
+                        card.setAttribute('data-purified-reason', `未命中关键词 (语义相似度: ${bestSim.toFixed(2)})`);
                         card.dataset.purifiedSemantic = 'filtered';
                     }
                 }
@@ -921,10 +963,13 @@
                         card.dataset.purifiedSimilarity = sim.toFixed(2);
                         if (sim >= SEMANTIC_THRESHOLD) {
                             card.dataset.purifiedSemantic = 'rescued';
+                            card.dataset.purifiedNote = `语义放行 (${sim.toFixed(2)})`;
                             filterReason = '';
-                        } else {
+                        } else if (sim < CHUNK_EVAL_MIN_THRESHOLD) {
                             card.dataset.purifiedSemantic = 'filtered';
                             filterReason = `未命中关键词 (语义相似度: ${sim.toFixed(2)})`;
+                        } else {
+                            filterReason = '未命中任一关键词或标签';
                         }
                     } else {
                         filterReason = '未命中任一关键词或标签';
