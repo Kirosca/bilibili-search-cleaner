@@ -25,25 +25,14 @@ function cleanText(str) {
 function splitByTopLevelPipe(str) {
     const branches = [];
     let curr = '';
-    let inQuote = false;
-    let quoteChar = '';
 
     for (let i = 0; i < str.length; i++) {
         const char = str[i];
-        if (inQuote) {
-            curr += char;
-            if (char === quoteChar) inQuote = false;
+        if (char === '|') {
+            if (curr.trim()) branches.push(curr.trim());
+            curr = '';
         } else {
-            if (char === '"' || char === "'") {
-                inQuote = true;
-                quoteChar = char;
-                curr += char;
-            } else if (char === '|') {
-                if (curr.trim()) branches.push(curr.trim());
-                curr = '';
-            } else {
-                curr += char;
-            }
+            curr += char;
         }
     }
     if (curr.trim()) branches.push(curr.trim());
@@ -59,6 +48,17 @@ function tokenizeBranch(branchStr) {
     for (let i = 0; i < branchStr.length; i++) {
         const char = branchStr[i];
         if (inQuote) {
+            // 引号容错：若未闭合且遇空白后紧跟新前缀（@、#、-），自动截断当前未闭合 token
+            if (/\s/.test(char)) {
+                const rest = branchStr.slice(i).trim();
+                if (/^[-#@]/.test(rest)) {
+                    if (curr.length > 0) tokens.push(curr);
+                    curr = '';
+                    inQuote = false;
+                    quoteChar = '';
+                    continue;
+                }
+            }
             curr += char;
             if (char === quoteChar) inQuote = false;
         } else {
@@ -101,10 +101,9 @@ function parseToken(rawToken) {
 
     let isExact = false;
     let val = t;
-    if ((val.startsWith('"') && val.endsWith('"') && val.length >= 2) ||
-        (val.startsWith("'") && val.endsWith("'") && val.length >= 2)) {
+    if (val.startsWith('"') || val.startsWith("'") || val.endsWith('"') || val.endsWith("'")) {
         isExact = true;
-        val = val.slice(1, -1);
+        val = val.replace(/^["']+|["']+$/g, '');
     }
 
     const cleanVal = cleanText(val);
@@ -115,7 +114,13 @@ function parseToken(rawToken) {
 
 function parseSearchQuery(rawParam) {
     if (!rawParam) return { exclusions: [], branches: [], hasRules: false };
-    const cleaned = cleanText(decodeURIComponent(rawParam.replace(/\+/g, ' ')));
+    let decodedParam = rawParam.replace(/\+/g, ' ');
+    try {
+        decodedParam = decodeURIComponent(decodedParam);
+    } catch {
+        // 容错降级
+    }
+    const cleaned = cleanText(decodedParam);
     const branchStrings = splitByTopLevelPipe(cleaned);
 
     const exclusions = [];
@@ -184,11 +189,15 @@ function extractCardTags(raw) {
     return { rawTags, tagList, tagSet };
 }
 
+function extractAuthor(rawAuthor) {
+    return cleanText(rawAuthor.replace(/\s*[·•].*$/, ''));
+}
+
 function makeCard(title, author, rawTags) {
     const tagData = extractCardTags(rawTags);
     return {
         title: cleanText(title),
-        author: cleanText(author),
+        author: extractAuthor(author),
         ...tagData
     };
 }
@@ -336,5 +345,49 @@ function getCleanApiKeyword(rawParam) {
     console.log('✓ PASS: API 搜索词脱壳与负向规则剥离');
 }
 
-console.log('\nAll 11 unit test suites PASSED with 100% precision!');
+// 12. [修复验证] UP主名称含空格及后接日期剥离（如 "Linus Tech Tips · 1-20"）
+{
+    const q1 = parseSearchQuery('@"Linus Tech Tips"');
+    const q2 = parseSearchQuery('-@"Linus Tech Tips"');
+    const c1 = makeCard('Linus日常', 'Linus Tech Tips · 2-10', '科技');
+    const c2 = makeCard('Linus粉丝剪辑', 'Linus Tech Tips Fans', '科技');
 
+    assert.strictEqual(testCard(q1, c1), true, 'c1 should match exact author "Linus Tech Tips"');
+    assert.strictEqual(testCard(q1, c2), false, 'c2 is fan club, not exact author');
+    assert.strictEqual(testCard(q2, c1), false, 'c1 should be excluded by -@"Linus Tech Tips"');
+    assert.strictEqual(testCard(q2, c2), true, 'c2 should not be excluded');
+    console.log('✓ PASS: [BugFix-1] UP主名称含空格与日期剥离精确匹配');
+}
+
+// 13. [修复验证] 未闭合引号容错解析（如 #"vue 3 | @"Linus Tech Tips）
+{
+    const q = parseSearchQuery('#"vue 3 | @"Linus Tech Tips');
+    const c1 = makeCard('前端教程', 'up1', 'vue 3,前端');
+    const c2 = makeCard('硬件测评', 'Linus Tech Tips', '硬件');
+    const c3 = makeCard('前端教程', 'up1', 'vue 3 pro,前端');
+
+    assert.strictEqual(testCard(q, c1), true, 'c1 should match unclosed quote tag #"vue 3');
+    assert.strictEqual(testCard(q, c2), true, 'c2 should match unclosed quote author @"Linus Tech Tips');
+    assert.strictEqual(testCard(q, c3), false, 'c3 should not match exact tag "vue 3"');
+
+    // 同样验证同一分支内未闭合引号后跟新操作符：如 #"vue 3 @"Linus Tech Tips
+    const qSameBranch = parseSearchQuery('#"vue 3 @"Linus Tech Tips');
+    assert.strictEqual(testCard(qSameBranch, c1), false, 'c1 lacks author');
+    const c4 = makeCard('全家桶', 'Linus Tech Tips', 'vue 3,硬件');
+    assert.strictEqual(testCard(qSameBranch, c4), true, 'c4 matches both unclosed tag and unclosed author');
+    console.log('✓ PASS: [BugFix-4] 未闭合引号容错处理');
+}
+
+// 14. [修复验证] decodeURIComponent 遇到畸变百分号编码容错（防 URIError）
+{
+    // 包含不规范百分号，如 "50% discount"
+    const q = parseSearchQuery('50% 折扣');
+    const c1 = makeCard('50% 折扣专场', 'up1', '购物');
+    const c2 = makeCard('原价专场', 'up1', '购物');
+
+    assert.strictEqual(testCard(q, c1), true, 'c1 contains "50%" and "折扣"');
+    assert.strictEqual(testCard(q, c2), false, 'c2 does not contain search terms');
+    console.log('✓ PASS: [BugFix-3] decodeURIComponent 畸变编码防护');
+}
+
+console.log('\nAll 14 unit test suites PASSED with 100% precision!');

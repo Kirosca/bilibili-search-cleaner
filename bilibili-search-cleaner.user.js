@@ -68,25 +68,14 @@
     function splitByTopLevelPipe(str) {
         const branches = [];
         let curr = '';
-        let inQuote = false;
-        let quoteChar = '';
 
         for (let i = 0; i < str.length; i++) {
             const char = str[i];
-            if (inQuote) {
-                curr += char;
-                if (char === quoteChar) inQuote = false;
+            if (char === '|') {
+                if (curr.trim()) branches.push(curr.trim());
+                curr = '';
             } else {
-                if (char === '"' || char === "'") {
-                    inQuote = true;
-                    quoteChar = char;
-                    curr += char;
-                } else if (char === '|') {
-                    if (curr.trim()) branches.push(curr.trim());
-                    curr = '';
-                } else {
-                    curr += char;
-                }
+                curr += char;
             }
         }
         if (curr.trim()) branches.push(curr.trim());
@@ -102,6 +91,17 @@
         for (let i = 0; i < branchStr.length; i++) {
             const char = branchStr[i];
             if (inQuote) {
+                // 引号容错：若未闭合且遇空白后紧跟新操作符（@、#、-），自动截断当前未闭合 token
+                if (/\s/.test(char)) {
+                    const rest = branchStr.slice(i).trim();
+                    if (/^[-#@]/.test(rest)) {
+                        if (curr.length > 0) tokens.push(curr);
+                        curr = '';
+                        inQuote = false;
+                        quoteChar = '';
+                        continue;
+                    }
+                }
                 curr += char;
                 if (char === quoteChar) inQuote = false;
             } else {
@@ -144,10 +144,10 @@
 
         let isExact = false;
         let val = t;
-        if ((val.startsWith('"') && val.endsWith('"') && val.length >= 2) ||
-            (val.startsWith("'") && val.endsWith("'") && val.length >= 2)) {
+        // 未闭合引号与首尾引号容错解析
+        if (val.startsWith('"') || val.startsWith("'") || val.endsWith('"') || val.endsWith("'")) {
             isExact = true;
-            val = val.slice(1, -1);
+            val = val.replace(/^["']+|["']+$/g, '');
         }
 
         const cleanVal = cleanText(val);
@@ -161,7 +161,14 @@
         const rawParam = params.get('keyword') || '';
         if (!rawParam) return { exclusions: [], branches: [], hasRules: false };
 
-        const cleaned = cleanText(decodeURIComponent(rawParam.replace(/\+/g, ' ')));
+        let decodedParam = rawParam.replace(/\+/g, ' ');
+        try {
+            decodedParam = decodeURIComponent(decodedParam);
+        } catch {
+            // 容错降级：URL存在不规范百分号编码时避免抛出 URIError 异常
+        }
+
+        const cleaned = cleanText(decodedParam);
         const branchStrings = splitByTopLevelPipe(cleaned);
 
         const exclusions = [];
@@ -209,6 +216,7 @@
 
     // 5. 网络层拦截：存储 Tag 字典 + 接口层物理剔除广告
     const videoTagMap = new Map();
+    let newTagsRecorded = false;
 
     function cleanAdsOnly(list) {
         if (!Array.isArray(list)) return list;
@@ -221,13 +229,31 @@
             if (id) {
                 const tagList = rawTags ? rawTags.split(/[,，、]+/).map(t => t.trim()).filter(Boolean) : [];
                 const tagSet = new Set(tagList);
-                videoTagMap.set(String(id), { rawTags, tagList, tagSet });
+                const strId = String(id);
+                if (!videoTagMap.has(strId) || videoTagMap.get(strId).rawTags !== rawTags) {
+                    videoTagMap.set(strId, { rawTags, tagList, tagSet });
+                    if (tagList.length > 0) newTagsRecorded = true;
+                }
             }
 
             if (v.is_ad_loc || v.is_promoted || v.goto === 'ad' || v.type === 'ad') return false;
 
             return true;
         });
+    }
+
+    function scanInitialState() {
+        try {
+            if (window.__pinia) {
+                const pinia = window.__pinia;
+                for (const key of Object.keys(pinia)) {
+                    const store = pinia[key];
+                    if (store?.result && Array.isArray(store.result)) {
+                        cleanAdsOnly(store.result);
+                    }
+                }
+            }
+        } catch {}
     }
 
     function getCardTagData(id) {
@@ -277,6 +303,15 @@
                     } else {
                         data.data.result = cleanAdsOnly(data.data.result);
                     }
+                }
+
+                if (newTagsRecorded) {
+                    newTagsRecorded = false;
+                    // 新增或更新了标签数据，清除当前卡片已评估缓存并重新执行安检
+                    document.querySelectorAll('[data-purified-query]').forEach(card => {
+                        delete card.dataset.purifiedQuery;
+                    });
+                    filterDOMElements();
                 }
 
                 return new Response(JSON.stringify(data), {
@@ -334,6 +369,7 @@
         isProcessing = true;
 
         try {
+            scanInitialState();
             const parsedQuery = parseSearchQuery();
             if (!parsedQuery.hasRules) return;
 
@@ -368,10 +404,10 @@
 
                 const { rawTags, tagList, tagSet } = getCardTagData(id);
 
-                // 纯净提取作者名字（提取第一署名作者）
+                // 纯净提取作者名字（提取第一署名作者，保留名称内空格，仅剥离时间与圆点分隔符）
                 const authorEl = card.querySelector('a[href*="space.bilibili.com"], .bili-video-card__info--author, .up-name, .bili-live-card__info--uname');
                 const rawAuthor = authorEl ? (authorEl.getAttribute('title') || authorEl.textContent || '') : '';
-                const author = cleanText(rawAuthor.replace(/[\s·•].*$/, ''));
+                const author = cleanText(rawAuthor.replace(/\s*[·•].*$/, ''));
 
                 const cardInfo = { title, author, tagList, tagSet, rawTags };
                 const isMatch = testCard(parsedQuery, cardInfo);
