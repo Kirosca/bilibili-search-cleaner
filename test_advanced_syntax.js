@@ -168,17 +168,22 @@ function testCard(parsedQuery, cardInfo) {
 
     // 3. 正向条件：满足任一分支即可通过 (OR)
     return parsedQuery.branches.some(branch => {
-        // 分支内所有正向条件必须同时满足 (AND)
-        return branch.every(cond => {
-            if (cond.target === 'title') {
-                return title.includes(cond.val);
-            } else if (cond.target === 'author') {
-                return cond.isExact ? (author === cond.val) : author.includes(cond.val);
-            } else if (cond.target === 'tag') {
-                return cond.isExact ? tagSet.has(cond.val) : (tagList.some(t => t.includes(cond.val)) || rawTags.includes(cond.val));
-            }
-            return false;
-        });
+        // 标题条件：分支内所有标题条件必须同时满足 (AND 逻辑)
+        const titleMatch = branch
+            .filter(cond => cond.target === 'title')
+            .every(cond => title.includes(cond.val));
+        if (!titleMatch) return false;
+
+        // 标签条件：分支内所有标签条件必须同时满足 (AND 逻辑)
+        const tagMatch = branch
+            .filter(cond => cond.target === 'tag')
+            .every(cond => cond.isExact ? tagSet.has(cond.val) : (tagList.some(t => t.includes(cond.val)) || rawTags.includes(cond.val)));
+        if (!tagMatch) return false;
+
+        // 作者条件：分支内作者按 OR 逻辑处理（满足任一指定 UP 主即可通过）
+        const authorConds = branch.filter(cond => cond.target === 'author');
+        const authorMatch = authorConds.length === 0 || authorConds.some(cond => cond.isExact ? (author === cond.val) : author.includes(cond.val));
+        return authorMatch;
     });
 }
 
@@ -390,4 +395,29 @@ function getCleanApiKeyword(rawParam) {
     console.log('✓ PASS: [BugFix-3] decodeURIComponent 畸变编码防护');
 }
 
-console.log('\nAll 14 unit test suites PASSED with 100% precision!');
+// 15. 同分支多 UP主 OR 逻辑匹配（如 @影视飓风 @mrbeast）
+{
+    const q1 = parseSearchQuery('@影视飓风 @mrbeast');
+    const c1 = makeCard('相机测评', '影视飓风', '科技');
+    const c2 = makeCard('吉尼斯挑战', 'MrBeast', '挑战');
+    const c3 = makeCard('游戏解说', '老番茄', '游戏');
+
+    assert.strictEqual(testCard(q1, c1), true, 'c1 should match 影视飓风 (OR)');
+    assert.strictEqual(testCard(q1, c2), true, 'c2 should match MrBeast (OR)');
+    assert.strictEqual(testCard(q1, c3), false, 'c3 should be filtered (neither author matches)');
+
+    // 标题 AND 配合多 UP主 OR
+    const q2 = parseSearchQuery('测评 @"影视飓风" @"小白测评"');
+    const c4 = makeCard('手机测评', '影视飓风', '科技');
+    const c5 = makeCard('手机测评', '小白测评', '科技');
+    const c6 = makeCard('电脑装机', '影视飓风', '科技');
+    const c7 = makeCard('手机测评', '其他UP', '科技');
+
+    assert.strictEqual(testCard(q2, c4), true, 'c4 matches title 测评 and author 影视飓风');
+    assert.strictEqual(testCard(q2, c5), true, 'c5 matches title 测评 and author 小白测评');
+    assert.strictEqual(testCard(q2, c6), false, 'c6 lacks title 测评');
+    assert.strictEqual(testCard(q2, c7), false, 'c7 author matches neither');
+    console.log('✓ PASS: [Feature] 同分支多 UP主 OR 逻辑匹配');
+}
+
+console.log('\nAll 15 unit test suites PASSED with 100% precision!');

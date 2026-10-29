@@ -270,6 +270,21 @@ runTest('3. UP主定向筛选', '带空格英文 UP主圆点剥离（Mr Beast �
     assert.strictEqual(testCard(q, cardInfo), true, '应保留内部空格并剥离 • 后缀');
 });
 
+runTest('3. UP主定向筛选', '同分支多 UP主自动按 OR 逻辑匹配（@影视飓风 @mrbeast）', () => {
+    const q = query('@影视飓风 @mrbeast');
+    assert.strictEqual(testCard(q, makeCardInfo('新机上手', '影视飓风', '科技')), true, '命中影视飓风应保留');
+    assert.strictEqual(testCard(q, makeCardInfo('挑战吉尼斯', 'MrBeast', '娱乐')), true, '命中MrBeast应保留');
+    assert.strictEqual(testCard(q, makeCardInfo('日常分享', '路人博主', '日常')), false, '非指定作者应过滤');
+});
+
+runTest('3. UP主定向筛选', '标题 AND 与多 UP主精确 OR 混合（测评 @"影视飓风" @"小白测评"）', () => {
+    const q = query('测评 @"影视飓风" @"小白测评"');
+    assert.strictEqual(testCard(q, makeCardInfo('手机测评', '影视飓风', '科技')), true, '标题包含测评且作者完全是影视飓风');
+    assert.strictEqual(testCard(q, makeCardInfo('手机测评', '小白测评', '科技')), true, '标题包含测评且作者完全是小白测评');
+    assert.strictEqual(testCard(q, makeCardInfo('装机实况', '影视飓风', '科技')), false, '缺少标题关键词测评');
+    assert.strictEqual(testCard(q, makeCardInfo('手机测评', '其他博主', '科技')), false, '作者不匹配');
+});
+
 // ----------------------------------------------------
 // 维度 4: 标签筛选 (#模糊 与 #"精确")
 // ----------------------------------------------------

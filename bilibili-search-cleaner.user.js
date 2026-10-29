@@ -348,17 +348,22 @@
 
         // 3. 正向条件：满足任一分支即可通过 (OR 逻辑)
         return parsedQuery.branches.some(branch => {
-            // 分支内所有正向条件必须同时满足 (AND 逻辑)
-            return branch.every(cond => {
-                if (cond.target === 'title') {
-                    return title.includes(cond.val);
-                } else if (cond.target === 'author') {
-                    return cond.isExact ? (author === cond.val) : author.includes(cond.val);
-                } else if (cond.target === 'tag') {
-                    return cond.isExact ? tagSet.has(cond.val) : (tagList.some(t => t.includes(cond.val)) || rawTags.includes(cond.val));
-                }
-                return false;
-            });
+            // 标题条件：分支内所有标题条件必须同时满足 (AND 逻辑)
+            const titleMatch = branch
+                .filter(cond => cond.target === 'title')
+                .every(cond => title.includes(cond.val));
+            if (!titleMatch) return false;
+
+            // 标签条件：分支内所有标签条件必须同时满足 (AND 逻辑)
+            const tagMatch = branch
+                .filter(cond => cond.target === 'tag')
+                .every(cond => cond.isExact ? tagSet.has(cond.val) : (tagList.some(t => t.includes(cond.val)) || rawTags.includes(cond.val)));
+            if (!tagMatch) return false;
+
+            // 作者条件：分支内作者按 OR 逻辑处理（满足任一指定 UP 主即可通过，兼容多 UP 主筛选习惯）
+            const authorConds = branch.filter(cond => cond.target === 'author');
+            const authorMatch = authorConds.length === 0 || authorConds.some(cond => cond.isExact ? (author === cond.val) : author.includes(cond.val));
+            return authorMatch;
         });
     }
 
