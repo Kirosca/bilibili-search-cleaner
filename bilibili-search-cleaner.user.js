@@ -144,9 +144,12 @@
 
         let isExact = false;
         let val = t;
-        // 未闭合引号与首尾引号容错解析
-        if (val.startsWith('"') || val.startsWith("'") || val.endsWith('"') || val.endsWith("'")) {
+        // 方案1（严格成对模式）：首尾成对出现引号时判定为精确匹配；单侧未闭合引号剥除后平滑退化为模糊匹配
+        if ((val.startsWith('"') && val.endsWith('"') && val.length >= 2) ||
+            (val.startsWith("'") && val.endsWith("'") && val.length >= 2)) {
             isExact = true;
+            val = val.slice(1, -1);
+        } else {
             val = val.replace(/^["']+|["']+$/g, '');
         }
 

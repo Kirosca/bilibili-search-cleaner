@@ -101,8 +101,12 @@ function parseToken(rawToken) {
 
     let isExact = false;
     let val = t;
-    if (val.startsWith('"') || val.startsWith("'") || val.endsWith('"') || val.endsWith("'")) {
+    // 方案1（严格成对模式）：首尾成对出现引号时判定为精确匹配；单侧未闭合引号剥除后平滑退化为模糊匹配
+    if ((val.startsWith('"') && val.endsWith('"') && val.length >= 2) ||
+        (val.startsWith("'") && val.endsWith("'") && val.length >= 2)) {
         isExact = true;
+        val = val.slice(1, -1);
+    } else {
         val = val.replace(/^["']+|["']+$/g, '');
     }
 
@@ -364,23 +368,33 @@ function getCleanApiKeyword(rawParam) {
     console.log('✓ PASS: [BugFix-1] UP主名称含空格与日期剥离精确匹配');
 }
 
-// 13. [修复验证] 未闭合引号容错解析（如 #"vue 3 | @"Linus Tech Tips）
+// 13. [方案1验证] 严格成对模式与单侧未闭合引号退化降级处理
 {
-    const q = parseSearchQuery('#"vue 3 | @"Linus Tech Tips');
+    // A. 成对引号：严格触发精确匹配
+    const qPaired = parseSearchQuery('#"vue 3" | @"Linus Tech Tips"');
     const c1 = makeCard('前端教程', 'up1', 'vue 3,前端');
     const c2 = makeCard('硬件测评', 'Linus Tech Tips', '硬件');
     const c3 = makeCard('前端教程', 'up1', 'vue 3 pro,前端');
 
-    assert.strictEqual(testCard(q, c1), true, 'c1 should match unclosed quote tag #"vue 3');
-    assert.strictEqual(testCard(q, c2), true, 'c2 should match unclosed quote author @"Linus Tech Tips');
-    assert.strictEqual(testCard(q, c3), false, 'c3 should not match exact tag "vue 3"');
+    assert.strictEqual(testCard(qPaired, c1), true, 'c1 should match exact tag "vue 3"');
+    assert.strictEqual(testCard(qPaired, c2), true, 'c2 should match exact author "Linus Tech Tips"');
+    assert.strictEqual(testCard(qPaired, c3), false, 'c3 (vue 3 pro) should not match exact tag "vue 3"');
 
-    // 同样验证同一分支内未闭合引号后跟新操作符：如 #"vue 3 @"Linus Tech Tips
-    const qSameBranch = parseSearchQuery('#"vue 3 @"Linus Tech Tips');
-    assert.strictEqual(testCard(qSameBranch, c1), false, 'c1 lacks author');
-    const c4 = makeCard('全家桶', 'Linus Tech Tips', 'vue 3,硬件');
-    assert.strictEqual(testCard(qSameBranch, c4), true, 'c4 matches both unclosed tag and unclosed author');
-    console.log('✓ PASS: [BugFix-4] 未闭合引号容错处理');
+    // B. 单侧未闭合引号：方案1自动平滑退化为模糊匹配，不报错
+    const qUnclosed = parseSearchQuery('#"vue 3');
+    assert.strictEqual(testCard(qUnclosed, c1), true, 'c1 matches fuzzy tag vue 3');
+    assert.strictEqual(testCard(qUnclosed, c3), true, 'c3 (vue 3 pro) also matches fuzzy tag vue 3');
+
+    // C. 单侧未闭合排除：方案1平滑退化为模糊排除（-#vue）
+    const qNegUnclosed = parseSearchQuery('-#"vue');
+    const cVue = makeCard('vue入门', 'up1', 'vue,前端');
+    const cVue3 = makeCard('vue3实战', 'up1', 'vue 3,前端');
+    const cReact = makeCard('react实战', 'up1', 'react,前端');
+    assert.strictEqual(testCard(qNegUnclosed, cVue), false, 'cVue should be excluded');
+    assert.strictEqual(testCard(qNegUnclosed, cVue3), false, 'cVue3 should be fuzzy excluded by -#vue');
+    assert.strictEqual(testCard(qNegUnclosed, cReact), true, 'cReact should pass');
+
+    console.log('✓ PASS: [方案1] 严格成对引号与未闭合平滑退化机制');
 }
 
 // 14. [修复验证] decodeURIComponent 遇到畸变百分号编码容错（防 URIError）

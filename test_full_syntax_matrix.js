@@ -372,25 +372,25 @@ runTest('7. 繁简自动归一化', '繁体搜索词匹配简体内容（含精�
 });
 
 // ----------------------------------------------------
-// 维度 8: 未闭合引号容错处理
+// 维度 8: 方案1（严格成对模式与未闭合平滑退化）
 // ----------------------------------------------------
-runTest('8. 未闭合引号容错', '单分支尾部未闭合引号：#"vue 3', () => {
+runTest('8. 引号模式', '成对引号严格精确匹配：#"vue 3"', () => {
+    const q = query('#"vue 3"');
+    assert.strictEqual(testCard(q, makeCardInfo('前端', 'up1', 'vue 3,前端')), true, '完全等于vue 3应保留');
+    assert.strictEqual(testCard(q, makeCardInfo('前端', 'up1', 'vue 3 pro,前端')), false, '非完全等于应过滤');
+});
+
+runTest('8. 引号模式', '单侧未闭合引号退化为模糊匹配：#"vue 3', () => {
     const q = query('#"vue 3');
-    assert.strictEqual(testCard(q, makeCardInfo('前端', 'up1', 'vue 3,前端')), true);
-    assert.strictEqual(testCard(q, makeCardInfo('前端', 'up1', 'vue 3 pro,前端')), false);
+    assert.strictEqual(testCard(q, makeCardInfo('前端', 'up1', 'vue 3,前端')), true, '模糊命中vue 3');
+    assert.strictEqual(testCard(q, makeCardInfo('前端', 'up1', 'vue 3 pro,前端')), true, '退化为模糊匹配后包含vue 3即通过');
 });
 
-runTest('8. 未闭合引号容错', '跨管道符未闭合引号：#"vue 3 | @"Linus Tech Tips', () => {
-    const q = query('#"vue 3 | @"Linus Tech Tips');
-    assert.strictEqual(testCard(q, makeCardInfo('前端', 'up1', 'vue 3,代码')), true, '分支1通过');
-    assert.strictEqual(testCard(q, makeCardInfo('评测', 'Linus Tech Tips', '硬件')), true, '分支2通过');
-    assert.strictEqual(testCard(q, makeCardInfo('前端', 'up1', 'vue 3 pro,代码')), false, '精确不匹配');
-});
-
-runTest('8. 未闭合引号容错', '同分支多操作符未闭合引号：#"vue 3 @"Linus Tech Tips', () => {
-    const q = query('#"vue 3 @"Linus Tech Tips');
-    assert.strictEqual(testCard(q, makeCardInfo('综合', 'Linus Tech Tips', 'vue 3')), true, '同时满足两项未闭合精确条件');
-    assert.strictEqual(testCard(q, makeCardInfo('综合', 'Other UP', 'vue 3')), false, '作者不符');
+runTest('8. 引号模式', '单侧未闭合排除退化为模糊排除：-#"vue', () => {
+    const q = query('-#"vue');
+    assert.strictEqual(testCard(q, makeCardInfo('全家桶', 'up1', 'vue,前端')), false, '完全命中vue被排除');
+    assert.strictEqual(testCard(q, makeCardInfo('全家桶', 'up1', 'vue 3,前端')), false, '退化为模糊排除后含vue被排除');
+    assert.strictEqual(testCard(q, makeCardInfo('全家桶', 'up1', 'react,前端')), true, '不含vue正常通过');
 });
 
 // ----------------------------------------------------
