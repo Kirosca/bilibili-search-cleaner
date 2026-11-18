@@ -50,11 +50,11 @@
             }
         }
 
-        const spotlightLabel = `聚光灯高亮模式: ${isSpotlight ? '✅ 已开启' : '❌ 已关闭'}`;
-        spotlightMenuId = GM_registerMenuCommand(spotlightLabel, toggleSpotlight);
-
         const filterStickyLabel = `搜索筛选常驻: ${isFilterSticky ? '✅ 已开启' : '❌ 已关闭'}`;
         filterStickyMenuId = GM_registerMenuCommand(filterStickyLabel, toggleFilterSticky);
+
+        const spotlightLabel = `聚光灯高亮模式: ${isSpotlight ? '✅ 已开启' : '❌ 已关闭'}`;
+        spotlightMenuId = GM_registerMenuCommand(spotlightLabel, toggleSpotlight);
 
         const waterfallLabel = `无缝瀑布流: ${isWaterfall ? '✅ 已开启' : '❌ 已关闭'}`;
         waterfallMenuId = GM_registerMenuCommand(waterfallLabel, toggleWaterfall);
@@ -808,7 +808,7 @@
         const badge = getOrCreateBadge();
         if (!badge) return;
         if (isWaterfallPaused) {
-            badge.innerHTML = `<span>⏸️ 已暂停: 第 ${currentRequestedPage} 页</span>`;
+            badge.innerHTML = `<span>🌊 已暂停: 第 ${currentRequestedPage} 页</span>`;
             badge.classList.add('paused');
         } else {
             badge.innerHTML = `<span>🌊 瀑布流: 第 ${currentRequestedPage} 页</span>`;
