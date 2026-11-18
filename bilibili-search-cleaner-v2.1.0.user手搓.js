@@ -83,7 +83,7 @@
         isWaterfall = !isWaterfall;
         localStorage.setItem('bili_cleaner_waterfall', String(isWaterfall));
         registerMenu();
-        applyWaterfallState();
+        window.location.reload();
     }
 
     function applyFilterStickyState() {
@@ -773,8 +773,14 @@
     }
 
     function getMainListContainer(root = document) {
-        // 精准定位到「类是 video i_wrapper search-all-list 的 div」内部的卡片容器，彻底隔离番剧、直播与活动横幅
-        const videoSection = root.querySelector('div.video.i_wrapper.search-all-list, .video.i_wrapper.search-all-list');
+        // 兼容首屏综合列表 (.search-all-list) 与后续页/纯视频列表 (.search-page-video) 的主视频容器
+        const videoSection = root.querySelector(
+            'div.video.i_wrapper.search-all-list, ' +
+            '.video.i_wrapper.search-all-list, ' +
+            'div.search-page-video.i_wrapper, ' +
+            '.search-page-video, ' +
+            'div.video.i_wrapper'
+        );
         if (videoSection) {
             return videoSection.querySelector('.video-list.row, .video-list, .row') || videoSection;
         }
@@ -855,9 +861,9 @@
     }
 
     function createCardElement(item) {
-        // 严格仅从「类是 video i_wrapper search-all-list 的 div」内部提取真实视频卡片作为克隆范本
-        const videoWrapper = document.querySelector('div.video.i_wrapper.search-all-list, .video.i_wrapper.search-all-list');
-        const sampleCol = videoWrapper ? videoWrapper.querySelector('.video-list-item, div[class*="col_"]:has(.bili-video-card)') : null;
+        // 优先从已定位的主容器中提取真实视频卡片作为克隆范本，确保首屏与翻页后均能获取到范本
+        const mainContainer = getMainListContainer(document);
+        const sampleCol = mainContainer ? mainContainer.querySelector('.video-list-item, div[class*="col_"]:has(.bili-video-card)') : null;
         let col;
         const cleanTit = (item.title || '').replace(/<[^>]+>/g, '');
         const coverUrl = item.pic ? (item.pic.startsWith('http') ? item.pic : 'https:' + item.pic) : '';
