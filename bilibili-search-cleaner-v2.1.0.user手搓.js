@@ -6,7 +6,7 @@
 // @author       Kirosca
 // @match        *://search.bilibili.com/*
 // @icon         https://www.bilibili.com/favicon.ico
-// @require      https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js
+// @require      https://cdn.jsdelivr.net/npm/opencc-js@1.4.2/dist/umd/t2cn.js
 // @run-at       document-start
 // @grant        GM_registerMenuCommand
 // @grant        GM_unregisterMenuCommand
@@ -40,7 +40,7 @@
             }
         }
 
-        const spotlightLabel = `聚光灯高亮模式: ${isSpotlight ? '✅ 已开启' : '❌ 已关闭（物理隐藏）'}`;
+        const spotlightLabel = `聚光灯高亮模式: ${isSpotlight ? '✅ 已开启' : '❌ 已关闭'}`;
         spotlightMenuId = GM_registerMenuCommand(spotlightLabel, toggleSpotlight);
 
         const filterStickyLabel = `搜索筛选常驻: ${isFilterSticky ? '✅ 已开启' : '❌ 已关闭'}`;
@@ -85,9 +85,10 @@
     function toSimplified(text) {
         if (!text) return '';
         try {
-            if (typeof OpenCC !== 'undefined') {
+            const opencc = typeof OpenCC !== 'undefined' ? OpenCC : (typeof window !== 'undefined' ? window.OpenCC : null);
+            if (opencc && typeof opencc.Converter === 'function') {
                 if (!sConverter) {
-                    sConverter = OpenCC.Converter({ from: 't', to: 'cn' });
+                    sConverter = opencc.Converter({ from: 't', to: 'cn' });
                 }
                 return sConverter(text);
             }
