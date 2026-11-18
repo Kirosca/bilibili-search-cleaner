@@ -1,437 +1,203 @@
 const assert = require('assert');
 
-// 0. 简繁与文本清洗模拟
+// 0. 简繁与文本清洗（当前 2.2.0 精简规范：去除双引号，管道符转为空格）
 function toSimplified(text) { return text; }
 
 function cleanText(str) {
     if (!str) return '';
     const simplified = toSimplified(str);
     return simplified
-        .replace(/&#x27;|&#39;|&apos;/g, "'")
-        .replace(/&quot;/g, '"')
+        .replace(/&#x27;|&#39;|&apos;/g, '')
+        .replace(/&quot;/g, '')
         .replace(/&amp;/g, '&')
         .replace(/&lt;/g, '<')
         .replace(/&gt;/g, '>')
-        .replace(/[\u2018\u2019\u201A\u201B\uFF07`]/g, "'")
-        .replace(/[\u201C\u201D\uFF02]/g, '"')
-        .replace(/\uFF5C/g, '|')
-        .replace(/\uFF03/g, '#')
-        .replace(/\uFF20/g, '@')
-        .replace(/\uFF0D/g, '-')
+        .replace(/[\u2018\u2019\u201A\u201B\uFF07`']/g, '')
+        .replace(/[\u201C\u201D\uFF02"]/g, '')
+        .replace(/[\uFF5C|]/g, ' ')
         .trim()
         .toLowerCase();
 }
 
-function splitByTopLevelPipe(str) {
-    const branches = [];
-    let curr = '';
+// 1. 关键词解析
+function getSearchKeywords(rawKeyword) {
+    const cleaned = cleanText(rawKeyword);
+    if (!cleaned) return { normal: [], exclude: [], tags: [], ups: [], hasRules: false };
 
-    for (let i = 0; i < str.length; i++) {
-        const char = str[i];
-        if (char === '|') {
-            if (curr.trim()) branches.push(curr.trim());
-            curr = '';
-        } else {
-            curr += char;
+    const list = cleaned.split(/\s+/);
+    const normal = [];
+    const exclude = [];
+    const tags = [];
+    const ups = [];
+
+    for (let k of list) {
+        // 输入法全角归一化容错，移除 * 前缀
+        k = k.replace(/^[\*＊]+/, '')
+             .replace(/^[\#＃]/, '#')
+             .replace(/^[\@＠]/, '@')
+             .replace(/^[\-－]/, '-');
+
+        if (k.startsWith('-') && k.length > 1) {
+            exclude.push(k.substring(1));
+        } else if (k.startsWith('#') && k.length > 1) {
+            tags.push(k.substring(1));
+        } else if (k.startsWith('@') && k.length > 1) {
+            ups.push(k.substring(1));
+        } else if (k) {
+            normal.push(k);
         }
     }
-    if (curr.trim()) branches.push(curr.trim());
-    return branches;
+
+    const hasRules = Boolean(normal.length || exclude.length || tags.length || ups.length);
+    return { normal, exclude, tags, ups, hasRules };
 }
 
-function tokenizeBranch(branchStr) {
-    const tokens = [];
-    let curr = '';
-    let inQuote = false;
-    let quoteChar = '';
+// 2. 视频匹配判定
+function checkVideoMatch(titleRaw, tagsRaw, authorRaw, filters) {
+    const title = cleanText(titleRaw);
+    const tags = cleanText(tagsRaw);
+    const author = cleanText((authorRaw || '').trim().replace(/\s*[·•][\s\S]*$/, '').trim());
 
-    for (let i = 0; i < branchStr.length; i++) {
-        const char = branchStr[i];
-        if (inQuote) {
-            // 引号容错：若未闭合且遇空白后紧跟新前缀（@、#、-），自动截断当前未闭合 token
-            if (/\s/.test(char)) {
-                const rest = branchStr.slice(i).trim();
-                if (/^[-#@]/.test(rest)) {
-                    if (curr.length > 0) tokens.push(curr);
-                    curr = '';
-                    inQuote = false;
-                    quoteChar = '';
-                    continue;
-                }
-            }
-            curr += char;
-            if (char === quoteChar) inQuote = false;
-        } else {
-            if (char === '"' || char === "'") {
-                inQuote = true;
-                quoteChar = char;
-                curr += char;
-            } else if (/\s/.test(char)) {
-                if (curr.length > 0) {
-                    tokens.push(curr);
-                    curr = '';
-                }
+    const { normal, exclude, tags: filterTags, ups } = filters;
+
+    // 1. 排除词一票否决
+    if (exclude.some(k => title.includes(k))) return false;
+    // 2. 普通词：标题严格包含 (AND)
+    if (normal.length && !normal.every(k => title.includes(k))) return false;
+    // 3. 显式标签筛选
+    if (filterTags.length) {
+        const hasTagMatch = filterTags.every(k => {
+            if (tags && tags.length > 0) {
+                return tags.includes(k) || title.includes(k) || author.includes(k);
             } else {
-                curr += char;
+                return title.includes(k) || author.includes(k);
             }
+        });
+        if (!hasTagMatch) return false;
+    }
+    // 4. 显式UP主筛选
+    if (ups.length && !ups.some(k => author.includes(k))) return false;
+
+    return true;
+}
+
+function getCleanApiKeyword(rawKeyword) {
+    if (!rawKeyword) return '';
+    const list = cleanText(rawKeyword).split(/\s+/);
+    const searchTerms = [];
+    for (let k of list) {
+        k = k.replace(/^[\*＊]+/, '')
+             .replace(/^[\#＃]/, '#')
+             .replace(/^[\@＠]/, '@')
+             .replace(/^[\-－]/, '-');
+
+        if (k.startsWith('-')) {
+            continue;
+        } else if (k.startsWith('@') || k.startsWith('#')) {
+            if (k.length > 1) searchTerms.push(k.substring(1));
+        } else if (k) {
+            searchTerms.push(k);
         }
     }
-    if (curr.length > 0) tokens.push(curr);
-    return tokens;
+    return toSimplified(searchTerms.join(' ')) || rawKeyword.replace(/^[\#\@\-]/gm, '').trim();
 }
 
-function parseToken(rawToken) {
-    let t = rawToken.trim();
-    if (!t) return null;
+console.log('Running v2.2.0 Syntax Tests (No Pipe, No Quotes, No Star)...\n');
 
-    let isNeg = false;
-    if (t.startsWith('-')) {
-        isNeg = true;
-        t = t.substring(1);
-    }
-
-    let target = 'title';
-    if (t.startsWith('#')) {
-        target = 'tag';
-        t = t.substring(1);
-    } else if (t.startsWith('@')) {
-        target = 'author';
-        t = t.substring(1);
-    }
-
-    let isExact = false;
-    let val = t;
-    // 方案1（严格成对模式）：首尾成对出现引号时判定为精确匹配；单侧未闭合引号剥除后平滑退化为模糊匹配
-    if ((val.startsWith('"') && val.endsWith('"') && val.length >= 2) ||
-        (val.startsWith("'") && val.endsWith("'") && val.length >= 2)) {
-        isExact = true;
-        val = val.slice(1, -1);
-    } else {
-        val = val.replace(/^["']+|["']+$/g, '');
-    }
-
-    const cleanVal = cleanText(val);
-    if (!cleanVal) return null;
-
-    return { isNeg, target, isExact, val: cleanVal };
-}
-
-function parseSearchQuery(rawParam) {
-    if (!rawParam) return { exclusions: [], branches: [], hasRules: false };
-    let decodedParam = rawParam.replace(/\+/g, ' ');
-    try {
-        decodedParam = decodeURIComponent(decodedParam);
-    } catch {
-        // 容错降级
-    }
-    const cleaned = cleanText(decodedParam);
-    const branchStrings = splitByTopLevelPipe(cleaned);
-
-    const exclusions = [];
-    const branches = [];
-
-    for (const bStr of branchStrings) {
-        const rawTokens = tokenizeBranch(bStr);
-        const posTokens = [];
-
-        for (const rt of rawTokens) {
-            const parsed = parseToken(rt);
-            if (!parsed) continue;
-            if (parsed.isNeg) {
-                exclusions.push(parsed);
-            } else {
-                posTokens.push(parsed);
-            }
-        }
-        if (posTokens.length > 0) {
-            branches.push(posTokens);
-        }
-    }
-    return { exclusions, branches, hasRules: exclusions.length > 0 || branches.length > 0 };
-}
-
-function testCard(parsedQuery, cardInfo) {
-    if (!parsedQuery.hasRules) return true;
-    const { title, author, tagList, tagSet, rawTags } = cardInfo;
-
-    // 1. 任何一个排除规则命中，直接过滤隐藏
-    for (const ex of parsedQuery.exclusions) {
-        if (ex.target === 'title') {
-            if (title.includes(ex.val)) return false;
-        } else if (ex.target === 'author') {
-            if (ex.isExact ? (author === ex.val) : author.includes(ex.val)) return false;
-        } else if (ex.target === 'tag') {
-            if (ex.isExact ? tagSet.has(ex.val) : (tagList.some(t => t.includes(ex.val)) || rawTags.includes(ex.val))) return false;
-        }
-    }
-
-    // 2. 如果只有排除条件没有正向条件，排除通过即保留
-    if (parsedQuery.branches.length === 0) {
-        return true;
-    }
-
-    // 3. 正向条件：满足任一分支即可通过 (OR)
-    return parsedQuery.branches.some(branch => {
-        // 标题条件：分支内所有标题条件必须同时满足 (AND 逻辑)
-        const titleMatch = branch
-            .filter(cond => cond.target === 'title')
-            .every(cond => title.includes(cond.val));
-        if (!titleMatch) return false;
-
-        // 标签条件：分支内所有标签条件必须同时满足 (AND 逻辑)
-        const tagMatch = branch
-            .filter(cond => cond.target === 'tag')
-            .every(cond => cond.isExact ? tagSet.has(cond.val) : (tagList.some(t => t.includes(cond.val)) || rawTags.includes(cond.val)));
-        if (!tagMatch) return false;
-
-        // 作者条件：分支内作者按 OR 逻辑处理（满足任一指定 UP 主即可通过）
-        const authorConds = branch.filter(cond => cond.target === 'author');
-        const authorMatch = authorConds.length === 0 || authorConds.some(cond => cond.isExact ? (author === cond.val) : author.includes(cond.val));
-        return authorMatch;
-    });
-}
-
-function extractCardTags(raw) {
-    const rawTags = cleanText(raw || '');
-    const tagList = rawTags ? rawTags.split(/[,，、]+/).map(t => t.trim()).filter(Boolean) : [];
-    const tagSet = new Set(tagList);
-    return { rawTags, tagList, tagSet };
-}
-
-function extractAuthor(rawAuthor) {
-    return cleanText(rawAuthor.replace(/\s*[·•].*$/, ''));
-}
-
-function makeCard(title, author, rawTags) {
-    const tagData = extractCardTags(rawTags);
-    return {
-        title: cleanText(title),
-        author: extractAuthor(author),
-        ...tagData
-    };
-}
-
-// ==================== 单元测试集 ====================
-
-console.log('Running Advanced Filter Syntax Tests...\n');
-
-// 1. 测试 A | B 标题或匹配
+// 测试 1: 普通关键词 AND 逻辑
 {
-    const q = parseSearchQuery('猫 | 狗');
-    const c1 = makeCard('这是一只可爱的小猫', 'up1', '宠物');
-    const c2 = makeCard('小狗在草地上奔跑', 'up2', '宠物');
-    const c3 = makeCard('野生动物大冒险', 'up3', '纪录片');
-    assert.strictEqual(testCard(q, c1), true, 'c1 should match 猫');
-    assert.strictEqual(testCard(q, c2), true, 'c2 should match 狗');
-    assert.strictEqual(testCard(q, c3), false, 'c3 should be filtered');
-    console.log('✓ PASS: A | B (标题或者匹配)');
+    const filters = getSearchKeywords('python 教程');
+    assert.deepStrictEqual(filters.normal, ['python', '教程']);
+    assert.strictEqual(checkVideoMatch('Python基础教程从入门到精通', '编程', 'UP1', filters), true);
+    assert.strictEqual(checkVideoMatch('Python从零开始', '编程', 'UP1', filters), false); // 缺"教程"
+    console.log('✓ PASS: 普通词 AND 包含匹配');
 }
 
-// 2. 测试 #"A B" 标签完全匹配
+// 测试 2: 负向排除词 -
 {
-    const q = parseSearchQuery('#"deepseek v3"');
-    const c1 = makeCard('AI新发布', 'up1', 'deepseek v3,大模型');
-    const c2 = makeCard('AI新发布', 'up1', 'deepseek v3 pro,大模型');
-    const c3 = makeCard('AI新发布', 'up1', 'deepseek,v3');
-    assert.strictEqual(testCard(q, c1), true, 'c1 should exactly match tag "deepseek v3"');
-    assert.strictEqual(testCard(q, c2), false, 'c2 has "deepseek v3 pro", not "deepseek v3"');
-    assert.strictEqual(testCard(q, c3), false, 'c3 has "deepseek" and "v3" separate');
-    console.log('✓ PASS: #"A B" (标签完全匹配)');
+    const filters = getSearchKeywords('手机测评 -广告 -开箱');
+    assert.deepStrictEqual(filters.normal, ['手机测评']);
+    assert.deepStrictEqual(filters.exclude, ['广告', '开箱']);
+    assert.strictEqual(checkVideoMatch('2024最新手机测评深度对比', '数码', 'UP1', filters), true);
+    assert.strictEqual(checkVideoMatch('手机测评 广告植入', '数码', 'UP1', filters), false);
+    assert.strictEqual(checkVideoMatch('手机测评 开箱上手', '数码', 'UP1', filters), false);
+    console.log('✓ PASS: 负向排除词 - 过滤');
 }
 
-// 3. 测试 -#A 排除含 A 的标签
+// 测试 3: #Tag 标签专搜
 {
-    const q = parseSearchQuery('-#手游');
-    const c1 = makeCard('原神日常', 'up1', '原神手游,开放世界');
-    const c2 = makeCard('单机大作', 'up2', '主机游戏,3a');
-    assert.strictEqual(testCard(q, c1), false, 'c1 has tag with "手游", should be excluded');
-    assert.strictEqual(testCard(q, c2), true, 'c2 should pass');
-    console.log('✓ PASS: -#A (排除含A标签)');
+    const filters = getSearchKeywords('#搞笑研究所');
+    assert.deepStrictEqual(filters.tags, ['搞笑研究所']);
+    assert.strictEqual(checkVideoMatch('这面是卖10块呀', '搞笑研究所,搞笑', '甜蜜老张', filters), true);
+    assert.strictEqual(checkVideoMatch('普通炒面', '美食,日常', '甜蜜老张', filters), false);
+    console.log('✓ PASS: #Tag 标签专搜');
 }
 
-// 4. 测试 -#"A B" 排除完全匹配 A B 的标签
+// 测试 4: @UP主 定向筛选
 {
-    const q = parseSearchQuery('-#"英雄联盟"');
-    const c1 = makeCard('精彩时刻', 'up1', '英雄联盟,moba');
-    const c2 = makeCard('手游精彩时刻', 'up1', '英雄联盟手游,moba');
-    assert.strictEqual(testCard(q, c1), false, 'c1 has exact tag "英雄联盟", should be excluded');
-    assert.strictEqual(testCard(q, c2), true, 'c2 has "英雄联盟手游", exact match should not exclude');
-    console.log('✓ PASS: -#"A B" (排除完全匹配【A B】标签)');
+    const filters = getSearchKeywords('@影视飓风');
+    assert.deepStrictEqual(filters.ups, ['影视飓风']);
+    assert.strictEqual(checkVideoMatch('摄影器材全解析', '摄影', '影视飓风', filters), true);
+    assert.strictEqual(checkVideoMatch('摄影器材全解析', '摄影', '影视飓风 · 2024年1月', filters), true);
+    assert.strictEqual(checkVideoMatch('摄影器材全解析', '摄影', '其他UP主', filters), false);
+    console.log('✓ PASS: @UP主 定向筛选与日期剥离');
 }
 
-// 5. 测试 -@A 排除 up 名字包含 A
+// 测试 5: 去掉【双引号“”】功能：引号自动剥离为普通字符处理
 {
-    const q = parseSearchQuery('-@营销号');
-    const c1 = makeCard('震惊视频', '娱乐营销号二号', '搞笑');
-    const c2 = makeCard('正经视频', '小红书官方', '生活');
-    assert.strictEqual(testCard(q, c1), false, 'c1 up has "营销号", should be excluded');
-    assert.strictEqual(testCard(q, c2), true, 'c2 should pass');
-    console.log('✓ PASS: -@A (排除UP名字包含A)');
+    const filters = getSearchKeywords('"Python" @"影视飓风"');
+    assert.deepStrictEqual(filters.normal, ['python']);
+    assert.deepStrictEqual(filters.ups, ['影视飓风']);
+    assert.strictEqual(checkVideoMatch('Python视频', 'vue', '影视飓风', filters), true);
+    console.log('✓ PASS: 去掉【双引号“”】功能（双引号自动平滑剥离）');
 }
 
-// 6. 测试 @"A" UP主名字完全匹配
+// 测试 6: 去掉【管道符|】功能：管道符转为空格，不作分支或运算
 {
-    const q = parseSearchQuery('@"老番茄"');
-    const c1 = makeCard('杀手47', '老番茄', '游戏');
-    const c2 = makeCard('游戏解说', '老番茄的粉丝小李', '游戏');
-    assert.strictEqual(testCard(q, c1), true, 'c1 author exactly equals "老番茄"');
-    assert.strictEqual(testCard(q, c2), false, 'c2 author contains "老番茄" but is not equal');
-    console.log('✓ PASS: @"A" (UP主名字完全匹配)');
+    const filters = getSearchKeywords('猫 | 狗');
+    assert.deepStrictEqual(filters.normal, ['猫', '狗']);
+    // 此时属于普通词 AND，必须同时含有猫和狗
+    assert.strictEqual(checkVideoMatch('猫与狗的一天', '宠物', 'UP1', filters), true);
+    assert.strictEqual(checkVideoMatch('可爱的小猫', '宠物', 'UP1', filters), false); // 缺狗
+    console.log('✓ PASS: 去掉【管道符|】功能（管道符转为空格分隔）');
 }
 
-// 7. 测试 -@"A" 排除 UP主名字完全匹配
+// 测试 7: 去掉【*前缀】功能：* 符号自动剥离，不再触发三连全字段泛搜
 {
-    const q = parseSearchQuery('-@"老番茄"');
-    const c1 = makeCard('杀手47', '老番茄', '游戏');
-    const c2 = makeCard('游戏解说', '老番茄的粉丝小李', '游戏');
-    assert.strictEqual(testCard(q, c1), false, 'c1 author exactly equals "老番茄", should be excluded');
-    assert.strictEqual(testCard(q, c2), true, 'c2 author is not strictly "老番茄", should pass');
-    console.log('✓ PASS: -@"A" (排除UP名字完全匹配)');
+    const filters = getSearchKeywords('*甜蜜老张');
+    assert.deepStrictEqual(filters.normal, ['甜蜜老张']);
+    assert.strictEqual(filters.triple, undefined);
+    // 普通词只匹配标题，不再通过作者维度泛搜
+    assert.strictEqual(checkVideoMatch('暴跌光速甩卖', '短剧', '甜蜜老张', filters), false);
+    assert.strictEqual(checkVideoMatch('甜蜜老张爆笑日常', '短剧', '甜蜜老张', filters), true);
+    console.log('✓ PASS: 去掉【*前缀】功能（* 剥离为普通标题词）');
 }
 
-// 8. 测试 | 在多种语法中混合生效及多个 |
+// 测试 8: 全角中文标点归一化（＃、＠、－）
 {
-    const q = parseSearchQuery('@"老番茄" | @"影视飓风" | #"数码评测"');
-    const c1 = makeCard('视频A', '老番茄', '游戏');
-    const c2 = makeCard('视频B', '影视飓风', '摄影');
-    const c3 = makeCard('视频C', '某路人', '数码评测,科技');
-    const c4 = makeCard('视频D', '某路人', '数码,科技');
-    assert.strictEqual(testCard(q, c1), true, 'c1 matches branch 1 (@"老番茄")');
-    assert.strictEqual(testCard(q, c2), true, 'c2 matches branch 2 (@"影视飓风")');
-    assert.strictEqual(testCard(q, c3), true, 'c3 matches branch 3 (#"数码评测")');
-    assert.strictEqual(testCard(q, c4), false, 'c4 matches none of the 3 branches');
-    console.log('✓ PASS: | 跨语法多分支 (UP完全匹配 OR UP完全匹配 OR Tag完全匹配)');
+    const filters = getSearchKeywords('手机 ＃搞笑 ＠老番茄 －营销号');
+    assert.deepStrictEqual(filters.normal, ['手机']);
+    assert.deepStrictEqual(filters.tags, ['搞笑']);
+    assert.deepStrictEqual(filters.ups, ['老番茄']);
+    assert.deepStrictEqual(filters.exclude, ['营销号']);
+    console.log('✓ PASS: 全角中文标点归一化');
 }
 
-// 9. 测试复合条件：A B | C D 且带全局排除 -E
+// 测试 9: API 搜索词脱壳（剥离 -排除词 与 @/# 前缀）
 {
-    const q = parseSearchQuery('深度 学习 | 机器 学习 -#少儿编程');
-    const c1 = makeCard('深度学习入门教程', 'up1', '人工智能');
-    const c2 = makeCard('机器学习实战', 'up2', '人工智能');
-    const c3 = makeCard('深度学习少儿版', 'up3', '少儿编程');
-    const c4 = makeCard('深度科普', 'up4', '科技');
-    assert.strictEqual(testCard(q, c1), true, 'c1 matches "深度" and "学习"');
-    assert.strictEqual(testCard(q, c2), true, 'c2 matches "机器" and "学习"');
-    assert.strictEqual(testCard(q, c3), false, 'c3 has excluded tag "少儿编程"');
-    assert.strictEqual(testCard(q, c4), false, 'c4 has "深度" but not "学习"');
-    console.log('✓ PASS: 复合条件 (A B | C D -#E)');
+    assert.strictEqual(getCleanApiKeyword('手机测评 -广告 -开箱'), '手机测评');
+    assert.strictEqual(getCleanApiKeyword('@影视飓风 #摄影'), '影视飓风 摄影');
+    assert.strictEqual(getCleanApiKeyword('*甜蜜老张'), '甜蜜老张');
+    console.log('✓ PASS: API 搜索词安全脱壳');
 }
 
-// 10. 测试中文全角标点兼容（“”、｜、＃、＠、－）
+// 测试 10: UP主带换行与日期剥离
 {
-    const q = parseSearchQuery('猫 ｜ ＃“宠物 猫” －＠“无良商家”');
-    const c1 = makeCard('可爱小猫咪', '正常商家', '日常生活');
-    const c2 = makeCard('宠物集锦', '正常商家', '宠物 猫');
-    const c3 = makeCard('宠物集锦', '无良商家', '宠物 猫');
-    assert.strictEqual(testCard(q, c1), true, 'c1 matches branch 1 (猫)');
-    assert.strictEqual(testCard(q, c2), true, 'c2 matches branch 2 (＃“宠物 猫”)');
-    assert.strictEqual(testCard(q, c3), false, 'c3 has excluded UP －＠“无良商家”');
-    console.log('✓ PASS: 中文全角标点容错兼容');
+    const filters = getSearchKeywords('@影视飓风');
+    assert.deepStrictEqual(filters.ups, ['影视飓风']);
+    const domAuthor = '\n  影视飓风\n  · 2024年2月10日\n';
+    assert.strictEqual(checkVideoMatch('科技杂谈', '科技', domAuthor, filters), true);
+    console.log('✓ PASS: UP主换行与缩进首字符防吞');
 }
 
-// 11. 测试发给 B 站接口的搜索词脱壳（智能脱壳与负向规则移除）
-function getCleanApiKeyword(rawParam) {
-    if (!rawParam) return '';
-    const parsedQuery = parseSearchQuery(rawParam);
-    if (!parsedQuery.hasRules) return '';
-
-    const positiveTerms = [];
-    for (const branch of parsedQuery.branches) {
-        for (const cond of branch) {
-            if (cond.val) {
-                positiveTerms.push(cond.val);
-            }
-        }
-    }
-    return toSimplified(positiveTerms.join(' '));
-}
-
-{
-    assert.strictEqual(getCleanApiKeyword('猫 | 狗'), '猫 狗');
-    assert.strictEqual(getCleanApiKeyword('#"deepseek v3" -#广告'), 'deepseek v3');
-    assert.strictEqual(getCleanApiKeyword('@"老番茄" | @"影视飓风"'), '老番茄 影视飓风');
-    assert.strictEqual(getCleanApiKeyword('-#广告 -@营销号'), '');
-    console.log('✓ PASS: API 搜索词脱壳与负向规则剥离');
-}
-
-// 12. [修复验证] UP主名称含空格及后接日期剥离（如 "Linus Tech Tips · 1-20"）
-{
-    const q1 = parseSearchQuery('@"Linus Tech Tips"');
-    const q2 = parseSearchQuery('-@"Linus Tech Tips"');
-    const c1 = makeCard('Linus日常', 'Linus Tech Tips · 2-10', '科技');
-    const c2 = makeCard('Linus粉丝剪辑', 'Linus Tech Tips Fans', '科技');
-
-    assert.strictEqual(testCard(q1, c1), true, 'c1 should match exact author "Linus Tech Tips"');
-    assert.strictEqual(testCard(q1, c2), false, 'c2 is fan club, not exact author');
-    assert.strictEqual(testCard(q2, c1), false, 'c1 should be excluded by -@"Linus Tech Tips"');
-    assert.strictEqual(testCard(q2, c2), true, 'c2 should not be excluded');
-    console.log('✓ PASS: [BugFix-1] UP主名称含空格与日期剥离精确匹配');
-}
-
-// 13. [方案1验证] 严格成对模式与单侧未闭合引号退化降级处理
-{
-    // A. 成对引号：严格触发精确匹配
-    const qPaired = parseSearchQuery('#"vue 3" | @"Linus Tech Tips"');
-    const c1 = makeCard('前端教程', 'up1', 'vue 3,前端');
-    const c2 = makeCard('硬件测评', 'Linus Tech Tips', '硬件');
-    const c3 = makeCard('前端教程', 'up1', 'vue 3 pro,前端');
-
-    assert.strictEqual(testCard(qPaired, c1), true, 'c1 should match exact tag "vue 3"');
-    assert.strictEqual(testCard(qPaired, c2), true, 'c2 should match exact author "Linus Tech Tips"');
-    assert.strictEqual(testCard(qPaired, c3), false, 'c3 (vue 3 pro) should not match exact tag "vue 3"');
-
-    // B. 单侧未闭合引号：方案1自动平滑退化为模糊匹配，不报错
-    const qUnclosed = parseSearchQuery('#"vue 3');
-    assert.strictEqual(testCard(qUnclosed, c1), true, 'c1 matches fuzzy tag vue 3');
-    assert.strictEqual(testCard(qUnclosed, c3), true, 'c3 (vue 3 pro) also matches fuzzy tag vue 3');
-
-    // C. 单侧未闭合排除：方案1平滑退化为模糊排除（-#vue）
-    const qNegUnclosed = parseSearchQuery('-#"vue');
-    const cVue = makeCard('vue入门', 'up1', 'vue,前端');
-    const cVue3 = makeCard('vue3实战', 'up1', 'vue 3,前端');
-    const cReact = makeCard('react实战', 'up1', 'react,前端');
-    assert.strictEqual(testCard(qNegUnclosed, cVue), false, 'cVue should be excluded');
-    assert.strictEqual(testCard(qNegUnclosed, cVue3), false, 'cVue3 should be fuzzy excluded by -#vue');
-    assert.strictEqual(testCard(qNegUnclosed, cReact), true, 'cReact should pass');
-
-    console.log('✓ PASS: [方案1] 严格成对引号与未闭合平滑退化机制');
-}
-
-// 14. [修复验证] decodeURIComponent 遇到畸变百分号编码容错（防 URIError）
-{
-    // 包含不规范百分号，如 "50% discount"
-    const q = parseSearchQuery('50% 折扣');
-    const c1 = makeCard('50% 折扣专场', 'up1', '购物');
-    const c2 = makeCard('原价专场', 'up1', '购物');
-
-    assert.strictEqual(testCard(q, c1), true, 'c1 contains "50%" and "折扣"');
-    assert.strictEqual(testCard(q, c2), false, 'c2 does not contain search terms');
-    console.log('✓ PASS: [BugFix-3] decodeURIComponent 畸变编码防护');
-}
-
-// 15. 同分支多 UP主 OR 逻辑匹配（如 @影视飓风 @mrbeast）
-{
-    const q1 = parseSearchQuery('@影视飓风 @mrbeast');
-    const c1 = makeCard('相机测评', '影视飓风', '科技');
-    const c2 = makeCard('吉尼斯挑战', 'MrBeast', '挑战');
-    const c3 = makeCard('游戏解说', '老番茄', '游戏');
-
-    assert.strictEqual(testCard(q1, c1), true, 'c1 should match 影视飓风 (OR)');
-    assert.strictEqual(testCard(q1, c2), true, 'c2 should match MrBeast (OR)');
-    assert.strictEqual(testCard(q1, c3), false, 'c3 should be filtered (neither author matches)');
-
-    // 标题 AND 配合多 UP主 OR
-    const q2 = parseSearchQuery('测评 @"影视飓风" @"小白测评"');
-    const c4 = makeCard('手机测评', '影视飓风', '科技');
-    const c5 = makeCard('手机测评', '小白测评', '科技');
-    const c6 = makeCard('电脑装机', '影视飓风', '科技');
-    const c7 = makeCard('手机测评', '其他UP', '科技');
-
-    assert.strictEqual(testCard(q2, c4), true, 'c4 matches title 测评 and author 影视飓风');
-    assert.strictEqual(testCard(q2, c5), true, 'c5 matches title 测评 and author 小白测评');
-    assert.strictEqual(testCard(q2, c6), false, 'c6 lacks title 测评');
-    assert.strictEqual(testCard(q2, c7), false, 'c7 author matches neither');
-    console.log('✓ PASS: [Feature] 同分支多 UP主 OR 逻辑匹配');
-}
-
-console.log('\nAll 15 unit test suites PASSED with 100% precision!');
+console.log('\nAll 10 unit test suites PASSED with 100% precision!');
