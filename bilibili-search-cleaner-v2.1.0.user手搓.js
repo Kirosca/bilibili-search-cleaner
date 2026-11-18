@@ -25,25 +25,14 @@
     }
 
     // ==========================================
-    // 菜单管理与持久化配置（聚光灯模式 & 筛选常驻 & 无缝瀑布流）
+    // 菜单管理与持久化配置（聚光灯模式 & 筛选常驻）
     // ==========================================
     let isSpotlight = localStorage.getItem('bili_cleaner_spotlight') !== 'false';
     let isFilterSticky = localStorage.getItem('bili_cleaner_sticky_filter') !== 'false';
-    let isWaterfallEnabled = localStorage.getItem('bili_cleaner_waterfall') !== 'false';
     let spotlightMenuId = null;
     let filterStickyMenuId = null;
-    let waterfallMenuId = null;
-
-    // 瀑布流模块核心运行状态变量提升声明（规避 TDZ 暂时性死区）
-    let isWaterfallPaused = false;
-    let isPaging = false;
-    let isAllLoaded = false;
-    let currentRequestedPage = 1;
-    let waterfallIntersectionObserver = null;
-    let seenVideoKeyMap = Object.create(null);
 
     function registerMenu() {
-        if (window.self !== window.top) return;
         if (typeof GM_registerMenuCommand !== 'function') return;
 
         // 注销上一轮菜单，防止重复追加
@@ -54,9 +43,6 @@
             if (filterStickyMenuId !== null) {
                 try { GM_unregisterMenuCommand(filterStickyMenuId); } catch (e) {}
             }
-            if (waterfallMenuId !== null) {
-                try { GM_unregisterMenuCommand(waterfallMenuId); } catch (e) {}
-            }
         }
 
         const spotlightLabel = `聚光灯高亮模式: ${isSpotlight ? '✅ 已开启' : '❌ 已关闭'}`;
@@ -64,9 +50,6 @@
 
         const filterStickyLabel = `搜索筛选常驻: ${isFilterSticky ? '✅ 已开启' : '❌ 已关闭'}`;
         filterStickyMenuId = GM_registerMenuCommand(filterStickyLabel, toggleFilterSticky);
-
-        const waterfallLabel = `无缝瀑布流: ${isWaterfallEnabled ? '✅ 已开启' : '❌ 已关闭'}`;
-        waterfallMenuId = GM_registerMenuCommand(waterfallLabel, toggleWaterfall);
     }
 
     function toggleSpotlight() {
@@ -99,27 +82,8 @@
         }
     }
 
-    function toggleWaterfall() {
-        isWaterfallEnabled = !isWaterfallEnabled;
-        localStorage.setItem('bili_cleaner_waterfall', String(isWaterfallEnabled));
-        registerMenu();
-        applyWaterfallState();
-    }
-
-    function applyWaterfallState() {
-        if (document.documentElement) {
-            document.documentElement.classList.toggle('bili-waterfall-enabled', isWaterfallEnabled);
-        }
-        if (isWaterfallEnabled) {
-            initWaterfallModule();
-        } else {
-            destroyWaterfallModule();
-        }
-    }
-
     registerMenu();
     applyFilterStickyState();
-    applyWaterfallState();
  
     // 0. 接入 OpenCC 单例转换器（由 @require 本地持久化驱动）
     let sConverter = null;
@@ -204,92 +168,6 @@
         html.bili-filter-sticky-enabled :has(> div.search-channel-item.mt_sm.ml_sm),
         html.bili-filter-sticky-enabled button.vui_button.vui_button--active-shrink.i_button_more {
             display: none !important;
-        }
-
-        /* 5. 瀑布流相关样式 */
-        /* 使用 visibility: hidden 隐藏分页组件，保持占位供视口交叠监听 */
-        html.bili-waterfall-enabled .search-page-pagination,
-        html.bili-waterfall-enabled .vui_pagenation,
-        html.bili-waterfall-enabled .vui_pagenation--btns {
-            visibility: hidden !important;
-        }
-
-        /* 覆盖在分页组件位置的加载动画 */
-        .bili-waterfall-loader-wrap {
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 28px 0 36px;
-            width: 100%;
-            color: #00aeec;
-            font-size: 14px;
-            font-weight: 500;
-        }
-        .bili-waterfall-loader-wrap.loading {
-            display: flex !important;
-        }
-        .bili-waterfall-spinner {
-            width: 22px;
-            height: 22px;
-            border: 3px solid rgba(0, 174, 236, 0.2);
-            border-top-color: #00aeec;
-            border-radius: 50%;
-            animation: bili-spin 0.8s linear infinite;
-            margin-right: 10px;
-        }
-        @keyframes bili-spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* 隐藏沙箱 iframe */
-        iframe#bili_waterfall_iframe {
-            position: absolute !important;
-            top: -9999px !important;
-            left: -9999px !important;
-            width: 1280px !important;
-            height: 800px !important;
-            border: none !important;
-            opacity: 0 !important;
-            pointer-events: none !important;
-            z-index: -9999 !important;
-        }
-
-        /* 左下角悬浮控制按钮 */
-        #bili-waterfall-badge {
-            position: fixed;
-            left: 20px;
-            bottom: 24px;
-            z-index: 999999;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border: 1px solid rgba(0, 174, 236, 0.35);
-            border-radius: 20px;
-            padding: 7px 14px;
-            font-size: 12px;
-            font-weight: 600;
-            color: #18191c;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-            cursor: pointer;
-            user-select: none;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        #bili-waterfall-badge:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 174, 236, 0.28);
-            border-color: #00aeec;
-        }
-        #bili-waterfall-badge.paused {
-            color: #9499a0;
-            border-color: #d0d3d8;
-            background: rgba(246, 247, 248, 0.95);
-        }
-        #bili-waterfall-badge.loading {
-            border-color: #00aeec;
-            color: #00aeec;
         }
     `;
     (document.head || document.documentElement).appendChild(styleElement);
@@ -415,13 +293,11 @@
         scanInitialState();
         filterDOMElements();
         bindStickyObserver();
-        initWaterfallModule();
     });
     window.addEventListener('load', () => {
         scanInitialState();
         filterDOMElements();
         bindStickyObserver();
-        initWaterfallModule();
     });
 
     const originFetch = targetWindow.fetch;
@@ -589,7 +465,6 @@
         rafId = requestAnimationFrame(() => {
             filterDOMElements();
             bindStickyObserver();
-            bindWaterfallObserver();
         });
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
@@ -672,347 +547,6 @@
             }
             enforceConditions(el);
         });
-    }
-
-    // 10. 无缝瀑布流模块（DOM 劫持 + 沙箱 iframe 预拉取拼页）
-    // 提取卡片唯一标识（用于去重）
-    function getCardKey(card) {
-        if (!card) return '';
-        const link = card.querySelector('a[href*="/video/"], a[href*="live.bilibili.com"]')?.href || '';
-        const matchVideo = link.match(/\/(?:video|play)\/([A-Za-z0-9]+)/);
-        if (matchVideo) return matchVideo[1].toLowerCase();
-        const matchLive = link.match(/live\.bilibili\.com\/([0-9]+)/);
-        if (matchLive) return 'live_' + matchLive[1];
-
-        const titleEl = card.querySelector('h3, [title], .bili-video-card__info--tit');
-        const title = titleEl ? (titleEl.getAttribute('title') || titleEl.textContent || '') : '';
-        return title ? 'tit_' + cleanText(title) : '';
-    }
-
-    // 同步主页面已存在的视频卡片到字典中
-    function syncMainPageCards() {
-        document.querySelectorAll('.video-list-item, div[class*="col_"], .bili-video-card').forEach(card => {
-            const key = getCardKey(card);
-            if (key) seenVideoKeyMap[key] = true;
-        });
-    }
-
-    // 获取主视频列表网格容器
-    function getMainListContainer(root = document) {
-        return root.querySelector(
-            '.video.search-all-list .video-list, ' +
-            '.video.i_wrapper .video-list, ' +
-            '.search-page-video .video-list, ' +
-            '.search-all-list .video-list, ' +
-            'div.video-list.row, ' +
-            '.video-list, ' +
-            '.search-page-list .row, ' +
-            '.search-all-list .row'
-        );
-    }
-
-    // 左下角悬浮控制按钮
-    function getOrCreateBadge() {
-        if (!isWaterfallEnabled) return null;
-        let badge = document.getElementById('bili-waterfall-badge');
-        if (!badge) {
-            badge = document.createElement('div');
-            badge.id = 'bili-waterfall-badge';
-            badge.title = '左键点击：暂停 / 继续瀑布流\n右键点击：平滑返回顶部';
-            badge.innerHTML = `
-                <span class="bili-waterfall-badge-icon">🌊</span>
-                <span class="bili-waterfall-badge-text">瀑布流: 第 1 页</span>
-            `;
-
-            badge.addEventListener('click', () => {
-                isWaterfallPaused = !isWaterfallPaused;
-                updateBadge();
-                if (!isWaterfallPaused) {
-                    checkAndTriggerPaging();
-                }
-            });
-
-            badge.addEventListener('contextmenu', (e) => {
-                e.preventDefault();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            });
-
-            (document.body || document.documentElement).appendChild(badge);
-        }
-        return badge;
-    }
-
-    function updateBadge() {
-        if (!isWaterfallEnabled) return;
-        const badge = getOrCreateBadge();
-        if (!badge) return;
-
-        badge.classList.toggle('paused', isWaterfallPaused);
-        badge.classList.toggle('loading', isPaging);
-
-        const iconEl = badge.querySelector('.bili-waterfall-badge-icon');
-        const textEl = badge.querySelector('.bili-waterfall-badge-text');
-
-        if (isAllLoaded) {
-            if (iconEl) iconEl.textContent = '🏁';
-            if (textEl) textEl.textContent = `已到底 (共 ${currentRequestedPage} 页)`;
-        } else if (isPaging) {
-            if (iconEl) iconEl.textContent = '⏳';
-            if (textEl) textEl.textContent = `加载中 (第 ${currentRequestedPage + 1} 页)...`;
-        } else if (isWaterfallPaused) {
-            if (iconEl) iconEl.textContent = '⏸️';
-            if (textEl) textEl.textContent = `已暂停 (第 ${currentRequestedPage} 页)`;
-        } else {
-            if (iconEl) iconEl.textContent = '🌊';
-            if (textEl) textEl.textContent = `瀑布流: 第 ${currentRequestedPage} 页`;
-        }
-    }
-
-    // 页面底部分页器上的 Loading 动画容器
-    function getOrCreateLoader() {
-        if (!isWaterfallEnabled) return null;
-        let loader = document.getElementById('bili-waterfall-loader');
-        if (!loader) {
-            loader = document.createElement('div');
-            loader.id = 'bili-waterfall-loader';
-            loader.className = 'bili-waterfall-loader-wrap';
-            loader.innerHTML = `
-                <div class="bili-waterfall-spinner"></div>
-                <span class="bili-waterfall-loader-text">正在加载下一页...</span>
-            `;
-        }
-        const pager = document.querySelector('.search-page-pagination, .vui_pagenation, .vui_pagenation--btns');
-        if (pager && loader.parentNode !== pager.parentNode) {
-            pager.parentNode.insertBefore(loader, pager);
-        }
-        return loader;
-    }
-
-    function updateLoader(show, text = '') {
-        const loader = getOrCreateLoader();
-        if (!loader) return;
-        loader.classList.toggle('loading', show);
-        if (text) {
-            const textEl = loader.querySelector('.bili-waterfall-loader-text');
-            if (textEl) textEl.textContent = text;
-        }
-    }
-
-    // 隐藏沙箱 iframe
-    function getOrCreateIframe() {
-        let iframe = document.getElementById('bili_waterfall_iframe');
-        if (!iframe) {
-            iframe = document.createElement('iframe');
-            iframe.id = 'bili_waterfall_iframe';
-            (document.body || document.documentElement).appendChild(iframe);
-        }
-        return iframe;
-    }
-
-    // 检查分页器是否存在下一页
-    function hasNextPage() {
-        const nextSideBtn = document.querySelector('button.vui_pagenation--btn-side:last-child');
-        if (nextSideBtn && (nextSideBtn.disabled || nextSideBtn.classList.contains('vui_button--disabled'))) {
-            return false;
-        }
-        return true;
-    }
-
-    // 构造下一页地址
-    function getNextPageUrl(page) {
-        const url = new URL(window.location.href);
-        url.searchParams.set('page', String(page));
-        return url.href;
-    }
-
-    // 执行加载下一页
-    function triggerLoadNextPage() {
-        if (!isWaterfallEnabled || isWaterfallPaused || isPaging || isAllLoaded) return;
-
-        // 仅在有关键词搜索的页面下触发
-        const params = new URLSearchParams(window.location.search);
-        if (!params.get('keyword')) return;
-
-        if (!hasNextPage()) {
-            isAllLoaded = true;
-            updateBadge();
-            return;
-        }
-
-        const nextPage = currentRequestedPage + 1;
-        const nextUrl = getNextPageUrl(nextPage);
-
-        isPaging = true;
-        updateBadge();
-        updateLoader(true, `正在加载第 ${nextPage} 页视频...`);
-
-        const iframe = getOrCreateIframe();
-        iframe.src = nextUrl;
-
-        iframe.onload = () => {
-            let attempt = 0;
-            const checkTimer = setInterval(() => {
-                attempt++;
-                const iWin = iframe.contentWindow;
-                const iDoc = iframe.contentDocument;
-
-                if (!iWin || !iDoc) {
-                    clearInterval(checkTimer);
-                    finishPaging();
-                    return;
-                }
-
-                // 微触发 iframe 滚动以唤醒懒加载
-                try {
-                    iWin.scrollTo(0, 800);
-                } catch (e) {}
-
-                const rawCards = iDoc.querySelectorAll('.video-list-item, div[class*="col_"], .bili-video-card');
-                const validCards = Array.from(rawCards).filter(c => {
-                    const card = c.closest('[class*="col_"], .video-list-item') || c;
-                    if (card.closest('.activity-game-list, .activity-card, .activity-game-list-item')) return false;
-                    return card.querySelector('a[href*="/video/"], a[href*="live.bilibili.com"], a[href*="/live/"]');
-                });
-
-                // 当提取到视频卡片，或者超时（达到 25 次约 1.5 秒）
-                if (validCards.length > 0 || attempt > 25) {
-                    clearInterval(checkTimer);
-
-                    if (validCards.length > 0) {
-                        appendCards(validCards, iDoc, nextPage, nextUrl);
-                    } else {
-                        isAllLoaded = true;
-                    }
-
-                    finishPaging();
-                }
-            }, 60);
-        };
-    }
-
-    function appendCards(newCards, iDoc, nextPage, nextUrl) {
-        syncMainPageCards();
-
-        const mainContainer = getMainListContainer(document);
-        if (!mainContainer) return;
-
-        const toAppend = [];
-        for (const card of newCards) {
-            const wrapCard = card.closest('[class*="col_"], .video-list-item') || card;
-            const key = getCardKey(wrapCard);
-            if (key && !seenVideoKeyMap[key]) {
-                seenVideoKeyMap[key] = true;
-                toAppend.push(document.importNode(wrapCard, true));
-            }
-        }
-
-        if (toAppend.length > 0) {
-            mainContainer.append(...toAppend);
-            currentRequestedPage = nextPage;
-
-            // 同步历史 URL 地址
-            try {
-                window.history.replaceState(null, '', nextUrl);
-            } catch (e) {}
-
-            // 更新主页面的分页器 DOM 为 iframe 的分页器状态
-            const oldPager = document.querySelector('.search-page-pagination, .vui_pagenation');
-            const newPager = iDoc.querySelector('.search-page-pagination, .vui_pagenation');
-            if (oldPager && newPager) {
-                oldPager.innerHTML = newPager.innerHTML;
-            }
-
-            // 触发规则过滤与安检
-            filterDOMElements();
-        } else {
-            // 如果提取到的卡片都已存在，且无更多按钮，标记到底
-            if (!hasNextPage()) {
-                isAllLoaded = true;
-            }
-        }
-    }
-
-    function finishPaging() {
-        isPaging = false;
-        updateLoader(false);
-        updateBadge();
-
-        // 加载完成后，如果分页组件依然在可见窗口内（如当前页过滤后有效视频较少），且未暂停，继续尝试加载下一页
-        setTimeout(() => {
-            checkAndTriggerPaging();
-        }, 350);
-    }
-
-    // 检查分页器是否在可视窗口内
-    function checkAndTriggerPaging() {
-        if (!isWaterfallEnabled || isWaterfallPaused || isPaging || isAllLoaded) return;
-        const pager = document.querySelector('.search-page-pagination, .vui_pagenation, .vui_pagenation--btns');
-        if (!pager) return;
-
-        const rect = pager.getBoundingClientRect();
-        const inViewport = rect.top < (window.innerHeight + 150) && rect.bottom > -100;
-        if (inViewport) {
-            triggerLoadNextPage();
-        }
-    }
-
-    // 设置 IntersectionObserver 监听分页组件
-    function bindWaterfallObserver() {
-        if (!isWaterfallEnabled) return;
-
-        if (waterfallIntersectionObserver) {
-            waterfallIntersectionObserver.disconnect();
-        }
-
-        const pager = document.querySelector('.search-page-pagination, .vui_pagenation, .vui_pagenation--btns');
-        if (!pager) return;
-
-        waterfallIntersectionObserver = new IntersectionObserver((entries) => {
-            const entry = entries[0];
-            if (entry && entry.isIntersecting) {
-                triggerLoadNextPage();
-            }
-        }, {
-            root: null,
-            rootMargin: '120px',
-            threshold: 0
-        });
-
-        waterfallIntersectionObserver.observe(pager);
-    }
-
-    function initWaterfallModule() {
-        if (!isWaterfallEnabled) return;
-        // 若 body 尚未生成（如脚本在 document-start 执行），等待 DOMContentLoaded 再初始化
-        if (!document.body) return;
-
-        // 初始化当前页码
-        const params = new URLSearchParams(window.location.search);
-        const p = parseInt(params.get('page') || '1', 10);
-        currentRequestedPage = isNaN(p) ? 1 : p;
-        isAllLoaded = false;
-        isPaging = false;
-
-        document.documentElement.classList.add('bili-waterfall-enabled');
-        getOrCreateBadge();
-        updateBadge();
-        bindWaterfallObserver();
-    }
-
-    function destroyWaterfallModule() {
-        document.documentElement.classList.remove('bili-waterfall-enabled');
-        if (waterfallIntersectionObserver) {
-            waterfallIntersectionObserver.disconnect();
-            waterfallIntersectionObserver = null;
-        }
-        const badge = document.getElementById('bili-waterfall-badge');
-        if (badge) badge.remove();
-
-        const loader = document.getElementById('bili-waterfall-loader');
-        if (loader) loader.remove();
-
-        const iframe = document.getElementById('bili_waterfall_iframe');
-        if (iframe) iframe.remove();
     }
 
     console.log('[Bilibili 搜索净化] 2.1.0 已启动。');
