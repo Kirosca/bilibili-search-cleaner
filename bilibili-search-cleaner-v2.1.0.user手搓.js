@@ -20,21 +20,31 @@
     'use strict';
 
     // ==========================================
-    // 菜单管理与持久化配置（默认开启聚光灯模式）
+    // 菜单管理与持久化配置（聚光灯模式 & 筛选常驻）
     // ==========================================
     let isSpotlight = localStorage.getItem('bili_cleaner_spotlight') !== 'false';
-    let menuCommandId = null;
+    let isFilterSticky = localStorage.getItem('bili_cleaner_sticky_filter') !== 'false';
+    let spotlightMenuId = null;
+    let filterStickyMenuId = null;
 
     function registerMenu() {
         if (typeof GM_registerMenuCommand !== 'function') return;
 
         // 注销上一轮菜单，防止重复追加
-        if (typeof GM_unregisterMenuCommand === 'function' && menuCommandId !== null) {
-            try { GM_unregisterMenuCommand(menuCommandId); } catch (e) {}
+        if (typeof GM_unregisterMenuCommand === 'function') {
+            if (spotlightMenuId !== null) {
+                try { GM_unregisterMenuCommand(spotlightMenuId); } catch (e) {}
+            }
+            if (filterStickyMenuId !== null) {
+                try { GM_unregisterMenuCommand(filterStickyMenuId); } catch (e) {}
+            }
         }
 
-        const label = `聚光灯高亮模式: ${isSpotlight ? '✅ 已开启' : '❌ 已关闭（物理隐藏）'}`;
-        menuCommandId = GM_registerMenuCommand(label, toggleSpotlight);
+        const spotlightLabel = `聚光灯高亮模式: ${isSpotlight ? '✅ 已开启' : '❌ 已关闭（物理隐藏）'}`;
+        spotlightMenuId = GM_registerMenuCommand(spotlightLabel, toggleSpotlight);
+
+        const filterStickyLabel = `搜索筛选常驻: ${isFilterSticky ? '✅ 已开启' : '❌ 已关闭'}`;
+        filterStickyMenuId = GM_registerMenuCommand(filterStickyLabel, toggleFilterSticky);
     }
 
     function toggleSpotlight() {
@@ -49,7 +59,26 @@
         filterDOMElements();
     }
 
+    function toggleFilterSticky() {
+        isFilterSticky = !isFilterSticky;
+        localStorage.setItem('bili_cleaner_sticky_filter', String(isFilterSticky));
+        registerMenu();
+        applyFilterStickyState();
+    }
+
+    function applyFilterStickyState() {
+        if (document.documentElement) {
+            document.documentElement.classList.toggle('bili-filter-sticky-enabled', isFilterSticky);
+        }
+        if (isFilterSticky) {
+            bindStickyObserver();
+        } else {
+            document.querySelectorAll('div.more-conditions').forEach(resetConditions);
+        }
+    }
+
     registerMenu();
+    applyFilterStickyState();
  
     // 0. 接入 OpenCC 单例转换器（由 @require 本地持久化驱动）
     let sConverter = null;
@@ -127,6 +156,12 @@
             filter: none !important;
             transform: translateY(-2px);
             z-index: 10;
+        }
+
+        /* 4. 搜索筛选功能常驻相关样式 */
+        html.bili-filter-sticky-enabled :has(> div.search-channel-item.mt_sm.ml_sm),
+        html.bili-filter-sticky-enabled button.vui_button.vui_button--active-shrink.i_button_more {
+            display: none !important;
         }
     `;
     (document.head || document.documentElement).appendChild(styleElement);
@@ -251,10 +286,12 @@
     window.addEventListener('DOMContentLoaded', () => {
         scanInitialState();
         filterDOMElements();
+        bindStickyObserver();
     });
     window.addEventListener('load', () => {
         scanInitialState();
         filterDOMElements();
+        bindStickyObserver();
     });
 
     const originFetch = targetWindow.fetch;
@@ -416,7 +453,10 @@
     let rafId = null;
     const observer = new MutationObserver(() => {
         if (rafId) cancelAnimationFrame(rafId);
-        rafId = requestAnimationFrame(filterDOMElements);
+        rafId = requestAnimationFrame(() => {
+            filterDOMElements();
+            bindStickyObserver();
+        });
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
 
@@ -450,6 +490,55 @@
             }
         }
     });
+
+    // 9. 搜索筛选功能常驻：自动展开并维持筛选条件面板展开状态
+    function enforceConditions(element) {
+        if (!isFilterSticky || !element) return;
+
+        if (element.classList.contains('ov_hidden')) {
+            element.classList.remove('ov_hidden');
+        }
+
+        if (element.classList.contains('hide')) {
+            element.classList.remove('hide');
+        }
+
+        if (element.style.height !== 'auto') {
+            element.style.setProperty('height', 'auto', 'important');
+        }
+    }
+
+    // 关闭常驻时恢复默认折叠隐藏状态
+    function resetConditions(element) {
+        if (!element) return;
+        element.classList.add('ov_hidden');
+        element.classList.add('hide');
+        element.style.removeProperty('height');
+    }
+
+    const stickyObserver = new MutationObserver(mutations => {
+        if (!isFilterSticky) return;
+        for (const m of mutations) {
+            if (m.target && m.target.classList && m.target.classList.contains('more-conditions')) {
+                enforceConditions(m.target);
+            }
+        }
+    });
+
+    function bindStickyObserver() {
+        if (!isFilterSticky) return;
+        const targets = document.querySelectorAll('div.more-conditions');
+        targets.forEach(el => {
+            if (!el.dataset.stickyObserved) {
+                el.dataset.stickyObserved = 'true';
+                stickyObserver.observe(el, {
+                    attributes: true,
+                    attributeFilter: ['class', 'style']
+                });
+            }
+            enforceConditions(el);
+        });
+    }
 
     console.log('[Bilibili 搜索净化] 2.1.0 已启动。');
 })();
