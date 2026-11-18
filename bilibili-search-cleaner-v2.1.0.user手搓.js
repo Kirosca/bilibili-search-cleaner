@@ -50,13 +50,13 @@
             }
         }
 
-        const filterStickyLabel = `搜索筛选常驻: ${isFilterSticky ? '✅ 已开启' : '❌ 已关闭'}`;
+        const filterStickyLabel = `⚓ 搜索筛选常驻: ${isFilterSticky ? '✅ 已开启' : '❌ 已关闭'}`;
         filterStickyMenuId = GM_registerMenuCommand(filterStickyLabel, toggleFilterSticky);
 
-        const spotlightLabel = `聚光灯高亮模式: ${isSpotlight ? '✅ 已开启' : '❌ 已关闭'}`;
+        const spotlightLabel = `🔦 聚光灯高亮模式: ${isSpotlight ? '✅ 已开启' : '❌ 已关闭'}`;
         spotlightMenuId = GM_registerMenuCommand(spotlightLabel, toggleSpotlight);
 
-        const waterfallLabel = `无缝瀑布流: ${isWaterfall ? '✅ 已开启' : '❌ 已关闭'}`;
+        const waterfallLabel = `🌊 无缝瀑布流: ${isWaterfall ? '✅ 已开启' : '❌ 已关闭'}`;
         waterfallMenuId = GM_registerMenuCommand(waterfallLabel, toggleWaterfall);
     }
 
