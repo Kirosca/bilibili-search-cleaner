@@ -420,5 +420,36 @@
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
 
+    // 8. 快捷键支持：在搜索结果页按 '/' 快速聚焦并全选搜索框
+    function getSearchInput() {
+        return document.querySelector('input.search-input-el') ||
+               document.querySelector('input.search-input') ||
+               document.querySelector('.search-input-wrap input') ||
+               document.querySelector('.search-bar input') ||
+               document.querySelector('input[type="text"]');
+    }
+
+    document.addEventListener('keydown', function(e) {
+        // 当按键为 '/' 且未按下 Ctrl / Alt / Meta(Cmd) 组合键时触发
+        if ((e.key === '/' || e.code === 'Slash') && !e.ctrlKey && !e.altKey && !e.metaKey) {
+            const active = document.activeElement;
+
+            // 若当前已聚焦于输入框、文本域或可编辑区域，不拦截正常字符输入
+            const isEditing = active && (
+                active.tagName === 'INPUT' ||
+                active.tagName === 'TEXTAREA' ||
+                active.isContentEditable
+            );
+
+            if (!isEditing) {
+                const input = getSearchInput();
+                if (input) {
+                    e.preventDefault(); // 阻止 '/' 字符输入到框内
+                    input.focus();
+                }
+            }
+        }
+    });
+
     console.log('[Bilibili 搜索净化] 2.1.0 已启动。');
 })();
