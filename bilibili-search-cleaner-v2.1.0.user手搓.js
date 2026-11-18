@@ -216,9 +216,29 @@
     // 突破油猴沙箱隔离：锁定宿主真实 window 对象
     const targetWindow = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
 
-    // 首屏 SSR 初始状态补偿读取
+    // 首屏 SSR 初始状态补偿读取（适配现代 Vite + Pinia 架构与旧版 __INITIAL_STATE__）
     function scanInitialState() {
         try {
+            const pinia = targetWindow.__pinia;
+            if (pinia) {
+                // 1. 综合搜索：searchResponse.searchAllResponse.result
+                const allRes = pinia.searchResponse?.searchAllResponse?.result;
+                if (Array.isArray(allRes)) {
+                    for (const cat of allRes) {
+                        if (cat.data && Array.isArray(cat.data)) {
+                            cleanAdsOnly(cat.data);
+                        }
+                    }
+                }
+
+                // 2. 分类搜索（如 /video）：searchTypeResponse.searchTypeResponse.result
+                const typeRes = pinia.searchTypeResponse?.searchTypeResponse?.result;
+                if (Array.isArray(typeRes)) {
+                    cleanAdsOnly(typeRes);
+                }
+            }
+
+            // 3. 兜底兼容旧版 SSR 格式
             const state = targetWindow.__INITIAL_STATE__;
             if (state?.flow?.data && Array.isArray(state.flow.data)) {
                 cleanAdsOnly(state.flow.data);
@@ -228,7 +248,14 @@
         } catch (e) {}
     }
     scanInitialState();
-    window.addEventListener('DOMContentLoaded', scanInitialState);
+    window.addEventListener('DOMContentLoaded', () => {
+        scanInitialState();
+        filterDOMElements();
+    });
+    window.addEventListener('load', () => {
+        scanInitialState();
+        filterDOMElements();
+    });
 
     const originFetch = targetWindow.fetch;
     targetWindow.fetch = async function(...args) {
@@ -301,6 +328,11 @@
         try {
             const { normal, exclude, tags, ups } = getSearchKeywords();
             if (!normal.length && !exclude.length && !tags.length && !ups.length) return;
+
+            // 若包含标签筛选且本地 Tag 字典尚为空，主动扫描首屏状态
+            if (tags.length && videoTagMap.size === 0) {
+                scanInitialState();
+            }
  
             const currentSearchQuery = window.location.search;
             const currentQueryKey = currentSearchQuery + '_' + (isSpotlight ? 'spotlight' : 'hide');
@@ -318,8 +350,10 @@
                 const titleEl = card.querySelector('h3.bili-video-card__info--tit, h3.bili-live-card__info--tit, a[title], .bili-video-card__info--tit, h3');
                 if (!titleEl) return;
  
-                // 标记已安检完成
-                card.dataset.purifiedQuery = currentQueryKey;
+                // 只有在不依赖 Tag 或 Tag 数据已就绪时，才记录缓存标记，避免未就绪时被提前锁死
+                if (!tags.length || videoTagMap.size > 0) {
+                    card.dataset.purifiedQuery = currentQueryKey;
+                }
  
                 // 提取标题并进行反转义与标点规范化
                 const rawTitle = titleEl.getAttribute('title') || titleEl.textContent || '';
