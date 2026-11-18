@@ -378,6 +378,9 @@
             elements.forEach(el => {
                 const card = el.closest('[class*="col_"], .video-list-item, .bili-live-card') || el;
  
+                // 排除活动、游戏、付费课程等非视频横幅容器
+                if (card.closest('.activity-game-list, .activity-card, .activity-game-list-item')) return;
+
                 // 性能缓存：当前卡片在本次搜索词及当前模式下若已判定过，直接跳过，零重复计算
                 if (card.dataset.purifiedQuery === currentQueryKey) return;
  
