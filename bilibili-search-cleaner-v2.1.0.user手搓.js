@@ -8,7 +8,8 @@
 // @icon         https://www.bilibili.com/favicon.ico
 // @require      https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js
 // @run-at       document-start
-// @grant        none
+// @grant        GM_registerMenuCommand
+// @grant        GM_unregisterMenuCommand
 // @license      MIT
 // ==/UserScript==
  
@@ -16,6 +17,38 @@
  
 (function() {
     'use strict';
+
+    // ==========================================
+    // 菜单管理与持久化配置（默认开启聚光灯模式）
+    // ==========================================
+    let isSpotlight = localStorage.getItem('bili_cleaner_spotlight') !== 'false';
+    let menuCommandId = null;
+
+    function registerMenu() {
+        if (typeof GM_registerMenuCommand !== 'function') return;
+
+        // 注销上一轮菜单，防止重复追加
+        if (typeof GM_unregisterMenuCommand === 'function' && menuCommandId !== null) {
+            try { GM_unregisterMenuCommand(menuCommandId); } catch (e) {}
+        }
+
+        const label = `聚光灯高亮模式: ${isSpotlight ? '✅ 已开启' : '❌ 已关闭（物理隐藏）'}`;
+        menuCommandId = GM_registerMenuCommand(label, toggleSpotlight);
+    }
+
+    function toggleSpotlight() {
+        isSpotlight = !isSpotlight;
+        localStorage.setItem('bili_cleaner_spotlight', String(isSpotlight));
+        registerMenu();
+
+        // 清空所有卡片的安检缓存标记，并立即触发重新判定
+        document.querySelectorAll('[data-purified-query]').forEach(card => {
+            delete card.dataset.purifiedQuery;
+        });
+        filterDOMElements();
+    }
+
+    registerMenu();
  
     // 0. 接入 OpenCC 单例转换器（由 @require 本地持久化驱动）
     let sConverter = null;
@@ -229,13 +262,14 @@
             if (!normal.length && !exclude.length && !tags.length && !ups.length) return;
  
             const currentSearchQuery = window.location.search;
+            const currentQueryKey = currentSearchQuery + '_' + (isSpotlight ? 'spotlight' : 'hide');
             const elements = document.querySelectorAll('.bili-video-card, .video-list-item, div[class*="col_"], .bili-live-card');
  
             elements.forEach(el => {
                 const card = el.closest('[class*="col_"], .video-list-item, .bili-live-card') || el;
  
-                // 性能缓存：当前卡片在本次搜索词下若已判定过，直接跳过，零重复计算
-                if (card.dataset.purifiedQuery === currentSearchQuery) return;
+                // 性能缓存：当前卡片在本次搜索词及当前模式下若已判定过，直接跳过，零重复计算
+                if (card.dataset.purifiedQuery === currentQueryKey) return;
  
                 const linkEl = card.querySelector('a[href*="/video/"], a[href*="/cheese/"], a[href*="live.bilibili.com"], a[href*="/live/"]');
                 if (!linkEl) return;
@@ -244,7 +278,7 @@
                 if (!titleEl) return;
  
                 // 标记已安检完成
-                card.dataset.purifiedQuery = currentSearchQuery;
+                card.dataset.purifiedQuery = currentQueryKey;
  
                 // 提取标题并进行反转义与标点规范化
                 const rawTitle = titleEl.getAttribute('title') || titleEl.textContent || '';
@@ -277,8 +311,7 @@
                     shouldHide = true;
                 }
 
-                // 聚光灯高亮 vs 传统物理隐藏判定
-                const isSpotlight = true;
+                // 聚光灯高亮 vs 传统物理隐藏判定（跟随全局/菜单选项 isSpotlight）
                 if (isSpotlight) {
                     card.style.removeProperty('display');
                     if (!shouldHide) {
