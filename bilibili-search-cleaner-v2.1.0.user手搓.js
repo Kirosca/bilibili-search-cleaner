@@ -10,6 +10,7 @@
 // @run-at       document-start
 // @grant        GM_registerMenuCommand
 // @grant        GM_unregisterMenuCommand
+// @grant        unsafeWindow
 // @license      MIT
 // ==/UserScript==
  
@@ -133,7 +134,14 @@
     // 3. 解析当前 URL 中的关键词分类 (普通词 / -排除词 / #Tag词 / @UP主词)
     function getSearchKeywords() {
         const params = new URLSearchParams(window.location.search);
-        const rawParam = params.get('keyword') || '';
+        let rawParam = params.get('keyword') || '';
+        // 兼容处理：若浏览器将未编码的 # 截断至 Hash Fragment，补充拼回
+        if (window.location.hash && !rawParam.includes('#')) {
+            const hashContent = decodeURIComponent(window.location.hash.replace(/^#/, ''));
+            if (hashContent) {
+                rawParam += ' #' + hashContent;
+            }
+        }
         const rawKeyword = cleanText(decodeURIComponent(rawParam.replace(/\+/g, ' ')));
         if (!rawKeyword) return { normal: [], exclude: [], tags: [], ups: [] };
  
@@ -183,22 +191,47 @@
  
     function cleanAdsOnly(list) {
         if (!Array.isArray(list)) return list;
- 
+
         return list.filter(v => {
             if (!v || typeof v !== 'object') return true;
- 
-            const id = v.bvid || v.aid || v.id || v.season_id || v.roomid;
-            const rawTags = cleanText(v.tag || v.keywords || v.tags || '');
-            if (id) videoTagMap.set(String(id), rawTags);
- 
+
+            const tagText = [v.tag, v.keywords, v.tags, v.typename].filter(Boolean).join(',');
+            const rawTags = cleanText(tagText);
+
+            if (v.bvid) videoTagMap.set(String(v.bvid), rawTags);
+            if (v.aid) {
+                videoTagMap.set(String(v.aid), rawTags);
+                videoTagMap.set("av" + v.aid, rawTags);
+            }
+            if (v.id) videoTagMap.set(String(v.id), rawTags);
+            if (v.season_id) videoTagMap.set(String(v.season_id), rawTags);
+            if (v.roomid) videoTagMap.set(String(v.roomid), rawTags);
+
             if (v.is_ad_loc || v.is_promoted || v.goto === 'ad' || v.type === 'ad') return false;
- 
+
             return true;
         });
     }
  
-    const originFetch = window.fetch;
-    window.fetch = async function(...args) {
+    // 突破油猴沙箱隔离：锁定宿主真实 window 对象
+    const targetWindow = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
+
+    // 首屏 SSR 初始状态补偿读取
+    function scanInitialState() {
+        try {
+            const state = targetWindow.__INITIAL_STATE__;
+            if (state?.flow?.data && Array.isArray(state.flow.data)) {
+                cleanAdsOnly(state.flow.data);
+            } else if (state?.result && Array.isArray(state.result)) {
+                cleanAdsOnly(state.result);
+            }
+        } catch (e) {}
+    }
+    scanInitialState();
+    window.addEventListener('DOMContentLoaded', scanInitialState);
+
+    const originFetch = targetWindow.fetch;
+    targetWindow.fetch = async function(...args) {
         let urlStr = '';
         if (typeof args[0] === 'string') {
             urlStr = args[0];
@@ -239,6 +272,14 @@
                     }
                 }
  
+                // 数据就绪后唤醒重新安检：清除时序过早判定的缓存并重新执行过滤
+                setTimeout(() => {
+                    document.querySelectorAll('[data-purified-query]').forEach(card => {
+                        delete card.dataset.purifiedQuery;
+                    });
+                    filterDOMElements();
+                }, 50);
+
                 return new Response(JSON.stringify(data), {
                     status: response.status,
                     statusText: response.statusText,
