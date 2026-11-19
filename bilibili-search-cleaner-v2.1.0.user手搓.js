@@ -219,7 +219,6 @@
         }
 
         /* 5. 瀑布流相关样式 */
-        html.bili-waterfall-enabled .search-page-pagination,
         html.bili-waterfall-enabled .vui_pagenation,
         html.bili-waterfall-enabled .vui_pagenation--btns {
             visibility: hidden !important;
@@ -626,7 +625,7 @@
             // 此时旧 IntersectionObserver 会停留在脱离文档流的孤立节点上导致失效，
             // 通过监测活跃节点的 isConnected 状态与引用一致性，实现无感自愈重绑
             if (isWaterfall && typeof bindWaterfallObserver === 'function') {
-                const currentPager = document.querySelector('.search-page-pagination, .vui_pagenation, .vui_pagenation--btns');
+                const currentPager = document.querySelector('.vui_pagenation, .vui_pagenation--btns');
                 if (currentPager && (!currentObservedPager || currentObservedPager !== currentPager || !currentObservedPager.isConnected)) {
                     bindWaterfallObserver();
                 }
@@ -939,16 +938,22 @@
                 }
             });
         }
-        const targetPager = pager || document.querySelector('.search-page-pagination, .vui_pagenation, .vui_pagenation--btns');
+        const targetPager = pager || document.querySelector('.vui_pagenation, .vui_pagenation--btns');
         if (targetPager && targetPager.parentNode && loader.nextSibling !== targetPager) {
             targetPager.parentNode.insertBefore(loader, targetPager);
+        } else if (!targetPager) {
+            // 无分页组件场景（例如单页搜索结果）：安全挂载于主视频列表容器下方
+            const mainSection = document.querySelector('div.video.i_wrapper.search-all-list, div.search-page-video.i_wrapper, div.video.i_wrapper') || getMainListContainer();
+            if (mainSection && mainSection.parentNode && loader.parentNode !== mainSection.parentNode) {
+                mainSection.parentNode.insertBefore(loader, mainSection.nextSibling);
+            }
         }
         adjustLoaderCentering();
         return loader;
     }
 
     function getOrCreateLoader() {
-        const pager = document.querySelector('.search-page-pagination, .vui_pagenation, .vui_pagenation--btns');
+        const pager = document.querySelector('.vui_pagenation, .vui_pagenation--btns');
         return ensureLoaderPosition(pager);
     }
 
@@ -956,7 +961,7 @@
     // 1. 若无 .vui_pagenation 分页组件，说明搜索结果仅有 1 页，首屏即为末页
     // 2. 存在分页器时，定位「下一页」侧边按钮的前序数字按钮，读取其标号即为最大页数
     function getDynamicMaxPage() {
-        const pager = document.querySelector('.vui_pagenation, .search-page-pagination');
+        const pager = document.querySelector('.vui_pagenation, .vui_pagenation--btns');
         if (!pager) {
             return 1;
         }
@@ -1358,7 +1363,7 @@
     // 视口相交检测与分页拉取触发器：兼备监听器离线脱落自愈功能
     function checkAndTriggerPaging() {
         if (!isWaterfall || isWaterfallPaused || isPaging || isAllLoaded) return;
-        const pager = document.querySelector('.search-page-pagination, .vui_pagenation, .vui_pagenation--btns');
+        const pager = document.querySelector('.vui_pagenation, .vui_pagenation--btns');
         if (!pager) return;
 
         // 若发现当前监听对象已脱离 DOM 树（如 Vue 切换组件后销毁原节点），自愈重新绑定
@@ -1379,7 +1384,7 @@
     function bindWaterfallObserver() {
         if (!isWaterfall) return;
 
-        const pager = document.querySelector('.search-page-pagination, .vui_pagenation, .vui_pagenation--btns');
+        const pager = document.querySelector('.vui_pagenation, .vui_pagenation--btns');
         if (!pager) return;
 
         // 若当前已经正在监听同一个且仍然挂载在 DOM 树上的有效分页器，无需重复创建
