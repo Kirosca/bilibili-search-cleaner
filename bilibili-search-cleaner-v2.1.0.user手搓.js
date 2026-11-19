@@ -226,7 +226,6 @@
             display: none;
             align-items: center;
             justify-content: center;
-            padding: 24px 0 36px;
             width: 100%;
             color: #00aeec;
             font-size: 14px;
