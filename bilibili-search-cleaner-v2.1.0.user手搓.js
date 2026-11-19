@@ -1136,18 +1136,28 @@
                 el.setAttribute('data-bsb-bvid', item.bvid);
             });
 
-            // 替换封面图片：彻底清除 picture 内部所有遗留的旧 source 标签，防止浏览器优先匹配旧 srcset
+            // 替换封面图片：彻底清除 picture 内部所有遗留的旧 source 标签，并重建全新的 img 元素，
+            // 杜绝浏览器继承母卡已解码的图片内存位图导致在新封面载入前闪现母卡封面的问题
             const pictureEl = col.querySelector('picture');
             if (pictureEl) {
                 pictureEl.querySelectorAll('source').forEach(s => s.remove());
             }
 
-            const imgEl = col.querySelector('.bili-video-card__cover img, picture img, img');
-            if (imgEl) {
+            const oldImg = col.querySelector('.bili-video-card__cover img, picture img, img');
+            if (oldImg) {
                 const finalPic = coverUrl ? (coverUrl + '@672w_378h_1c_!web-search-common-cover.webp') : '';
-                imgEl.src = finalPic;
-                imgEl.alt = cleanTit;
-                imgEl.removeAttribute('srcset');
+                const newImg = document.createElement('img');
+                // 继承母卡图片的作用域样式属性与 class，排除 src、srcset 及母卡旧加载事件
+                for (const attr of oldImg.attributes) {
+                    const name = attr.name.toLowerCase();
+                    if (name !== 'src' && name !== 'srcset' && !name.startsWith('on')) {
+                        newImg.setAttribute(attr.name, attr.value);
+                    }
+                }
+                newImg.alt = cleanTit;
+                newImg.loading = 'lazy';
+                newImg.src = finalPic;
+                oldImg.replaceWith(newImg);
             }
 
             // 替换作者与发布时间
