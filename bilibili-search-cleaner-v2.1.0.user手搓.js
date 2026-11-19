@@ -1383,17 +1383,39 @@
         }
     }
 
+    // 判定当前是否满足触发下一页加载的条件（视口进入预加载缓冲带且尚未全部加载完毕）
+    function isPagingConditionMet() {
+        if (!isWaterfall || isWaterfallPaused || isAllLoaded) return false;
+        if (currentRequestedPage >= maxWaterfallPage) return false;
+        const target = document.querySelector('.vui_pagenation, .vui_pagenation--btns') || document.getElementById('bili-waterfall-loader');
+        if (!target) return false;
+        const rect = target.getBoundingClientRect();
+        return rect.top < (window.innerHeight + 1000) && rect.bottom > -100;
+    }
+
     function finishPaging(success = true) {
         isPaging = false;
-        if (isAllLoaded) {
-            updateLoader(true, '已无更多', true);
-        } else {
-            updateLoader(false);
-        }
         updateBadge();
 
-        if (success && !isAllLoaded && !isWaterfallPaused) {
-            setTimeout(checkAndTriggerPaging, 300);
+        if (isAllLoaded) {
+            updateLoader(true, '已无更多', true);
+            return;
+        }
+
+        // 核心优化：若添加视频后依然符合已有的「加载下一页」视口判定，则不移除 active 类，保持连贯加载
+        if (success && !isWaterfallPaused && isPagingConditionMet()) {
+            updateLoader(true, `正在加载第 ${currentRequestedPage + 1} 页视频...`);
+            setTimeout(() => {
+                if (!isPaging && !isAllLoaded && !isWaterfallPaused && isPagingConditionMet()) {
+                    triggerLoadNextPage();
+                }
+            }, 60);
+        } else {
+            // 已推移至预加载缓冲带之外，平滑收起加载状态条
+            updateLoader(false);
+            if (success && !isAllLoaded && !isWaterfallPaused) {
+                setTimeout(checkAndTriggerPaging, 300);
+            }
         }
     }
 
@@ -1409,7 +1431,7 @@
     // 视口相交检测与分页拉取触发器：兼备监听器离线脱落自愈功能
     function checkAndTriggerPaging() {
         if (!isWaterfall || isWaterfallPaused || isPaging || isAllLoaded) return;
-        const pager = document.querySelector('.vui_pagenation, .vui_pagenation--btns');
+        const pager = document.querySelector('.vui_pagenation, .vui_pagenation--btns') || document.getElementById('bili-waterfall-loader');
         if (!pager) return;
 
         // 若发现当前监听对象已脱离 DOM 树（如 Vue 切换组件后销毁原节点），自愈重新绑定
@@ -1417,10 +1439,7 @@
             bindWaterfallObserver();
         }
 
-        const rect = pager.getBoundingClientRect();
-        // 提前量优化：将触发阈值提升至视口下方 1000px（约 2~3 行卡片高度），实现无感静默预加载
-        const inViewport = rect.top < (window.innerHeight + 1000) && rect.bottom > -100;
-        if (inViewport) {
+        if (isPagingConditionMet()) {
             triggerLoadNextPage();
         }
     }
