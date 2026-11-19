@@ -27,9 +27,9 @@
     // ==========================================
     // 菜单管理与持久化配置（聚光灯模式 & 筛选常驻 & 无缝瀑布流）
     // ==========================================
-    let isSpotlight = localStorage.getItem('bili_cleaner_spotlight') !== 'false';
-    let isFilterSticky = localStorage.getItem('bili_cleaner_sticky_filter') !== 'false';
-    let isWaterfall = localStorage.getItem('bili_cleaner_waterfall') !== 'false';
+    let isSpotlight = localStorage.getItem('bili_cleaner_spotlight') === 'true';
+    let isFilterSticky = localStorage.getItem('bili_cleaner_sticky_filter') === 'true';
+    let isWaterfall = localStorage.getItem('bili_cleaner_waterfall') === 'true';
     let spotlightMenuId = null;
     let filterStickyMenuId = null;
     let waterfallMenuId = null;
