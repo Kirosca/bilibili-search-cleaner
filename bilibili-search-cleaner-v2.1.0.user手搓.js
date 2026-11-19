@@ -1237,7 +1237,8 @@
         }
 
         const rect = pager.getBoundingClientRect();
-        const inViewport = rect.top < (window.innerHeight + 250) && rect.bottom > -100;
+        // 提前量优化：将触发阈值提升至视口下方 1000px（约 2~3 行卡片高度），实现无感静默预加载
+        const inViewport = rect.top < (window.innerHeight + 1000) && rect.bottom > -100;
         if (inViewport) {
             triggerLoadNextPage();
         }
@@ -1272,7 +1273,7 @@
             }
         }, {
             root: null,
-            rootMargin: '250px',
+            rootMargin: '1000px 0px',
             threshold: 0
         });
 
@@ -1333,6 +1334,8 @@
             updateLoader(true, '已无更多', true);
         } else {
             updateLoader(false);
+            // 重置完成后若首屏内容未占满预加载缓冲带（1000px），提前静默预载下一页
+            setTimeout(checkAndTriggerPaging, 300);
         }
 
         bindWaterfallObserver();
@@ -1355,6 +1358,8 @@
             updateLoader(true, '已无更多', true);
         } else {
             updateLoader(false);
+            // 重置完成后若首屏内容未占满预加载缓冲带（1000px），提前静默预载下一页
+            setTimeout(checkAndTriggerPaging, 300);
         }
     }
 
@@ -1460,6 +1465,8 @@
                 updateLoader(false);
             }
             bindWaterfallObserver();
+            // 首屏初始化后校验视口高度，若大屏或首屏卡片较少导致缓冲不足，提前静默预载下一页
+            setTimeout(checkAndTriggerPaging, 300);
         } else {
             document.documentElement.classList.remove('bili-waterfall-enabled');
             if (waterfallObserver) {
