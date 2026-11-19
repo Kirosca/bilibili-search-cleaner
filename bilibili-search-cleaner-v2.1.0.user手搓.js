@@ -1013,8 +1013,11 @@
     }
 
     // 生成终态文案（方案 B+C 融合：客观归因区分真实到底与系统检索上限，并内置行动闭环入口）
+    // 依据 B 站 1000 条检索截断与不同屏幕列宽（4/5/6/7 列 × 6 行），自适应四档系统检索饱和上限：
+    // 4 列(24/页) -> 42 页 | 5 列(30/页) -> 34 页 | 6 列(36/页) -> 28 页 | 7 列(42/页) -> 24 页
     function getEndedTipHtml() {
-        const isMaxLimit = currentRequestedPage >= 34;
+        const SYSTEM_MAX_PAGES = new Set([24, 28, 34, 42]);
+        const isMaxLimit = SYSTEM_MAX_PAGES.has(currentRequestedPage) || currentRequestedPage >= 34;
         const reasonText = isMaxLimit 
             ? `已达系统检索上限（共 ${currentRequestedPage} 页）` 
             : `已展示全部相关视频（共 ${currentRequestedPage} 页）`;
