@@ -83,6 +83,30 @@
         isWaterfall = !isWaterfall;
         localStorage.setItem('bili_cleaner_waterfall', String(isWaterfall));
         registerMenu();
+
+        // 1. 优先触发官方分页组件的「第 1 页」按钮，通知 B 站内部路由与状态回到首页
+        try {
+            const firstPageBtn = document.querySelector('button.vui_pagenation--btn-num[aria-label^="第 1 页"]');
+            if (firstPageBtn) {
+                firstPageBtn.click();
+            }
+        } catch (e) {}
+
+        // 2. 强制重置瀑布流核心状态到第 1 页
+        currentRequestedPage = 1;
+        seenBvidMap.clear();
+        isAllLoaded = false;
+        isPaging = false;
+
+        // 3. 强效兜底：若当前处于非第 1 页（如第 6 页），直接剔除 URL 中的 page 参数并重定向至第 1 页流式启动，杜绝前置内容缺失
+        const url = new URL(window.location.href);
+        if (url.searchParams.has('page') && url.searchParams.get('page') !== '1') {
+            url.searchParams.delete('page');
+            window.location.href = url.toString();
+            return;
+        }
+
+        // 4. 处于第 1 页时直接刷新使瀑布流生命周期生效
         window.location.reload();
     }
 
@@ -441,6 +465,16 @@
                     filterDOMElements();
                 }, 50);
 
+                // 官方搜索响应握手：当检测到 B 站发起官方搜索（非瀑布流内部翻页请求）并返回数据时，
+                // 延时等待 Vue 将新搜索首屏结果与新分页器渲染挂载到 DOM 树，再唤醒瀑布流状态同步
+                if (!isInternalPaging && !isPaging && isWaterfall) {
+                    setTimeout(() => {
+                        if (typeof onOfficialSearchMounted === 'function') {
+                            onOfficialSearchMounted();
+                        }
+                    }, 120);
+                }
+
                 return new Response(JSON.stringify(data), {
                     status: response.status,
                     statusText: response.statusText,
@@ -556,6 +590,16 @@
         rafId = requestAnimationFrame(() => {
             filterDOMElements();
             bindStickyObserver();
+            // 分页器节点存活与换新自愈检测：
+            // B 站 Vue 在单页切换结果时会直接销毁旧分页器并创建新节点，
+            // 此时旧 IntersectionObserver 会停留在脱离文档流的孤立节点上导致失效，
+            // 通过监测活跃节点的 isConnected 状态与引用一致性，实现无感自愈重绑
+            if (isWaterfall && typeof bindWaterfallObserver === 'function') {
+                const currentPager = document.querySelector('.search-page-pagination, .vui_pagenation, .vui_pagenation--btns');
+                if (currentPager && (!currentObservedPager || currentObservedPager !== currentPager || !currentObservedPager.isConnected)) {
+                    bindWaterfallObserver();
+                }
+            }
             if (typeof checkSearchChange === 'function') {
                 checkSearchChange();
             }
@@ -651,6 +695,8 @@
     let isAllLoaded = false;
     let currentRequestedPage = 1;
     let waterfallObserver = null;
+    let currentObservedPager = null;
+    let isInternalPaging = false;
     const seenBvidMap = new Set();
     let cachedWbiKeys = null;
 
@@ -822,7 +868,8 @@
         }
     }
 
-    function getOrCreateLoader() {
+    // 维护加载器位置：保证 loader 节点始终插在当前活跃分页器的正前方（避免因 Vue 重新渲染导致 loader 脱落或位移）
+    function ensureLoaderPosition(pager) {
         if (!isWaterfall) return null;
         let loader = document.getElementById('bili-waterfall-loader');
         if (!loader) {
@@ -833,19 +880,25 @@
                 <div class="bili-waterfall-spinner"></div>
                 <span class="bili-waterfall-loader-text">正在加载下一页视频...</span>
             `;
-            const pager = document.querySelector('.search-page-pagination, .vui_pagenation, .vui_pagenation--btns');
-            if (pager && pager.parentNode) {
-                pager.parentNode.insertBefore(loader, pager);
-            }
+        }
+        const targetPager = pager || document.querySelector('.search-page-pagination, .vui_pagenation, .vui_pagenation--btns');
+        if (targetPager && targetPager.parentNode && loader.nextSibling !== targetPager) {
+            targetPager.parentNode.insertBefore(loader, targetPager);
         }
         return loader;
     }
 
+    function getOrCreateLoader() {
+        const pager = document.querySelector('.search-page-pagination, .vui_pagenation, .vui_pagenation--btns');
+        return ensureLoaderPosition(pager);
+    }
+
+    // 更新加载状态条：支持状态重置（解除 active/ended 样式并将文本重置为就绪提示）
     function updateLoader(show, text = '正在加载下一页视频...', ended = false) {
         const loader = getOrCreateLoader();
         if (!loader) return;
+        const txtEl = loader.querySelector('.bili-waterfall-loader-text');
         if (show) {
-            const txtEl = loader.querySelector('.bili-waterfall-loader-text');
             if (txtEl) txtEl.textContent = text;
             loader.classList.add('active');
             if (ended) {
@@ -854,6 +907,9 @@
                 loader.classList.remove('ended');
             }
         } else {
+            if (txtEl && !isAllLoaded) {
+                txtEl.textContent = '正在加载下一页视频...';
+            }
             if (!isAllLoaded) {
                 loader.classList.remove('active', 'ended');
             }
@@ -1121,12 +1177,16 @@
                 appendCards(videoItems);
                 currentRequestedPage = nextPage;
 
-                // 同步当前页码到 URL
+                // 同步当前页码到 URL（标记内部翻页，防止被切页侦听误当做外部跳页）
                 try {
                     const newUrl = new URL(window.location.href);
                     newUrl.searchParams.set('page', String(nextPage));
+                    isInternalPaging = true;
                     window.history.replaceState(null, '', newUrl.toString());
-                } catch (e) {}
+                    setTimeout(() => { isInternalPaging = false; }, 100);
+                } catch (e) {
+                    isInternalPaging = false;
+                }
 
                 // 达到第 34 页时标记为最后一页
                 if (currentRequestedPage >= 34) {
@@ -1156,26 +1216,54 @@
         }
     }
 
+    // 重新扫描首屏卡片提取已有视频 BV 号，用于增量去重防抖
+    function refreshSeenBvidsFromDOM() {
+        seenBvidMap.clear();
+        document.querySelectorAll('a[href*="/video/"]').forEach(a => {
+            const m = a.href.match(/\/video\/([A-Za-z0-9]+)/);
+            if (m) seenBvidMap.add(m[1].toLowerCase());
+        });
+    }
+
+    // 视口相交检测与分页拉取触发器：兼备监听器离线脱落自愈功能
     function checkAndTriggerPaging() {
         if (!isWaterfall || isWaterfallPaused || isPaging || isAllLoaded) return;
         const pager = document.querySelector('.search-page-pagination, .vui_pagenation, .vui_pagenation--btns');
         if (!pager) return;
 
+        // 若发现当前监听对象已脱离 DOM 树（如 Vue 切换组件后销毁原节点），自愈重新绑定
+        if (currentObservedPager !== pager || !pager.isConnected) {
+            bindWaterfallObserver();
+        }
+
         const rect = pager.getBoundingClientRect();
-        const inViewport = rect.top < (window.innerHeight + 150) && rect.bottom > -100;
+        const inViewport = rect.top < (window.innerHeight + 250) && rect.bottom > -100;
         if (inViewport) {
             triggerLoadNextPage();
         }
     }
 
+    // 绑定瀑布流交叉观察者（IntersectionObserver）：
+    // 监听分页器触底可见性，并严格维护单例与活跃节点引用，杜绝在孤立脱轨节点上无效监听
     function bindWaterfallObserver() {
         if (!isWaterfall) return;
-        if (waterfallObserver) {
-            waterfallObserver.disconnect();
-        }
 
         const pager = document.querySelector('.search-page-pagination, .vui_pagenation, .vui_pagenation--btns');
         if (!pager) return;
+
+        // 若当前已经正在监听同一个且仍然挂载在 DOM 树上的有效分页器，无需重复创建
+        if (currentObservedPager === pager && pager.isConnected && waterfallObserver) {
+            ensureLoaderPosition(pager);
+            return;
+        }
+
+        if (waterfallObserver) {
+            waterfallObserver.disconnect();
+            waterfallObserver = null;
+        }
+
+        currentObservedPager = pager;
+        ensureLoaderPosition(pager);
 
         waterfallObserver = new IntersectionObserver((entries) => {
             const entry = entries[0];
@@ -1184,7 +1272,7 @@
             }
         }, {
             root: null,
-            rootMargin: '100px',
+            rootMargin: '250px',
             threshold: 0
         });
 
@@ -1192,6 +1280,7 @@
     }
 
     let lastSearchSign = '';
+    // 提取当前搜索上下文唯一特征（路径、关键词、排序规则、时长与分区筛选）
     function getSearchSignature() {
         const p = new URLSearchParams(window.location.search);
         return [
@@ -1203,40 +1292,94 @@
         ].join('||');
     }
 
-    function checkSearchChange() {
-        if (!isWaterfall) return;
+    // 深度重置瀑布流状态：
+    // 1. isNewSearch = true 时，彻底解除旧搜索（如 34 页）的所有已加载完状态，归零到第 1 页并清洗 URL 参数
+    // 2. 外部切页时同步校准当前页数并刷新去重字典
+    function resetWaterfallForNewSearch(isNewSearch = false) {
         const currentSign = getSearchSignature();
-        if (lastSearchSign && currentSign !== lastSearchSign) {
-            resetWaterfallForNewSearch();
-        } else if (!lastSearchSign) {
-            lastSearchSign = currentSign;
+        const signChanged = !lastSearchSign || currentSign !== lastSearchSign;
+        lastSearchSign = currentSign;
+
+        const p = parseInt(new URLSearchParams(window.location.search).get('page') || '1', 10);
+        const urlPage = isNaN(p) ? 1 : p;
+
+        if (signChanged || isNewSearch) {
+            // 新搜索场景：强制回到第 1 页并解除已全部加载完毕的状态
+            currentRequestedPage = 1;
+            isAllLoaded = false;
+
+            // 若 URL 中残留之前搜索的非首页 page 参数（如第 34 页），强制清洗 URL
+            try {
+                const u = new URL(window.location.href);
+                if (u.searchParams.has('page') && u.searchParams.get('page') !== '1') {
+                    u.searchParams.delete('page');
+                    isInternalPaging = true;
+                    window.history.replaceState(null, '', u.toString());
+                    setTimeout(() => { isInternalPaging = false; }, 100);
+                }
+            } catch (e) {
+                isInternalPaging = false;
+            }
+        } else {
+            currentRequestedPage = urlPage;
+            isAllLoaded = currentRequestedPage >= 34;
         }
+
+        isPaging = false;
+        refreshSeenBvidsFromDOM();
+        updateBadge();
+
+        if (isAllLoaded) {
+            updateLoader(true, '已无更多', true);
+        } else {
+            updateLoader(false);
+        }
+
+        bindWaterfallObserver();
     }
 
-    function resetWaterfallForNewSearch() {
-        lastSearchSign = getSearchSignature();
+    // B 站官方搜索响应首屏渲染完成钩子：重新采样 DOM 首屏卡片并接管新挂载的分页器
+    function onOfficialSearchMounted() {
+        if (!isWaterfall) return;
         const p = parseInt(new URLSearchParams(window.location.search).get('page') || '1', 10);
-        currentRequestedPage = isNaN(p) ? 1 : p;
-        isAllLoaded = currentRequestedPage >= 34;
+        const urlPage = isNaN(p) ? 1 : p;
+        if (urlPage === 1) {
+            currentRequestedPage = 1;
+            isAllLoaded = false;
+        }
         isPaging = false;
-        seenBvidMap.clear();
-
-        // 重新收集当前首屏已有 bvid
-        document.querySelectorAll('a[href*="/video/"]').forEach(a => {
-            const m = a.href.match(/\/video\/([A-Za-z0-9]+)/);
-            if (m) seenBvidMap.add(m[1].toLowerCase());
-        });
-
+        refreshSeenBvidsFromDOM();
+        bindWaterfallObserver();
         updateBadge();
         if (isAllLoaded) {
             updateLoader(true, '已无更多', true);
         } else {
             updateLoader(false);
         }
-        bindWaterfallObserver();
     }
 
-    // 劫持单页路由变更，确保重新搜索时立即重置状态到第 1 页
+    // 侦测当前搜索或页码变化并智能分流分发重置逻辑
+    function checkSearchChange() {
+        if (!isWaterfall) return;
+        if (isInternalPaging) return;
+
+        const currentSign = getSearchSignature();
+        const p = parseInt(new URLSearchParams(window.location.search).get('page') || '1', 10);
+        const urlPage = isNaN(p) ? 1 : p;
+
+        const signChanged = lastSearchSign && currentSign !== lastSearchSign;
+        const pageChanged = urlPage !== currentRequestedPage;
+
+        if (signChanged) {
+            resetWaterfallForNewSearch(true);
+        } else if (pageChanged) {
+            resetWaterfallForNewSearch(false);
+        } else if (!lastSearchSign) {
+            lastSearchSign = currentSign;
+        }
+    }
+
+    // 劫持单页路由变更，确保重新搜索或外部切页时立即重置瀑布流状态
     try {
         const originPushState = targetWindow.history.pushState;
         if (originPushState) {
@@ -1257,6 +1400,41 @@
         targetWindow.addEventListener('popstate', () => {
             setTimeout(checkSearchChange, 50);
         });
+
+        // 委托监听分页按钮点击，单页切页时实时校准瀑布流页码
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('button.vui_pagenation--btn, button.vui_pagenation--btn-num');
+            if (btn) {
+                setTimeout(checkSearchChange, 80);
+            }
+        }, true);
+
+        // 监听搜索框回车与搜索按钮点击，前置触发瀑布流状态复位
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const active = document.activeElement;
+                if (active && (active.tagName === 'INPUT' || active.classList.contains('search-input'))) {
+                    setTimeout(() => {
+                        resetWaterfallForNewSearch(true);
+                    }, 100);
+                }
+            }
+        }, true);
+
+        document.addEventListener('click', (e) => {
+            const searchBtn = e.target.closest('.search-button, .search-btn, .nav-search-btn, button[class*="search"]');
+            if (searchBtn) {
+                setTimeout(() => {
+                    resetWaterfallForNewSearch(true);
+                }, 100);
+            }
+        }, true);
+
+        // 视口滚动兜底监听：在观察者偶发失效或极端快速滚动时，确保触底能正常触发增量拉取
+        window.addEventListener('scroll', () => {
+            if (!isWaterfall || isWaterfallPaused || isPaging || isAllLoaded) return;
+            checkAndTriggerPaging();
+        }, { passive: true });
     } catch (e) {}
 
     function syncWaterfallLifecycle() {
@@ -1266,12 +1444,7 @@
             document.documentElement.classList.add('bili-waterfall-enabled');
 
             lastSearchSign = getSearchSignature();
-
-            // 收集首屏已有 bvid
-            document.querySelectorAll('a[href*="/video/"]').forEach(a => {
-                const m = a.href.match(/\/video\/([A-Za-z0-9]+)/);
-                if (m) seenBvidMap.add(m[1].toLowerCase());
-            });
+            refreshSeenBvidsFromDOM();
 
             const p = parseInt(new URLSearchParams(window.location.search).get('page') || '1', 10);
             currentRequestedPage = isNaN(p) ? 1 : p;
@@ -1293,6 +1466,7 @@
                 waterfallObserver.disconnect();
                 waterfallObserver = null;
             }
+            currentObservedPager = null;
             const badge = document.getElementById('bili-waterfall-badge');
             if (badge) badge.remove();
 
