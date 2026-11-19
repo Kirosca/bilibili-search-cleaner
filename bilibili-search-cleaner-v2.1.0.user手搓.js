@@ -725,6 +725,7 @@
     let isPaging = false;
     let isAllLoaded = false;
     let currentRequestedPage = 1;
+    let maxWaterfallPage = 34;
     let waterfallObserver = null;
     let currentObservedPager = null;
     let isInternalPaging = false;
@@ -951,12 +952,64 @@
         return ensureLoaderPosition(pager);
     }
 
-    // 生成终态文案（方案 B+C 融合：客观归因区分真实到底与 34 页接口上限，并内置行动闭环入口）
+    // 动态提取当前搜索结果最大页码：
+    // 1. 若无 .vui_pagenation 分页组件，说明搜索结果仅有 1 页，首屏即为末页
+    // 2. 存在分页器时，定位「下一页」侧边按钮的前序数字按钮，读取其标号即为最大页数
+    function getDynamicMaxPage() {
+        const pager = document.querySelector('.vui_pagenation, .search-page-pagination');
+        if (!pager) {
+            return 1;
+        }
+
+        const nextBtn = pager.querySelector('button.vui_pagenation--btn[aria-label="下一页"], button.vui_pagenation--btn-side[aria-label="下一页"]');
+        if (nextBtn) {
+            let prev = nextBtn.previousElementSibling;
+            while (prev && prev.tagName !== 'BUTTON') {
+                prev = prev.previousElementSibling;
+            }
+            if (prev) {
+                const label = prev.getAttribute('aria-label') || '';
+                const m = label.match(/(\d+)/);
+                if (m) {
+                    const num = parseInt(m[1], 10);
+                    if (!isNaN(num) && num > 0) return num;
+                }
+                const txt = parseInt(prev.textContent.trim(), 10);
+                if (!isNaN(txt) && txt > 0) return txt;
+            }
+        }
+
+        // 兜底：从所有数字按钮中提取最后一个标号
+        const numBtns = pager.querySelectorAll('button.vui_pagenation--btn-num');
+        if (numBtns.length > 0) {
+            const lastNumBtn = numBtns[numBtns.length - 1];
+            const label = lastNumBtn.getAttribute('aria-label') || '';
+            const m = label.match(/(\d+)/);
+            if (m) {
+                const num = parseInt(m[1], 10);
+                if (!isNaN(num) && num > 0) return num;
+            }
+            const txt = parseInt(lastNumBtn.textContent.trim(), 10);
+            if (!isNaN(txt) && txt > 0) return txt;
+        }
+
+        return 34;
+    }
+
+    function updateDynamicMaxPage() {
+        const p = getDynamicMaxPage();
+        if (p > 0) {
+            maxWaterfallPage = p;
+        }
+        return maxWaterfallPage;
+    }
+
+    // 生成终态文案（方案 B+C 融合：客观归因区分真实到底与系统检索上限，并内置行动闭环入口）
     function getEndedTipHtml() {
-        const isMaxLimit = currentRequestedPage >= 34;
+        const isMaxLimit = currentRequestedPage >= maxWaterfallPage && maxWaterfallPage >= 34;
         const reasonText = isMaxLimit 
-            ? '已达系统检索上限（共 34 页）' 
-            : '已展示全部相关视频';
+            ? `已达系统检索上限（共 ${maxWaterfallPage} 页）` 
+            : `已展示全部相关视频（共 ${maxWaterfallPage} 页）`;
         return `<span>${reasonText}</span><span style="margin: 0 4px; opacity: 0.5;">·</span><a class="bili-waterfall-back-to-top" role="button">⬆ 回到顶部</a>`;
     }
 
@@ -1193,7 +1246,8 @@
 
     async function triggerLoadNextPage() {
         if (!isWaterfall || isWaterfallPaused || isPaging || isAllLoaded) return;
-        if (currentRequestedPage >= 34) {
+        updateDynamicMaxPage();
+        if (currentRequestedPage >= maxWaterfallPage) {
             isAllLoaded = true;
             updateBadge();
             updateLoader(true, '已无更多', true);
@@ -1263,8 +1317,9 @@
                 appendCards(videoItems);
                 currentRequestedPage = nextPage;
 
-                // 达到第 34 页时标记为最后一页
-                if (currentRequestedPage >= 34) {
+                // 达到末页时标记为已全部加载完毕
+                updateDynamicMaxPage();
+                if (currentRequestedPage >= maxWaterfallPage) {
                     isAllLoaded = true;
                 }
             } else {
@@ -1386,6 +1441,7 @@
             // 新搜索场景：强制回到第 1 页并解除已全部加载完毕的状态
             currentRequestedPage = 1;
             isAllLoaded = false;
+            updateDynamicMaxPage();
 
             // 若 URL 中残留之前搜索的非首页 page 参数（如第 34 页），强制清洗 URL
             try {
@@ -1401,7 +1457,8 @@
             }
         } else {
             currentRequestedPage = urlPage;
-            isAllLoaded = currentRequestedPage >= 34;
+            updateDynamicMaxPage();
+            isAllLoaded = currentRequestedPage >= maxWaterfallPage;
         }
 
         isPaging = false;
@@ -1422,11 +1479,12 @@
     // B 站官方搜索响应首屏渲染完成钩子：重新采样 DOM 首屏卡片并接管新挂载的分页器
     function onOfficialSearchMounted() {
         if (!isWaterfall) return;
+        updateDynamicMaxPage();
         const p = parseInt(new URLSearchParams(window.location.search).get('page') || '1', 10);
         const urlPage = isNaN(p) ? 1 : p;
         if (urlPage === 1) {
             currentRequestedPage = 1;
-            isAllLoaded = false;
+            isAllLoaded = maxWaterfallPage <= 1;
         }
         isPaging = false;
         refreshSeenBvidsFromDOM();
@@ -1545,8 +1603,9 @@
             lastSearchSign = getSearchSignature();
             refreshSeenBvidsFromDOM();
 
+            updateDynamicMaxPage();
             currentRequestedPage = 1;
-            isAllLoaded = false;
+            isAllLoaded = maxWaterfallPage <= 1;
             isPaging = false;
 
             getOrCreateBadge();
