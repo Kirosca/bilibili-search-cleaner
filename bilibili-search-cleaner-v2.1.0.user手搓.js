@@ -1250,17 +1250,6 @@
                 appendCards(videoItems);
                 currentRequestedPage = nextPage;
 
-                // 同步当前页码到 URL（标记内部翻页，防止被切页侦听误当做外部跳页）
-                try {
-                    const newUrl = new URL(window.location.href);
-                    newUrl.searchParams.set('page', String(nextPage));
-                    isInternalPaging = true;
-                    window.history.replaceState(null, '', newUrl.toString());
-                    setTimeout(() => { isInternalPaging = false; }, 100);
-                } catch (e) {
-                    isInternalPaging = false;
-                }
-
                 // 达到第 34 页时标记为最后一页
                 if (currentRequestedPage >= 34) {
                     isAllLoaded = true;
@@ -1446,7 +1435,8 @@
         const urlPage = isNaN(p) ? 1 : p;
 
         const signChanged = lastSearchSign && currentSign !== lastSearchSign;
-        const pageChanged = urlPage !== currentRequestedPage;
+        // 瀑布流保持单页流式体验（URL 不随滚动递增页码），仅当搜索特征变化或 URL 显式带入非首页页码时触发重置
+        const pageChanged = urlPage > 1 && urlPage !== currentRequestedPage;
 
         if (signChanged) {
             resetWaterfallForNewSearch(true);
@@ -1524,14 +1514,23 @@
         if (!document.body) return;
 
         if (isWaterfall) {
+            // 瀑布流防白屏冷启动保护：若打开或刷新页面的 URL 残留有非第 1 页参数（例如历史记录或从尾页刷新留存的 ?page=34），
+            // 立即重定向至纯净首页流，杜绝直接渲染尾页导致的前置缺失与空数据白屏
+            const currentUrl = new URL(window.location.href);
+            const p = parseInt(currentUrl.searchParams.get('page') || '1', 10);
+            if (p > 1) {
+                currentUrl.searchParams.delete('page');
+                window.location.replace(currentUrl.toString());
+                return;
+            }
+
             document.documentElement.classList.add('bili-waterfall-enabled');
 
             lastSearchSign = getSearchSignature();
             refreshSeenBvidsFromDOM();
 
-            const p = parseInt(new URLSearchParams(window.location.search).get('page') || '1', 10);
-            currentRequestedPage = isNaN(p) ? 1 : p;
-            isAllLoaded = currentRequestedPage >= 34;
+            currentRequestedPage = 1;
+            isAllLoaded = false;
             isPaging = false;
 
             getOrCreateBadge();
