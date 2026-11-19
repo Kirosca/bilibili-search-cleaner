@@ -1011,10 +1011,10 @@
 
     // 生成终态文案（方案 B+C 融合：客观归因区分真实到底与系统检索上限，并内置行动闭环入口）
     function getEndedTipHtml() {
-        const isMaxLimit = currentRequestedPage >= maxWaterfallPage && maxWaterfallPage >= 34;
+        const isMaxLimit = currentRequestedPage >= 34;
         const reasonText = isMaxLimit 
-            ? `已达系统检索上限（共 ${maxWaterfallPage} 页）` 
-            : `已展示全部相关视频（共 ${maxWaterfallPage} 页）`;
+            ? `已达系统检索上限（共 ${currentRequestedPage} 页）` 
+            : `已展示全部相关视频（共 ${currentRequestedPage} 页）`;
         return `<span>${reasonText}</span><span style="margin: 0 4px; opacity: 0.5;">·</span><a class="bili-waterfall-back-to-top" role="button">⬆ 回到顶部</a>`;
     }
 
@@ -1328,6 +1328,8 @@
                     isAllLoaded = true;
                 }
             } else {
+                // 接口返回空数据（数据已自然到底），校准最大页数与实际已展示页数一致
+                maxWaterfallPage = currentRequestedPage;
                 isAllLoaded = true;
             }
         } catch (e) {
