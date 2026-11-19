@@ -110,7 +110,7 @@
 
             // 4. 处于第 1 页时直接刷新使瀑布流生命周期生效
             window.location.reload();
-        }, 100);
+        }, 50);
     }
 
     function applyFilterStickyState() {
