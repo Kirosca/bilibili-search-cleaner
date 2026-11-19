@@ -1061,6 +1061,37 @@
             return String(num);
         }
 
+        function formatDuration(val) {
+            if (!val && val !== 0) return '';
+            const str = String(val).trim();
+            if (!str) return '';
+
+            // 纯数字秒数（如 66 -> "01:06"）
+            if (/^\d+$/.test(str)) {
+                const totalSeconds = parseInt(str, 10);
+                const h = Math.floor(totalSeconds / 3600);
+                const m = Math.floor((totalSeconds % 3600) / 60);
+                const s = totalSeconds % 60;
+                const mm = String(m).padStart(2, '0');
+                const ss = String(s).padStart(2, '0');
+                if (h > 0) {
+                    const hh = String(h).padStart(2, '0');
+                    return `${hh}:${mm}:${ss}`;
+                }
+                return `${mm}:${ss}`;
+            }
+
+            // 冒号分隔格式（解决 B 站 API 返回未补零的 "1:6" 或 "3:1" -> 对齐官方规范 "01:06" 或 "03:01"）
+            if (str.includes(':')) {
+                const parts = str.split(':').map(p => p.trim());
+                return parts.map(p => p.padStart(2, '0')).join(':');
+            }
+
+            return str;
+        }
+
+        const durationText = formatDuration(item.duration);
+
         // 优先从已定位的主容器中精准提取真实普通视频卡片作为克隆范本，严格排除直播间、课堂与番剧等干扰卡片
         const mainContainer = getMainListContainer(document);
         const sampleCol = mainContainer ? (
@@ -1158,7 +1189,7 @@
             }
 
             let durationEl = col.querySelector('.bili-video-card__stats__duration');
-            if (!durationEl && item.duration) {
+            if (!durationEl && durationText) {
                 const targetWrap = col.querySelector('.bili-video-card__stats, .bili-video-card__mask');
                 if (targetWrap) {
                     durationEl = document.createElement('span');
@@ -1166,8 +1197,8 @@
                     targetWrap.appendChild(durationEl);
                 }
             }
-            if (durationEl && item.duration) {
-                durationEl.textContent = item.duration;
+            if (durationEl && durationText) {
+                durationEl.textContent = durationText;
             }
         } else {
             // 现代化兜底卡片构建（确保无真实母本时依然能渲染出与原站一致的响应式结构）
@@ -1192,7 +1223,7 @@
                                             <span class="bili-video-card__stats--item"><span>${playText}</span></span>
                                             <span class="bili-video-card__stats--item"><span>${dmText}</span></span>
                                         </div>
-                                        <span class="bili-video-card__stats__duration">${item.duration || ''}</span>
+                                        <span class="bili-video-card__stats__duration">${durationText}</span>
                                     </div>
                                 </div>
                             </div>
