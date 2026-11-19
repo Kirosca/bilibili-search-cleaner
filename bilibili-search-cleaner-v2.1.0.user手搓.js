@@ -861,9 +861,15 @@
     }
 
     function createCardElement(item) {
-        // 优先从已定位的主容器中提取真实视频卡片作为克隆范本，确保首屏与翻页后均能获取到范本
+        // 优先从已定位的主容器中精准提取真实普通视频卡片作为克隆范本，严格排除直播间、课堂与番剧等干扰卡片
         const mainContainer = getMainListContainer(document);
-        const sampleCol = mainContainer ? mainContainer.querySelector('.video-list-item, div[class*="col_"]:has(.bili-video-card)') : null;
+        const sampleCol = mainContainer ? (
+            mainContainer.querySelector(
+                'div[class*="col_"]:has(a[href*="/video/"]):not(:has(a[href*="live.bilibili.com"], a[href*="/cheese/"], .bili-video-card__info--living)), ' +
+                '.video-list-item:has(a[href*="/video/"]):not(:has(a[href*="live.bilibili.com"], a[href*="/cheese/"], .bili-video-card__info--living)), ' +
+                'div[class*="col_"]:has(.bili-video-card):not(:has(a[href*="live.bilibili.com"], a[href*="/cheese/"], .bili-video-card__info--living))'
+            ) || mainContainer.querySelector('.video-list-item, div[class*="col_"]:has(.bili-video-card)')
+        ) : null;
         let col;
         const cleanTit = (item.title || '').replace(/<[^>]+>/g, '');
         const coverUrl = item.pic ? (item.pic.startsWith('http') ? item.pic : 'https:' + item.pic) : '';
@@ -873,7 +879,11 @@
             delete col.dataset.purifiedQuery;
             col.classList.remove('bili-cleaner-highlighted', 'bili-cleaner-dimmed');
 
-            col.querySelectorAll('a[href*="/video/"]').forEach(a => {
+            // 彻底清理直播专属节点（内联直播播放器、直播中状态标等）及残留的活动播放器
+            col.querySelectorAll('.v-inline-live-player, .bili-video-card__info--living, .v-inline-player, .bpx-docker, video').forEach(el => el.remove());
+
+            // 统一将卡片内部所有主链接（视频/直播/课程遗留）重定向为当前视频地址
+            col.querySelectorAll('a[href*="/video/"], a[href*="live.bilibili.com"], a[href*="/cheese/"]').forEach(a => {
                 a.href = `//www.bilibili.com/video/${item.bvid}`;
             });
 
@@ -886,6 +896,7 @@
                 if (parentA) {
                     parentA.setAttribute('title', cleanTit);
                     parentA.title = cleanTit;
+                    parentA.href = `//www.bilibili.com/video/${item.bvid}`;
                 }
             }
 
@@ -920,7 +931,12 @@
                     if (textNode) textNode.textContent = item.author;
                     else ownerA.textContent = item.author;
                 }
-                const dateSpan = ownerA.querySelector('.bili-video-card__info--date');
+                let dateSpan = ownerA.querySelector('.bili-video-card__info--date');
+                if (!dateSpan && item.pubdate) {
+                    dateSpan = document.createElement('span');
+                    dateSpan.className = 'bili-video-card__info--date';
+                    ownerA.appendChild(dateSpan);
+                }
                 if (dateSpan && item.pubdate) {
                     const d = new Date(item.pubdate * 1000);
                     dateSpan.textContent = ` · ${d.getMonth() + 1}月${d.getDate()}日`;
@@ -950,7 +966,15 @@
                 }
             }
 
-            const durationEl = col.querySelector('.bili-video-card__stats__duration');
+            let durationEl = col.querySelector('.bili-video-card__stats__duration');
+            if (!durationEl && item.duration) {
+                const targetWrap = col.querySelector('.bili-video-card__stats, .bili-video-card__mask');
+                if (targetWrap) {
+                    durationEl = document.createElement('span');
+                    durationEl.className = 'bili-video-card__stats__duration';
+                    targetWrap.appendChild(durationEl);
+                }
+            }
             if (durationEl && item.duration) {
                 durationEl.textContent = item.duration;
             }
