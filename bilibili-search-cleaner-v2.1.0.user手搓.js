@@ -1021,24 +1021,17 @@
         return `<span>${reasonText}</span><span style="margin: 0 4px; opacity: 0.5;">·</span><a class="bili-waterfall-back-to-top" role="button">⬆ 回到顶部</a>`;
     }
 
-    // 更新加载状态条：支持状态重置（解除 active/ended 样式并将文本重置为就绪提示）
-    function updateLoader(show, text = '正在加载下一页视频...', ended = false) {
+    // 更新加载状态条：展示加载动画或平滑隐藏
+    function updateLoader(show, text = '正在加载下一页视频...') {
         const loader = getOrCreateLoader();
         if (!loader) return;
         const txtEl = loader.querySelector('.bili-waterfall-loader-text');
         if (show) {
             loader.classList.add('active');
+            loader.classList.remove('ended');
             adjustLoaderCentering();
-            if (ended) {
-                loader.classList.add('ended');
-                if (txtEl) {
-                    txtEl.innerHTML = getEndedTipHtml();
-                }
-            } else {
-                loader.classList.remove('ended');
-                if (txtEl) {
-                    txtEl.textContent = text;
-                }
+            if (txtEl) {
+                txtEl.textContent = text;
             }
         } else {
             if (txtEl && !isAllLoaded) {
@@ -1047,6 +1040,18 @@
             if (!isAllLoaded) {
                 loader.classList.remove('active', 'ended');
             }
+        }
+    }
+
+    // 专属终态展示：调用 getEndedTipHtml() 渲染客观终态提示（已展示全部相关视频 / 已达系统检索上限）
+    function showEndedLoader() {
+        const loader = getOrCreateLoader();
+        if (!loader) return;
+        loader.classList.add('active', 'ended');
+        adjustLoaderCentering();
+        const txtEl = loader.querySelector('.bili-waterfall-loader-text');
+        if (txtEl) {
+            txtEl.innerHTML = getEndedTipHtml();
         }
     }
 
@@ -1299,7 +1304,7 @@
         if (currentRequestedPage >= maxWaterfallPage) {
             isAllLoaded = true;
             updateBadge();
-            updateLoader(true, '已无更多', true);
+            showEndedLoader();
             return;
         }
 
@@ -1398,7 +1403,7 @@
         updateBadge();
 
         if (isAllLoaded) {
-            updateLoader(true, '已无更多', true);
+            showEndedLoader();
             return;
         }
 
@@ -1544,7 +1549,7 @@
         updateBadge();
 
         if (isAllLoaded) {
-            updateLoader(true, '已无更多', true);
+            showEndedLoader();
         } else {
             updateLoader(false);
             // 重置完成后若首屏内容未占满预加载缓冲带（1000px），提前静默预载下一页
@@ -1569,7 +1574,7 @@
         bindWaterfallObserver();
         updateBadge();
         if (isAllLoaded) {
-            updateLoader(true, '已无更多', true);
+            showEndedLoader();
         } else {
             updateLoader(false);
             // 重置完成后若首屏内容未占满预加载缓冲带（1000px），提前静默预载下一页
@@ -1692,7 +1697,7 @@
             updateBadge();
             getOrCreateLoader();
             if (isAllLoaded) {
-                updateLoader(true, '已无更多', true);
+                showEndedLoader();
             } else {
                 updateLoader(false);
             }
