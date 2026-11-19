@@ -1220,7 +1220,7 @@
             const apiBase = 'https://api.bilibili.com/x/web-interface/wbi/search/type';
 
             const queryObj = {
-                category_id: '',
+                category_id: urlParams.get('category_id') || '',
                 search_type: 'video',
                 ad_resource: 5654,
                 __refresh__: true,
@@ -1229,9 +1229,11 @@
                 page: nextPage,
                 page_size: 42,
                 order: urlParams.get('order') || 'totalrank',
+                pubtime_begin_s: urlParams.get('pubtime_begin_s') || 0,
+                pubtime_end_s: urlParams.get('pubtime_end_s') || 0,
                 duration: urlParams.get('duration') || '0',
                 tids: urlParams.get('tids') || '0',
-                from_source: 'web_search',
+                from_source: urlParams.get('from_source') || 'web_search',
                 from_spmid: '333.337',
                 platform: 'pc',
                 highlight: 1,
@@ -1354,7 +1356,7 @@
     }
 
     let lastSearchSign = '';
-    // 提取当前搜索上下文唯一特征（路径、关键词、排序规则、时长与分区筛选）
+    // 提取当前搜索上下文唯一特征（路径、关键词、排序规则、时长、时间区间、分类与分区筛选）
     function getSearchSignature() {
         const p = new URLSearchParams(window.location.search);
         return [
@@ -1362,7 +1364,10 @@
             p.get('keyword') || '',
             p.get('order') || '',
             p.get('duration') || '',
-            p.get('tids') || ''
+            p.get('tids') || '',
+            p.get('pubtime_begin_s') || '',
+            p.get('pubtime_end_s') || '',
+            p.get('category_id') || ''
         ].join('||');
     }
 
