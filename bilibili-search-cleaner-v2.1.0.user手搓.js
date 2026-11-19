@@ -861,6 +861,16 @@
     }
 
     function createCardElement(item) {
+        function formatStat(n) {
+            if (!n && n !== 0) return '';
+            if (typeof n === 'string' && (n.includes('万') || n.includes('亿'))) return n;
+            const num = Number(n);
+            if (isNaN(num)) return String(n);
+            if (num >= 100000000) return (num / 100000000).toFixed(1) + '亿';
+            if (num >= 10000) return (num / 10000).toFixed(1) + '万';
+            return String(num);
+        }
+
         // 优先从已定位的主容器中精准提取真实普通视频卡片作为克隆范本，严格排除直播间、课堂与番剧等干扰卡片
         const mainContainer = getMainListContainer(document);
         const sampleCol = mainContainer ? (
@@ -946,15 +956,6 @@
             // 替换播放量与弹幕数统计
             const statItems = col.querySelectorAll('.bili-video-card__stats--item');
             if (statItems.length >= 2) {
-                function formatStat(n) {
-                    if (!n && n !== 0) return '';
-                    if (typeof n === 'string' && (n.includes('万') || n.includes('亿'))) return n;
-                    const num = Number(n);
-                    if (isNaN(num)) return String(n);
-                    if (num >= 100000000) return (num / 100000000).toFixed(1) + '亿';
-                    if (num >= 10000) return (num / 10000).toFixed(1) + '万';
-                    return String(num);
-                }
                 const playSpan = statItems[0].querySelector('span');
                 if (playSpan && item.play !== undefined) {
                     playSpan.textContent = formatStat(item.play);
@@ -979,18 +980,30 @@
                 durationEl.textContent = item.duration;
             }
         } else {
+            // 现代化兜底卡片构建（确保无真实母本时依然能渲染出与原站一致的响应式结构）
             col = document.createElement('div');
-            col.className = 'col_md_4 col_6 video-list-item';
+            col.className = 'col_3 col_xs_1_5 col_md_2 col_xl_1_7 mb_x40 video-list-item';
+            const dateText = item.pubdate ? ` · ${new Date(item.pubdate * 1000).getMonth() + 1}月${new Date(item.pubdate * 1000).getDate()}日` : '';
+            const playText = item.play !== undefined ? formatStat(item.play) : '0';
+            const dmVal = item.danmaku !== undefined ? item.danmaku : item.video_review;
+            const dmText = dmVal !== undefined ? formatStat(dmVal) : '0';
+
             col.innerHTML = `
-                <div class="bili-video-card">
+                <div class="bili-video-card" data-bsb-bvid="${item.bvid}">
                     <div class="bili-video-card__wrap">
                         <a href="//www.bilibili.com/video/${item.bvid}" target="_blank">
                             <div class="bili-video-card__image--wrap">
                                 <picture class="v-img bili-video-card__cover">
                                     <img src="${coverUrl}@672w_378h_1c_!web-search-common-cover.webp" alt="${cleanTit}" loading="lazy">
                                 </picture>
-                                <div class="bili-video-card__stats">
-                                    <span class="bili-video-card__stats__duration">${item.duration || ''}</span>
+                                <div class="bili-video-card__mask">
+                                    <div class="bili-video-card__stats">
+                                        <div class="bili-video-card__stats--left">
+                                            <span class="bili-video-card__stats--item"><span>${playText}</span></span>
+                                            <span class="bili-video-card__stats--item"><span>${dmText}</span></span>
+                                        </div>
+                                        <span class="bili-video-card__stats__duration">${item.duration || ''}</span>
+                                    </div>
                                 </div>
                             </div>
                         </a>
@@ -1000,7 +1013,8 @@
                             </a>
                             <div class="bili-video-card__info--bottom">
                                 <a class="bili-video-card__info--author" href="//space.bilibili.com/${item.mid}" target="_blank">
-                                    <span class="bili-video-card__info--author-name">${item.author}</span>
+                                    <span class="bili-video-card__info--author">${item.author}</span>
+                                    <span class="bili-video-card__info--date">${dateText}</span>
                                 </a>
                             </div>
                         </div>
