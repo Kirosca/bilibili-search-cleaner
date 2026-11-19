@@ -226,19 +226,48 @@
             display: none;
             align-items: center;
             justify-content: center;
-            width: 100%;
+            width: fit-content;
+            max-width: 100%;
+            margin: 0 auto;
             color: #00aeec;
             font-size: 14px;
             font-weight: 500;
+            padding: 0 !important;
+            position: relative;
         }
         .bili-waterfall-loader.active {
             display: flex !important;
         }
         .bili-waterfall-loader.ended {
             color: #9499a0;
+            font-size: 13px;
+            padding: 0 !important;
+            user-select: none;
         }
         .bili-waterfall-loader.ended .bili-waterfall-spinner {
             display: none !important;
+        }
+        .bili-waterfall-loader.ended::before,
+        .bili-waterfall-loader.ended::after {
+            content: '';
+            display: inline-block;
+            width: 48px;
+            height: 1px;
+            background: rgba(148, 153, 160, 0.25);
+            vertical-align: middle;
+            margin: 0 14px;
+        }
+        .bili-waterfall-back-to-top {
+            color: #00aeec;
+            cursor: pointer;
+            text-decoration: none;
+            margin-left: 6px;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+        .bili-waterfall-back-to-top:hover {
+            color: #008ac5;
+            text-decoration: underline;
         }
         .bili-waterfall-spinner {
             width: 20px;
@@ -867,6 +896,25 @@
         }
     }
 
+    // 动态计算 position: relative 左右居中偏移量：将 loader 水平中轴线精准对齐至主列表容器中轴线，上下高度完全不干预
+    function adjustLoaderCentering() {
+        const loader = document.getElementById('bili-waterfall-loader');
+        if (!loader) return;
+        loader.style.position = 'relative';
+        loader.style.removeProperty('top');
+
+        const mainContainer = getMainListContainer(document) || document.querySelector('.search-page-video, .video.i_wrapper') || document.body;
+        const targetRect = mainContainer ? mainContainer.getBoundingClientRect() : { left: 0, width: window.innerWidth };
+        const targetCenterX = targetRect.left + targetRect.width / 2;
+
+        const currentLeft = parseFloat(loader.style.left) || 0;
+        const loaderRect = loader.getBoundingClientRect();
+        const rawLoaderCenterX = loaderRect.left - currentLeft + loaderRect.width / 2;
+
+        const offsetLeft = Math.round(targetCenterX - rawLoaderCenterX);
+        loader.style.left = `${offsetLeft}px`;
+    }
+
     // 维护加载器位置：保证 loader 节点始终插在当前活跃分页器的正前方（避免因 Vue 重新渲染导致 loader 脱落或位移）
     function ensureLoaderPosition(pager) {
         if (!isWaterfall) return null;
@@ -879,11 +927,19 @@
                 <div class="bili-waterfall-spinner"></div>
                 <span class="bili-waterfall-loader-text">正在加载下一页视频...</span>
             `;
+            loader.addEventListener('click', (e) => {
+                const btn = e.target.closest('.bili-waterfall-back-to-top');
+                if (btn) {
+                    e.preventDefault();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
         }
         const targetPager = pager || document.querySelector('.search-page-pagination, .vui_pagenation, .vui_pagenation--btns');
         if (targetPager && targetPager.parentNode && loader.nextSibling !== targetPager) {
             targetPager.parentNode.insertBefore(loader, targetPager);
         }
+        adjustLoaderCentering();
         return loader;
     }
 
@@ -892,18 +948,33 @@
         return ensureLoaderPosition(pager);
     }
 
+    // 生成终态文案（方案 B+C 融合：客观归因区分真实到底与 34 页接口上限，并内置行动闭环入口）
+    function getEndedTipHtml() {
+        const isMaxLimit = currentRequestedPage >= 34;
+        const reasonText = isMaxLimit 
+            ? '已达系统检索上限（共 34 页）' 
+            : '已展示全部相关视频';
+        return `<span>${reasonText}</span><span style="margin: 0 4px; opacity: 0.5;">·</span><a class="bili-waterfall-back-to-top" role="button">⬆ 回到顶部</a>`;
+    }
+
     // 更新加载状态条：支持状态重置（解除 active/ended 样式并将文本重置为就绪提示）
     function updateLoader(show, text = '正在加载下一页视频...', ended = false) {
         const loader = getOrCreateLoader();
         if (!loader) return;
         const txtEl = loader.querySelector('.bili-waterfall-loader-text');
         if (show) {
-            if (txtEl) txtEl.textContent = text;
             loader.classList.add('active');
+            adjustLoaderCentering();
             if (ended) {
                 loader.classList.add('ended');
+                if (txtEl) {
+                    txtEl.innerHTML = getEndedTipHtml();
+                }
             } else {
                 loader.classList.remove('ended');
+                if (txtEl) {
+                    txtEl.textContent = text;
+                }
             }
         } else {
             if (txtEl && !isAllLoaded) {
@@ -1438,6 +1509,11 @@
         window.addEventListener('scroll', () => {
             if (!isWaterfall || isWaterfallPaused || isPaging || isAllLoaded) return;
             checkAndTriggerPaging();
+        }, { passive: true });
+
+        // 视口尺寸变化时实时校准 loader 左右居中位置
+        window.addEventListener('resize', () => {
+            if (isWaterfall) adjustLoaderCentering();
         }, { passive: true });
     } catch (e) {}
 
