@@ -89,6 +89,7 @@
             const firstPageBtn = document.querySelector('button.vui_pagenation--btn-num[aria-label^="第 1 页"]');
             if (firstPageBtn) {
                 firstPageBtn.click();
+                
             }
         } catch (e) {}
 
@@ -98,16 +99,18 @@
         isAllLoaded = false;
         isPaging = false;
 
-        // 3. 强效兜底：若当前处于非第 1 页（如第 6 页），直接剔除 URL 中的 page 参数并重定向至第 1 页流式启动，杜绝前置内容缺失
-        const url = new URL(window.location.href);
-        if (url.searchParams.has('page') && url.searchParams.get('page') !== '1') {
-            url.searchParams.delete('page');
-            window.location.href = url.toString();
-            return;
-        }
+        // 3. 延迟执行跳转或刷新，为分页按钮点击事件及内部路由更新预留响应时间
+        setTimeout(() => {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('page') && url.searchParams.get('page') !== '1') {
+                url.searchParams.delete('page');
+                window.location.href = url.toString();
+                return;
+            }
 
-        // 4. 处于第 1 页时直接刷新使瀑布流生命周期生效
-        window.location.reload();
+            // 4. 处于第 1 页时直接刷新使瀑布流生命周期生效
+            window.location.reload();
+        }, 100);
     }
 
     function applyFilterStickyState() {
