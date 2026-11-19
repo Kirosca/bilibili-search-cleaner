@@ -1216,21 +1216,32 @@
                 return;
             }
 
-            // 统一采用 B 站官方网页翻页专用的 /search/type 纯视频接口，单次获取 42 条数据
+            // 统一采用 B 站官方网页翻页专用的 /search/type 纯视频接口，单次获取 42 条数据（参数完全对齐官方原生翻页）
             const apiBase = 'https://api.bilibili.com/x/web-interface/wbi/search/type';
 
             const queryObj = {
+                category_id: '',
                 search_type: 'video',
-                keyword: getCleanApiKeyword() || decodeURIComponent(rawKeyword.replace(/\+/g, ' ')),
+                ad_resource: 5654,
+                __refresh__: true,
+                _extra: '',
+                context: '',
                 page: nextPage,
-                page_size: 30,
+                page_size: 42,
                 order: urlParams.get('order') || 'totalrank',
                 duration: urlParams.get('duration') || '0',
                 tids: urlParams.get('tids') || '0',
                 from_source: 'web_search',
+                from_spmid: '333.337',
                 platform: 'pc',
                 highlight: 1,
-                single_column: 0
+                single_column: 0,
+                keyword: getCleanApiKeyword() || decodeURIComponent(rawKeyword.replace(/\+/g, ' ')),
+                source_tag: 3,
+                gaia_vtoken: '',
+                web_location: 1430654,
+                'x-bili-device-req-json': JSON.stringify({ platform: 'web', device: 'pc', spmid: '333.337', mobi_app: 'web_cn' }),
+                'x-bili-locale-json': JSON.stringify({ c_locale: { language: 'zh', script: 'Hans' }, always_translate: false })
             };
 
             const signedQs = signWbi(queryObj, keys.img_key, keys.sub_key);
