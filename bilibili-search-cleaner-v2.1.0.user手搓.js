@@ -102,8 +102,11 @@
         // 3. 延迟执行跳转或刷新，为分页按钮点击事件及内部路由更新预留响应时间
         setTimeout(() => {
             const url = new URL(window.location.href);
-            if (url.searchParams.has('page') && url.searchParams.get('page') !== '1') {
+            const hasNonFirstPage = (url.searchParams.has('page') && url.searchParams.get('page') !== '1') ||
+                                    (url.searchParams.has('o') && url.searchParams.get('o') !== '0');
+            if (hasNonFirstPage) {
                 url.searchParams.delete('page');
+                url.searchParams.delete('o');
                 window.location.href = url.toString();
                 return;
             }
@@ -1286,7 +1289,7 @@
                 _extra: '',
                 context: '',
                 page: nextPage,
-                page_size: 42,
+                page_size: 30,
                 order: urlParams.get('order') || 'totalrank',
                 pubtime_begin_s: urlParams.get('pubtime_begin_s') || 0,
                 pubtime_end_s: urlParams.get('pubtime_end_s') || 0,
@@ -1450,11 +1453,19 @@
             isAllLoaded = false;
             updateDynamicMaxPage();
 
-            // 若 URL 中残留之前搜索的非首页 page 参数（如第 34 页），强制清洗 URL
+            // 若 URL 中残留之前搜索的非首页 page 或 o 参数（如第 34 页或分类页 o=30），强制清洗 URL
             try {
                 const u = new URL(window.location.href);
+                let changed = false;
                 if (u.searchParams.has('page') && u.searchParams.get('page') !== '1') {
                     u.searchParams.delete('page');
+                    changed = true;
+                }
+                if (u.searchParams.has('o') && u.searchParams.get('o') !== '0') {
+                    u.searchParams.delete('o');
+                    changed = true;
+                }
+                if (changed) {
                     isInternalPaging = true;
                     window.history.replaceState(null, '', u.toString());
                     setTimeout(() => { isInternalPaging = false; }, 100);
@@ -1595,12 +1606,14 @@
         if (!document.body) return;
 
         if (isWaterfall) {
-            // 瀑布流防白屏冷启动保护：若打开或刷新页面的 URL 残留有非第 1 页参数（例如历史记录或从尾页刷新留存的 ?page=34），
+            // 瀑布流防白屏冷启动保护：若打开或刷新页面的 URL 残留有非第 1 页参数（例如历史记录或从尾页刷新留存的 ?page=34 或分类页 ?o=30），
             // 立即重定向至纯净首页流，杜绝直接渲染尾页导致的前置缺失与空数据白屏
             const currentUrl = new URL(window.location.href);
             const p = parseInt(currentUrl.searchParams.get('page') || '1', 10);
-            if (p > 1) {
+            const o = parseInt(currentUrl.searchParams.get('o') || '0', 10);
+            if (p > 1 || o > 0) {
                 currentUrl.searchParams.delete('page');
+                currentUrl.searchParams.delete('o');
                 window.location.replace(currentUrl.toString());
                 return;
             }
