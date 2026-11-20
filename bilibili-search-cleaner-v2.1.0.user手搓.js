@@ -101,6 +101,7 @@
         // 2. 强制重置瀑布流核心状态到第 1 页
         currentRequestedPage = 1;
         seenBvidMap.clear();
+        cachedCardTemplate = null;
         isAllLoaded = false;
         isPaging = false;
 
@@ -758,6 +759,7 @@
     let isInternalPaging = false;
     const seenBvidMap = new Set();
     let cachedWbiKeys = null;
+    let cachedCardTemplate = null;
 
     // 内联轻量 MD5 实现（自研自包含，无外部依赖）
     function computeMd5(string) {
@@ -1188,75 +1190,113 @@
         } catch (e) {}
     }
 
+    // 格式化播放量与弹幕数统计数字（支持万/亿转换）
+    function formatStat(n) {
+        if (!n && n !== 0) return '';
+        if (typeof n === 'string' && (n.includes('万') || n.includes('亿'))) return n;
+        const num = Number(n);
+        if (isNaN(num)) return String(n);
+        if (num >= 100000000) return (num / 100000000).toFixed(1) + '亿';
+        if (num >= 10000) return (num / 10000).toFixed(1) + '万';
+        return String(num);
+    }
+
+    // 格式化视频时长（对齐 mm:ss 或 hh:mm:ss 格式规范）
+    function formatDuration(val) {
+        if (!val && val !== 0) return '';
+        const str = String(val).trim();
+        if (!str) return '';
+
+        // 纯数字秒数（如 66 -> "01:06"）
+        if (/^\d+$/.test(str)) {
+            const totalSeconds = parseInt(str, 10);
+            const h = Math.floor(totalSeconds / 3600);
+            const m = Math.floor((totalSeconds % 3600) / 60);
+            const s = totalSeconds % 60;
+            const mm = String(m).padStart(2, '0');
+            const ss = String(s).padStart(2, '0');
+            if (h > 0) {
+                const hh = String(h).padStart(2, '0');
+                return `${hh}:${mm}:${ss}`;
+            }
+            return `${mm}:${ss}`;
+        }
+
+        // 冒号分隔格式（解决 B 站 API 返回未补零的 "1:6" 或 "3:1" -> 对齐官方规范 "01:06" 或 "03:01"）
+        if (str.includes(':')) {
+            const parts = str.split(':').map(p => p.trim());
+            return parts.map(p => p.padStart(2, '0')).join(':');
+        }
+
+        return str;
+    }
+
+    // 获取并预清洗纯净母卡模板骨架（单例缓存，彻底消除高开销的重复选择器查询与节点剔除）
+    function getCardTemplate() {
+        if (cachedCardTemplate) {
+            return cachedCardTemplate;
+        }
+
+        const mainContainer = getMainListContainer(document);
+        if (!mainContainer) return null;
+
+        // 仅在首次提取时执行一次高开销的选择器扫描
+        const sampleCol = mainContainer.querySelector(
+            'div[class*="col_"]:has(a[href*="/video/"]):not(:has(a[href*="live.bilibili.com"], a[href*="/cheese/"], .bili-video-card__info--living)), ' +
+            '.video-list-item:has(a[href*="/video/"]):not(:has(a[href*="live.bilibili.com"], a[href*="/cheese/"], .bili-video-card__info--living)), ' +
+            'div[class*="col_"]:has(.bili-video-card):not(:has(a[href*="live.bilibili.com"], a[href*="/cheese/"], .bili-video-card__info--living))'
+        ) || mainContainer.querySelector('.video-list-item, div[class*="col_"]:has(.bili-video-card)');
+
+        if (!sampleCol) return null;
+
+        // 克隆并预清洗为纯净模板骨架
+        const tpl = sampleCol.cloneNode(true);
+        delete tpl.dataset.purifiedQuery;
+        tpl.classList.remove('bili-cleaner-highlighted', 'bili-cleaner-dimmed');
+
+        // 彻底清理直播专属节点（内联直播播放器、直播中状态标等）及残留的活动播放器
+        tpl.querySelectorAll('.v-inline-live-player, .bili-video-card__info--living, .v-inline-player, .bpx-docker, video').forEach(el => el.remove());
+
+        // 清理 picture 内部残留的旧 source 标签，防止干扰后续动态封面
+        const pictureEl = tpl.querySelector('picture');
+        if (pictureEl) {
+            pictureEl.querySelectorAll('source').forEach(s => s.remove());
+        }
+
+        // 预处理纯净的 img 标签（继承母卡样式与属性，清空旧 src/srcset）
+        const oldImg = tpl.querySelector('.bili-video-card__cover img, picture img, img');
+        if (oldImg) {
+            const cleanImg = document.createElement('img');
+            for (const attr of oldImg.attributes) {
+                const name = attr.name.toLowerCase();
+                if (name !== 'src' && name !== 'srcset' && !name.startsWith('on')) {
+                    cleanImg.setAttribute(attr.name, attr.value);
+                }
+            }
+            cleanImg.loading = 'lazy';
+            oldImg.replaceWith(cleanImg);
+        }
+
+        cachedCardTemplate = tpl;
+        return cachedCardTemplate;
+    }
+
     // 根据接口返回的数据项克隆或生成视频卡片 DOM 元素
     function createCardElement(item) {
-        // 格式化播放量与弹幕数统计数字（支持万/亿转换）
-        function formatStat(n) {
-            if (!n && n !== 0) return '';
-            if (typeof n === 'string' && (n.includes('万') || n.includes('亿'))) return n;
-            const num = Number(n);
-            if (isNaN(num)) return String(n);
-            if (num >= 100000000) return (num / 100000000).toFixed(1) + '亿';
-            if (num >= 10000) return (num / 10000).toFixed(1) + '万';
-            return String(num);
-        }
-
-        // 格式化视频时长（对齐 mm:ss 或 hh:mm:ss 格式规范）
-        function formatDuration(val) {
-            if (!val && val !== 0) return '';
-            const str = String(val).trim();
-            if (!str) return '';
-
-            // 纯数字秒数（如 66 -> "01:06"）
-            if (/^\d+$/.test(str)) {
-                const totalSeconds = parseInt(str, 10);
-                const h = Math.floor(totalSeconds / 3600);
-                const m = Math.floor((totalSeconds % 3600) / 60);
-                const s = totalSeconds % 60;
-                const mm = String(m).padStart(2, '0');
-                const ss = String(s).padStart(2, '0');
-                if (h > 0) {
-                    const hh = String(h).padStart(2, '0');
-                    return `${hh}:${mm}:${ss}`;
-                }
-                return `${mm}:${ss}`;
-            }
-
-            // 冒号分隔格式（解决 B 站 API 返回未补零的 "1:6" 或 "3:1" -> 对齐官方规范 "01:06" 或 "03:01"）
-            if (str.includes(':')) {
-                const parts = str.split(':').map(p => p.trim());
-                return parts.map(p => p.padStart(2, '0')).join(':');
-            }
-
-            return str;
-        }
-
         const durationText = formatDuration(item.duration);
-
-        // 优先从已定位的主容器中精准提取真实普通视频卡片作为克隆范本，严格排除直播间、课堂与番剧等干扰卡片
-        const mainContainer = getMainListContainer(document);
-        const sampleCol = mainContainer ? (
-            mainContainer.querySelector(
-                'div[class*="col_"]:has(a[href*="/video/"]):not(:has(a[href*="live.bilibili.com"], a[href*="/cheese/"], .bili-video-card__info--living)), ' +
-                '.video-list-item:has(a[href*="/video/"]):not(:has(a[href*="live.bilibili.com"], a[href*="/cheese/"], .bili-video-card__info--living)), ' +
-                'div[class*="col_"]:has(.bili-video-card):not(:has(a[href*="live.bilibili.com"], a[href*="/cheese/"], .bili-video-card__info--living))'
-            ) || mainContainer.querySelector('.video-list-item, div[class*="col_"]:has(.bili-video-card)')
-        ) : null;
-        let col;
         const cleanTit = (item.title || '').replace(/<[^>]+>/g, '');
         const coverUrl = item.pic ? (item.pic.startsWith('http') ? item.pic : 'https:' + item.pic) : '';
+        const videoHref = `//www.bilibili.com/video/${item.bvid}`;
+
+        const sampleCol = getCardTemplate();
+        let col;
 
         if (sampleCol) {
             col = sampleCol.cloneNode(true);
-            delete col.dataset.purifiedQuery;
-            col.classList.remove('bili-cleaner-highlighted', 'bili-cleaner-dimmed');
-
-            // 彻底清理直播专属节点（内联直播播放器、直播中状态标等）及残留的活动播放器
-            col.querySelectorAll('.v-inline-live-player, .bili-video-card__info--living, .v-inline-player, .bpx-docker, video').forEach(el => el.remove());
 
             // 统一将卡片内部所有主链接（视频/直播/课程遗留）重定向为当前视频地址
             col.querySelectorAll('a[href*="/video/"], a[href*="live.bilibili.com"], a[href*="/cheese/"]').forEach(a => {
-                a.href = `//www.bilibili.com/video/${item.bvid}`;
+                a.href = videoHref;
             });
 
             const titEl = col.querySelector('.bili-video-card__info--tit, h3');
@@ -1268,7 +1308,7 @@
                 if (parentA) {
                     parentA.setAttribute('title', cleanTit);
                     parentA.title = cleanTit;
-                    parentA.href = `//www.bilibili.com/video/${item.bvid}`;
+                    parentA.href = videoHref;
                 }
             }
 
@@ -1277,28 +1317,11 @@
                 el.setAttribute('data-bsb-bvid', item.bvid);
             });
 
-            // 替换封面图片：彻底清除 picture 内部所有遗留的旧 source 标签，并重建全新的 img 元素，
-            // 杜绝浏览器继承母卡已解码的图片内存位图导致在新封面载入前闪现母卡封面的问题
-            const pictureEl = col.querySelector('picture');
-            if (pictureEl) {
-                pictureEl.querySelectorAll('source').forEach(s => s.remove());
-            }
-
-            const oldImg = col.querySelector('.bili-video-card__cover img, picture img, img');
-            if (oldImg) {
-                const finalPic = coverUrl ? (coverUrl + '@672w_378h_1c_!web-search-common-cover.webp') : '';
-                const newImg = document.createElement('img');
-                // 继承母卡图片的作用域样式属性与 class，排除 src、srcset 及母卡旧加载事件
-                for (const attr of oldImg.attributes) {
-                    const name = attr.name.toLowerCase();
-                    if (name !== 'src' && name !== 'srcset' && !name.startsWith('on')) {
-                        newImg.setAttribute(attr.name, attr.value);
-                    }
-                }
-                newImg.alt = cleanTit;
-                newImg.loading = 'lazy';
-                newImg.src = finalPic;
-                oldImg.replaceWith(newImg);
+            // 替换封面图片：模板骨架已预清洗为单一 img，直接写入目标地址
+            const imgEl = col.querySelector('.bili-video-card__cover img, picture img, img');
+            if (imgEl) {
+                imgEl.alt = cleanTit;
+                imgEl.src = coverUrl ? (coverUrl + '@672w_378h_1c_!web-search-common-cover.webp') : '';
             }
 
             // 替换作者与发布时间
@@ -1654,6 +1677,7 @@
         if (signChanged || isNewSearch) {
             // 新搜索场景：强制回到第 1 页并解除已全部加载完毕的状态
             currentRequestedPage = 1;
+            cachedCardTemplate = null;
             isAllLoaded = false;
             updateDynamicMaxPage();
 
@@ -1708,6 +1732,7 @@
             currentRequestedPage = 1;
             isAllLoaded = maxWaterfallPage <= 1;
         }
+        cachedCardTemplate = null;
         isPaging = false;
         refreshSeenBvidsFromDOM();
         bindWaterfallObserver();
