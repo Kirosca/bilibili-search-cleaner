@@ -1012,30 +1012,88 @@
         return maxWaterfallPage;
     }
 
-    // 根据最后一页最大页数自适应原生每页容量（4/5/6/7列 × 6行）：
-    // - 饱和态（1008总量）：42页->24条, 34页->30条, 28页->36条, 24页->42条；
-    // - 非饱和态（搜索结果总量小于1000条，最大分页数非上述固定档位）：原生默认按30条步长请求。
-    function getDynamicPageSize() {
-        switch (maxWaterfallPage) {
-            case 42:
-                return 24;
-            case 34:
-                return 30;
-            case 28:
-                return 36;
-            case 24:
-                return 42;
-            default:
-                return 30;
+    // 直接测量 DOM 第一行与第二行卡片的物理数量（物理列数）：
+    // 统计前两行各行的物理卡片数并取较大值，有效规避首行因直播大卡、话题卡或广告剔除导致的列数测量偏差；
+    // 兼备卡片宽度与容器宽度几何比值双重校验
+    function getGridColumnCount() {
+        const mainContainer = getMainListContainer(document);
+        if (!mainContainer) return 5;
+
+        const firstCard = mainContainer.querySelector(
+            '.video-list-item, div[class*="col_"]:has(.bili-video-card), div[class*="col_"]'
+        );
+        if (!firstCard || firstCard.offsetWidth === 0) return 5;
+
+        // 1. 扫描第一行与第二行的卡片物理数量，取数量较多的一行作为实际栅格列数
+        const allCards = Array.from(mainContainer.children).filter(el => 
+            el.id !== 'bili-waterfall-loader' && 
+            el.offsetHeight > 0 && 
+            (el.classList.contains('video-list-item') || el.matches('div[class*="col_"]') || el.querySelector('.bili-video-card'))
+        );
+
+        let row1Count = 0;
+        let row2Count = 0;
+        let row1Top = null;
+        let row2Top = null;
+
+        for (const card of allCards) {
+            const top = card.offsetTop;
+            if (row1Top === null) {
+                row1Top = top;
+                row1Count = 1;
+            } else if (Math.abs(top - row1Top) <= 6) {
+                row1Count++;
+            } else if (row2Top === null) {
+                row2Top = top;
+                row2Count = 1;
+            } else if (Math.abs(top - row2Top) <= 6) {
+                row2Count++;
+            } else {
+                // 已扫描完前两行，提前退出
+                break;
+            }
         }
+
+        const maxMeasured = Math.max(row1Count, row2Count);
+        if (maxMeasured >= 4 && maxMeasured <= 7) {
+            return maxMeasured;
+        }
+
+        // 2. 兜底与少卡片场景（如首屏仅有 1~3 个卡片）：卡片宽度与容器宽度几何比值计算
+        const containerWidth = mainContainer.clientWidth;
+        const cardWidth = firstCard.offsetWidth;
+        if (containerWidth > 0 && cardWidth > 0) {
+            const cols = Math.round(containerWidth / cardWidth);
+            if (cols >= 4 && cols <= 7) {
+                return cols;
+            }
+            if (cols > 7) return 7;
+            if (cols < 4 && cols > 0) return 4;
+        }
+
+        return 5;
+    }
+
+    // 根据 DOM 第一行卡片的物理列数，按固定 6 行直接计算单页请求容量（page_size）：
+    // - 4 列（窄屏）：4 × 6 = 24 条
+    // - 5 列（标屏）：5 × 6 = 30 条
+    // - 6 列（宽屏）：6 × 6 = 36 条
+    // - 7 列（超宽屏）：7 × 6 = 42 条
+    function getDynamicPageSize() {
+        const cols = getGridColumnCount();
+        return cols * 6;
     }
 
     // 生成终态文案（方案 B+C 融合：客观归因区分真实到底与系统检索上限，并内置行动闭环入口）
-    // 依据 B 站 1000 条检索截断与不同屏幕列宽（4/5/6/7 列 × 6 行），自适应四档系统检索饱和上限：
-    // 4 列(24/页) -> 42 页 | 5 列(30/页) -> 34 页 | 6 列(36/页) -> 28 页 | 7 列(42/页) -> 24 页
+    // 依据当前 DOM 测量的物理列数（4/5/6/7 列 × 固定 6 行），自适应系统 1008 条检索饱和上限：
+    // 4 列 -> 42 页 | 5 列 -> 34 页 | 6 列 -> 28 页 | 7 列 -> 24 页
     function getEndedTipHtml() {
+        const cols = getGridColumnCount();
+        const maxLimitPageForCurrentCols = Math.ceil(1008 / (cols * 6));
         const SYSTEM_MAX_PAGES = new Set([24, 28, 34, 42]);
-        const isMaxLimit = SYSTEM_MAX_PAGES.has(currentRequestedPage) || currentRequestedPage >= 34;
+        const isMaxLimit = currentRequestedPage >= maxLimitPageForCurrentCols ||
+                           SYSTEM_MAX_PAGES.has(currentRequestedPage) ||
+                           currentRequestedPage >= 34;
         const reasonText = isMaxLimit 
             ? `已达系统检索上限（共 ${currentRequestedPage} 页）` 
             : `已展示全部相关视频（共 ${currentRequestedPage} 页）`;
@@ -1683,9 +1741,8 @@
         }, { passive: true });
 
         // 视口尺寸变化监听（响应式栅格切换自适应）：
-        // 当用户缩放窗口、最大化或跨屏拖拽时，B 站栅格列数将在 4/5/6/7 列间响应式切换，
-        // 官方分页器上的总页码（42/34/28/24）亦会联动重绘。
-        // 此处引入 200ms 防抖，为 B 站 Vue 组件重新渲染分页器 DOM 预留充分的响应时间：
+        // 当用户缩放窗口、最大化或跨屏拖拽时，B 站栅格列数将在 4/5/6/7 列间响应式切换。
+        // 此处引入 200ms 防抖，等待页面完成响应式断点重排后，直接测量第一行卡片物理数量重算步长与终态：
         let resizeTimer = null;
         window.addEventListener('resize', () => {
             if (!isWaterfall) return;
@@ -1693,10 +1750,10 @@
             // 1. 实时校准加载器位置，确保其水平中轴线始终对齐主视频列表
             adjustLoaderCentering();
 
-            // 2. 防抖重采样最新最大页码，并联动校准单页步长（page_size）与终态边界
+            // 2. 防抖重算第一行物理列数，并联动校准最大页数与终态边界
             if (resizeTimer) clearTimeout(resizeTimer);
             resizeTimer = setTimeout(() => {
-                // 重新解析分页器提取当前分辨率下的最新最大页数（42/34/28/24 之一），后续翻页将自动读取新步长
+                // 重新解析分页器提取当前最大页数（翻页 page_size 将直接基于 DOM 第一行卡片物理测量值计算：列数 × 6）
                 updateDynamicMaxPage();
 
                 // 3. 动态重校终态边界状态：
