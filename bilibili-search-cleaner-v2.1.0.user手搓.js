@@ -1043,7 +1043,7 @@
             loader.className = 'bili-waterfall-loader';
             loader.innerHTML = `
                 <div class="bili-waterfall-spinner"></div>
-                <span class="bili-waterfall-loader-text">正在加载下一页视频...</span>
+                <span class="bili-waterfall-loader-text">正在筛选下一页视频...</span>
             `;
             loader.addEventListener('click', (e) => {
                 const btn = e.target.closest('.bili-waterfall-back-to-top');
@@ -1230,24 +1230,14 @@
         }
     }
 
-    // 依据当前 DOM 测量的物理列数（4/5/6/7 列 × 固定 6 行），自适应系统 1008 条检索饱和上限：
-    // 4 列 -> 42 页 | 5 列 -> 34 页 | 6 列 -> 28 页 | 7 列 -> 24 页
+    // 生成终态文案
     function getEndedTipHtml() {
-        const cols = getGridColumnCount();
-        const maxLimitPageForCurrentCols = Math.ceil(1008 / (cols * 6));
-        const SYSTEM_MAX_PAGES = new Set([24, 28, 34, 42]);
-        const isMaxLimit = currentRequestedPage >= maxLimitPageForCurrentCols ||
-                           SYSTEM_MAX_PAGES.has(currentRequestedPage) ||
-                           currentRequestedPage >= 34;
-        const count = getVisibleVideoCount();
-        const reasonText = isMaxLimit 
-            ? `已达系统检索上限（目标视频数量: ${count}）` 
-            : `已展示全部相关视频（目标视频数量: ${count}）`;
+        const reasonText = '已展示全部相关视频';
         return `<span>${reasonText}</span><span style="margin: 0 4px; opacity: 0.5;">·</span><a class="bili-waterfall-back-to-top" role="button">⬆ 回到顶部</a>`;
     }
 
     // 更新加载状态条：展示加载动画或平滑隐藏
-    function updateLoader(show, text = '正在加载下一页视频...') {
+    function updateLoader(show, text = '正在筛选下一页视频...') {
         const loader = getOrCreateLoader();
         if (!loader) return;
         const txtEl = loader.querySelector('.bili-waterfall-loader-text');
@@ -1260,7 +1250,7 @@
             }
         } else {
             if (txtEl && !isAllLoaded) {
-                txtEl.textContent = '正在加载下一页视频...';
+                txtEl.textContent = '正在筛选下一页视频...';
             }
             if (!isAllLoaded) {
                 loader.classList.remove('active', 'ended');
