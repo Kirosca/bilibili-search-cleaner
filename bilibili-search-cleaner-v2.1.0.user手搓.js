@@ -34,6 +34,7 @@
     let filterStickyMenuId = null;
     let waterfallMenuId = null;
 
+    // 注册与更新油猴菜单命令
     function registerMenu() {
         if (typeof GM_registerMenuCommand !== 'function') return;
 
@@ -60,6 +61,7 @@
         waterfallMenuId = GM_registerMenuCommand(waterfallLabel, toggleWaterfall);
     }
 
+    // 切换聚光灯高亮模式并持久化配置
     function toggleSpotlight() {
         isSpotlight = !isSpotlight;
         localStorage.setItem('bili_cleaner_spotlight', String(isSpotlight));
@@ -72,6 +74,7 @@
         filterDOMElements();
     }
 
+    // 切换搜索筛选常驻状态并更新样式
     function toggleFilterSticky() {
         isFilterSticky = !isFilterSticky;
         localStorage.setItem('bili_cleaner_sticky_filter', String(isFilterSticky));
@@ -79,6 +82,7 @@
         applyFilterStickyState();
     }
 
+    // 切换瀑布流状态并在复位后刷新或跳转至第 1 页
     function toggleWaterfall() {
         isWaterfall = !isWaterfall;
         localStorage.setItem('bili_cleaner_waterfall', String(isWaterfall));
@@ -116,6 +120,7 @@
         }, 50);
     }
 
+    // 应用搜索筛选常驻的 CSS 类名并绑定变动观察者
     function applyFilterStickyState() {
         if (document.documentElement) {
             document.documentElement.classList.toggle('bili-filter-sticky-enabled', isFilterSticky);
@@ -127,6 +132,7 @@
         }
     }
 
+    // 同步并应用瀑布流当前生命周期状态
     function applyWaterfallState() {
         if (typeof syncWaterfallLifecycle === 'function') {
             syncWaterfallLifecycle();
@@ -138,6 +144,7 @@
  
     // 0. 接入 OpenCC 单例转换器（由 @require 本地持久化驱动）
     let sConverter = null;
+    // 将文本由繁体中文转换为简体中文
     function toSimplified(text) {
         if (!text) return '';
         try {
@@ -378,6 +385,7 @@
     // 5. 网络层拦截：存储 Tag 字典 + 接口层物理剔除广告
     const videoTagMap = new Map();
  
+    // 物理剔除数据列表中的商业推广与广告卡片，并提取存储标签字典
     function cleanAdsOnly(list) {
         if (!Array.isArray(list)) return list;
 
@@ -522,6 +530,7 @@
     // 6. DOM 层执行安检：支持高性能状态缓存与繁简归一化
     let isProcessing = false;
  
+    // 遍历匹配 DOM 卡片元素并执行多维度安检过滤
     function filterDOMElements() {
         if (isProcessing) return;
         isProcessing = true;
@@ -641,6 +650,7 @@
     observer.observe(document.documentElement, { childList: true, subtree: true });
 
     // 8. 快捷键支持：在搜索结果页按 '/' 快速聚焦并全选搜索框
+    // 获取当前页面中的搜索输入框元素
     function getSearchInput() {
         return document.querySelector('input.search-input-el') ||
                document.querySelector('input.search-input') ||
@@ -705,6 +715,7 @@
         }
     });
 
+    // 监听筛选条件面板 DOM 变动，确保面板始终处于展开状态
     function bindStickyObserver() {
         if (!isFilterSticky) return;
         const targets = document.querySelectorAll('div.more-conditions');
@@ -736,7 +747,9 @@
 
     // 内联轻量 MD5 实现（自研自包含，无外部依赖）
     function computeMd5(string) {
+        // 32 位循环左移
         function rotL(val, bits) { return (val << bits) | (val >>> (32 - bits)); }
+        // 32 位无符号加法
         function addU(x, y) {
             var x8 = (x & 0x80000000), y8 = (y & 0x80000000);
             var x4 = (x & 0x40000000), y4 = (y & 0x40000000);
@@ -747,13 +760,21 @@
                 else return (res ^ 0x40000000 ^ x8 ^ y8);
             } else { return (res ^ x8 ^ y8); }
         }
+        // MD5 基础逻辑运算函数 F, G, H, I
         function F(x, y, z) { return (x & y) | ((~x) & z); }
+        // MD5 逻辑函数 G
         function G(x, y, z) { return (x & z) | (y & (~z)); }
+        // MD5 逻辑函数 H
         function H(x, y, z) { return (x ^ y ^ z); }
+        // MD5 逻辑函数 I
         function I(x, y, z) { return (y ^ (x | (~z))); }
+        // MD5 四轮转换迭代函数 FF, GG, HH, II
         function FF(a,b,c,d,x,s,ac) { return addU(rotL(addU(addU(a, F(b,c,d)), addU(x, ac)), s), b); }
+        // MD5 迭代函数 GG
         function GG(a,b,c,d,x,s,ac) { return addU(rotL(addU(addU(a, G(b,c,d)), addU(x, ac)), s), b); }
+        // MD5 迭代函数 HH
         function HH(a,b,c,d,x,s,ac) { return addU(rotL(addU(addU(a, H(b,c,d)), addU(x, ac)), s), b); }
+        // MD5 迭代函数 II
         function II(a,b,c,d,x,s,ac) { return addU(rotL(addU(addU(a, I(b,c,d)), addU(x, ac)), s), b); }
         var str = unescape(encodeURIComponent(string));
         var len = str.length;
@@ -787,6 +808,7 @@
             a = II(a,b,c,d,words[k+4], 6,0xF7537E82); d = II(d,a,b,c,words[k+11],10,0xBD3AF235); c = II(c,d,a,b,words[k+2], 15,0x2AD7D2BB); b = II(b,c,d,a,words[k+9], 21,0xEB86D391);
             a = addU(a, AA); b = addU(b, BB); c = addU(c, CC); d = addU(d, DD);
         }
+        // 将数值转为十六进制小写格式
         function toHex(val) {
             var h = '';
             for (var m = 0; m <= 3; m++) {
@@ -805,12 +827,14 @@
         36, 20, 34, 44, 52
     ];
 
+    // 对编码密钥进行重排映射计算生成 Wbi mixin_key
     function getMixinKey(orig) {
         let temp = '';
         mixinKeyEncTab.forEach(n => { temp += orig[n] || ''; });
         return temp.slice(0, 32);
     }
 
+    // 获取 B 站当前会话的 Wbi 签名密钥（优先从首屏状态读取，次选接口请求）
     async function getWbiKeys() {
         if (cachedWbiKeys) return cachedWbiKeys;
         try {
@@ -837,6 +861,7 @@
         return null;
     }
 
+    // 对请求参数进行 Wbi 签名并生成带 wts 与 w_rid 的查询字符串
     function signWbi(params, img_key, sub_key) {
         const mixin_key = getMixinKey(img_key + sub_key);
         const curr_time = Math.round(Date.now() / 1000);
@@ -852,8 +877,8 @@
         return query_str + '&w_rid=' + w_rid;
     }
 
+    // 获取主视频列表容器（兼容首屏综合列表与纯视频列表）
     function getMainListContainer(root = document) {
-        // 兼容首屏综合列表 (.search-all-list) 与后续页/纯视频列表 (.search-page-video) 的主视频容器
         const videoSection = root.querySelector(
             'div.video.i_wrapper.search-all-list, ' +
             '.video.i_wrapper.search-all-list, ' +
@@ -867,6 +892,7 @@
         return null;
     }
 
+    // 获取或创建瀑布流状态悬浮微标 DOM 元素
     function getOrCreateBadge() {
         if (!isWaterfall) return null;
         let badge = document.getElementById('bili-waterfall-badge');
@@ -890,6 +916,7 @@
         return badge;
     }
 
+    // 更新瀑布流悬浮微标的文本内容与激活状态
     function updateBadge() {
         const badge = getOrCreateBadge();
         if (!badge) return;
@@ -955,6 +982,7 @@
         return loader;
     }
 
+    // 获取或创建瀑布流底部加载指示器 DOM 元素
     function getOrCreateLoader() {
         const pager = document.querySelector('.vui_pagenation, .vui_pagenation--btns');
         return ensureLoaderPosition(pager);
@@ -1004,6 +1032,7 @@
         return 34;
     }
 
+    // 重新计算并同步当前搜索结果的最大页码
     function updateDynamicMaxPage() {
         const p = getDynamicMaxPage();
         if (p > 0) {
@@ -1145,7 +1174,9 @@
         } catch (e) {}
     }
 
+    // 根据接口返回的数据项克隆或生成视频卡片 DOM 元素
     function createCardElement(item) {
+        // 格式化播放量与弹幕数统计数字（支持万/亿转换）
         function formatStat(n) {
             if (!n && n !== 0) return '';
             if (typeof n === 'string' && (n.includes('万') || n.includes('亿'))) return n;
@@ -1156,6 +1187,7 @@
             return String(num);
         }
 
+        // 格式化视频时长（对齐 mm:ss 或 hh:mm:ss 格式规范）
         function formatDuration(val) {
             if (!val && val !== 0) return '';
             const str = String(val).trim();
@@ -1351,6 +1383,7 @@
         return col;
     }
 
+    // 向主视频列表容器批量追加卡片并执行去重
     function appendCards(items) {
         if (!Array.isArray(items) || items.length === 0) return 0;
         const mainContainer = getMainListContainer(document);
@@ -1388,6 +1421,7 @@
         return addedCount;
     }
 
+    // 异步请求下一页视频数据并驱动瀑布流追加渲染
     async function triggerLoadNextPage() {
         if (!isWaterfall || isWaterfallPaused || isPaging || isAllLoaded) return;
         updateDynamicMaxPage();
@@ -1488,6 +1522,7 @@
         return rect.top < (window.innerHeight + 1000) && rect.bottom > -100;
     }
 
+    // 结束单次分页拉取事务，重置加载状态并按需触发视口连续预加载
     function finishPaging(success = true) {
         isPaging = false;
         updateBadge();
@@ -1784,6 +1819,7 @@
         }, { passive: true });
     } catch (e) {}
 
+    // 初始化或同步瀑布流生命周期与状态绑定
     function syncWaterfallLifecycle() {
         if (!document.body) return;
 
