@@ -1751,8 +1751,15 @@
             adjustLoaderCentering();
 
             // 2. 防抖重算第一行物理列数，并联动校准最大页数与终态边界
+            // 核心约束：当 loader 已存在 ended 类（已到达终态）时，即使窗口尺寸变动也绝不触发状态与页数校准
+            const loader = document.getElementById('bili-waterfall-loader');
+            if (loader && loader.classList.contains('ended')) return;
+
             if (resizeTimer) clearTimeout(resizeTimer);
             resizeTimer = setTimeout(() => {
+                const curLoader = document.getElementById('bili-waterfall-loader');
+                if (curLoader && curLoader.classList.contains('ended')) return;
+
                 // 重新解析分页器提取当前最大页数（翻页 page_size 将直接基于 DOM 第一行卡片物理测量值计算：列数 × 6）
                 updateDynamicMaxPage();
 
@@ -1761,11 +1768,6 @@
                     // 若窗口缩小导致列数减少、总页数下调，且当前已达新上限：立即转入终态展示
                     isAllLoaded = true;
                     showEndedLoader();
-                } else if (isAllLoaded && currentRequestedPage < maxWaterfallPage) {
-                    // 若窗口拉宽导致列数增加、总页数放宽，且当前尚未达到新上限：立即解除到底锁定，恢复触底预加载判定
-                    isAllLoaded = false;
-                    updateLoader(false);
-                    checkAndTriggerPaging();
                 }
             }, 200);
         }, { passive: true });
