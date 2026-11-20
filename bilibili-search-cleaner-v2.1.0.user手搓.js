@@ -988,10 +988,18 @@
         if (targetPager && targetPager.parentNode && loader.nextSibling !== targetPager) {
             targetPager.parentNode.insertBefore(loader, targetPager);
         } else if (!targetPager) {
-            // 无分页组件场景（例如单页搜索结果）：安全挂载于主视频列表容器下方
+            // 无分页组件场景（例如单页搜索结果）：在 mainSection 中新建最后一个子级元素并挂载 loader
             const mainSection = document.querySelector('div.video.i_wrapper.search-all-list, div.search-page-video.i_wrapper, div.video.i_wrapper') || getMainListContainer();
-            if (mainSection && mainSection.parentNode && loader.parentNode !== mainSection.parentNode) {
-                mainSection.parentNode.insertBefore(loader, mainSection.nextSibling);
+            if (mainSection) {
+                let wrapper = loader.parentElement;
+                if (!wrapper || !wrapper.classList.contains('flex_center') || wrapper.parentElement !== mainSection) {
+                    wrapper = document.createElement('div');
+                    wrapper.className = 'flex_center mt_x50 mb_lg';
+                    mainSection.appendChild(wrapper);
+                    wrapper.appendChild(loader);
+                } else if (mainSection.lastElementChild !== wrapper) {
+                    mainSection.appendChild(wrapper);
+                }
             }
         }
         adjustLoaderCentering();
