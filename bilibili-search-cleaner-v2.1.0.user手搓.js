@@ -267,7 +267,8 @@
         }
         .bili-waterfall-loader.ended {
             color: #9499a0;
-            font-size: 13px;
+            font-size: 12px;
+            font-weight: normal;
             padding: 0 !important;
             user-select: none;
         }
@@ -283,18 +284,6 @@
             background: rgba(148, 153, 160, 0.25);
             vertical-align: middle;
             margin: 0 14px;
-        }
-        .bili-waterfall-back-to-top {
-            color: #00aeec;
-            cursor: pointer;
-            text-decoration: none;
-            margin-left: 6px;
-            font-weight: 500;
-            transition: color 0.2s ease;
-        }
-        .bili-waterfall-back-to-top:hover {
-            color: #008ac5;
-            text-decoration: underline;
         }
         .bili-waterfall-spinner {
             width: 20px;
@@ -1043,15 +1032,8 @@
             loader.className = 'bili-waterfall-loader';
             loader.innerHTML = `
                 <div class="bili-waterfall-spinner"></div>
-                <span class="bili-waterfall-loader-text">正在筛选下一页视频...</span>
+                <span class="bili-waterfall-loader-text">筛选中...</span>
             `;
-            loader.addEventListener('click', (e) => {
-                const btn = e.target.closest('.bili-waterfall-back-to-top');
-                if (btn) {
-                    e.preventDefault();
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-            });
         }
         const targetPager = pager || document.querySelector('.vui_pagenation, .vui_pagenation--btns');
         if (targetPager && targetPager.parentNode && loader.nextSibling !== targetPager) {
@@ -1232,12 +1214,12 @@
 
     // 生成终态文案
     function getEndedTipHtml() {
-        const reasonText = '已展示全部相关视频';
-        return `<span>${reasonText}</span><span style="margin: 0 4px; opacity: 0.5;">·</span><a class="bili-waterfall-back-to-top" role="button">⬆ 回到顶部</a>`;
+        const reasonText = '暂无更多';
+        return `<span>${reasonText}</span>`;
     }
 
     // 更新加载状态条：展示加载动画或平滑隐藏
-    function updateLoader(show, text = '正在筛选下一页视频...') {
+    function updateLoader(show, text = '筛选中...') {
         const loader = getOrCreateLoader();
         if (!loader) return;
         const txtEl = loader.querySelector('.bili-waterfall-loader-text');
@@ -1250,7 +1232,7 @@
             }
         } else {
             if (txtEl && !isAllLoaded) {
-                txtEl.textContent = '正在筛选下一页视频...';
+                txtEl.textContent = '筛选中...';
             }
             if (!isAllLoaded) {
                 loader.classList.remove('active', 'ended');
@@ -1258,7 +1240,7 @@
         }
     }
 
-    // 专属终态展示：调用 getEndedTipHtml() 渲染客观终态提示（已展示全部相关视频 / 已达系统检索上限）
+    // 专属终态展示：调用 getEndedTipHtml() 渲染客观终态提示（已展示全部筛选内容 / 已达系统检索上限）
     function showEndedLoader() {
         const loader = getOrCreateLoader();
         if (!loader) return;
