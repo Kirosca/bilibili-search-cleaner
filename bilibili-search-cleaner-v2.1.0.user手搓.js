@@ -1207,6 +1207,29 @@
     }
 
     // 生成终态文案（方案 B+C 融合：客观归因区分真实到底与系统检索上限，并内置行动闭环入口）
+    // 统计当前页面实际处于可见状态的有效视频卡片总数
+    function getVisibleVideoCount() {
+        try {
+            const container = getMainListContainer(document);
+            if (!container) return 0;
+            return Array.from(container.children)
+                .filter(el => {
+                    if (!el || !el.isConnected) return false;
+                    if (el.id === 'bili-waterfall-loader' || el.classList.contains('flex_center')) return false;
+                    const isCard = el.classList.contains('video-list-item') || 
+                                   el.matches('div[class*="col_"]') || 
+                                   el.querySelector('.bili-video-card');
+                    if (!isCard) return false;
+                    if (el.offsetHeight === 0 && el.offsetWidth === 0) return false;
+                    const cs = window.getComputedStyle(el);
+                    return cs.display !== 'none' && cs.visibility !== 'hidden';
+                })
+                .length;
+        } catch (e) {
+            return 0;
+        }
+    }
+
     // 依据当前 DOM 测量的物理列数（4/5/6/7 列 × 固定 6 行），自适应系统 1008 条检索饱和上限：
     // 4 列 -> 42 页 | 5 列 -> 34 页 | 6 列 -> 28 页 | 7 列 -> 24 页
     function getEndedTipHtml() {
@@ -1216,9 +1239,10 @@
         const isMaxLimit = currentRequestedPage >= maxLimitPageForCurrentCols ||
                            SYSTEM_MAX_PAGES.has(currentRequestedPage) ||
                            currentRequestedPage >= 34;
+        const count = getVisibleVideoCount();
         const reasonText = isMaxLimit 
-            ? `已达系统检索上限（共 ${currentRequestedPage} 页）` 
-            : `已展示全部相关视频（共 ${currentRequestedPage} 页）`;
+            ? `已达系统检索上限（已有视频数量: ${count}）` 
+            : `已展示全部相关视频（已有视频数量: ${count}）`;
         return `<span>${reasonText}</span><span style="margin: 0 4px; opacity: 0.5;">·</span><a class="bili-waterfall-back-to-top" role="button">⬆ 回到顶部</a>`;
     }
 
@@ -1256,13 +1280,7 @@
         }
         // 终态提示渲染完成后，统计并输出当前页面实际处于可见状态的有效视频卡片总数
         try {
-            const count = Array.from(document.querySelectorAll('.video-list.row .video-list-item'))
-                .filter(el => {
-                    if (!el.isConnected || el.getClientRects().length === 0) return false;
-                    const cs = getComputedStyle(el);
-                    return cs.visibility !== 'hidden' && cs.visibility !== 'collapse';
-                })
-                .length;
+            const count = getVisibleVideoCount();
             console.log(`[Bilibili 搜索净化] 已有视频数量: ${count}`);
         } catch (e) {}
     }
@@ -1569,7 +1587,7 @@
         const nextPage = currentRequestedPage + 1;
         isPaging = true;
         updateBadge();
-        updateLoader(true, `正在加载第 ${nextPage} 页视频...`);
+        updateLoader(true);
 
         const sessionSeq = pagingSessionSeq;
         const controller = new AbortController();
@@ -1684,7 +1702,7 @@
 
         // 核心优化：若添加视频后依然符合已有的「加载下一页」视口判定，则不移除 active 类，保持连贯加载
         if (success && !isWaterfallPaused && isPagingConditionMet()) {
-            updateLoader(true, `正在加载第 ${currentRequestedPage + 1} 页视频...`);
+            updateLoader(true);
             setTimeout(() => {
                 if (!isPaging && !currentPagingPromise && !isAllLoaded && !isWaterfallPaused && isPagingConditionMet()) {
                     triggerLoadNextPage();
