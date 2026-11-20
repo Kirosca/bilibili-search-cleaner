@@ -1189,32 +1189,41 @@
     }
 
     // 生成终态文案（方案 B+C 融合：客观归因区分真实到底与系统检索上限，并内置行动闭环入口）
-    // 统计当前页面实际处于可见状态的有效视频卡片总数
-    function getVisibleVideoCount() {
+    // 统计当前页面视频卡片总数（含目标与非目标）及实际可见的目标视频数
+    function getVideoCounts() {
         try {
             const container = getMainListContainer(document);
-            if (!container) return 0;
-            return Array.from(container.children)
-                .filter(el => {
-                    if (!el || !el.isConnected) return false;
-                    if (el.id === 'bili-waterfall-loader' || el.classList.contains('flex_center')) return false;
-                    const isCard = el.classList.contains('video-list-item') || 
-                                   el.matches('div[class*="col_"]') || 
-                                   el.querySelector('.bili-video-card');
-                    if (!isCard) return false;
-                    if (el.offsetHeight === 0 && el.offsetWidth === 0) return false;
-                    const cs = window.getComputedStyle(el);
-                    return cs.display !== 'none' && cs.visibility !== 'hidden';
-                })
-                .length;
+            if (!container) return { total: 0, target: 0 };
+            const allCards = Array.from(container.children).filter(el => {
+                if (!el || !el.isConnected) return false;
+                if (el.id === 'bili-waterfall-loader' || el.classList.contains('flex_center')) return false;
+                if (el.classList.contains('activity-game-list') || el.classList.contains('activity-card')) return false;
+                return el.classList.contains('video-list-item') || 
+                       el.matches('div[class*="col_"]') || 
+                       Boolean(el.querySelector('.bili-video-card'));
+            });
+            const total = allCards.length;
+            const target = allCards.filter(el => {
+                if (isSpotlight && el.classList.contains('bili-cleaner-dimmed')) return false;
+                if (el.style.display === 'none') return false;
+                if (el.offsetHeight === 0 && el.offsetWidth === 0) return false;
+                const cs = window.getComputedStyle(el);
+                return cs.display !== 'none' && cs.visibility !== 'hidden';
+            }).length;
+            return { total, target };
         } catch (e) {
-            return 0;
+            return { total: 0, target: 0 };
         }
+    }
+
+    function getVisibleVideoCount() {
+        return getVideoCounts().target;
     }
 
     // 生成终态文案
     function getEndedTipHtml() {
-        const reasonText = '暂无更多';
+        const { total, target: count } = getVideoCounts();
+        const reasonText = `已抓取 ${total} 个视频，获取了 ${count} 个目标视频`;
         return `<span>${reasonText}</span>`;
     }
 
