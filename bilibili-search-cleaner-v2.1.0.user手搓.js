@@ -635,8 +635,7 @@
                     }
                 }
             });
-            if (isWaterfall && typeof refreshPageAnchors === 'function') {
-                refreshPageAnchors();
+            if (isWaterfall && typeof updateViewportPage === 'function') {
                 updateViewportPage();
             }
         } finally {
@@ -953,110 +952,59 @@
         }
     }
 
-    // 辅助判定卡片是否在页面中实际渲染显示（物理可见，聚光灯模式下暗化卡片亦属于页面已显示）
-    function isCardPhysicallyShown(card) {
-        if (!card || !card.isConnected) return false;
-        if (card.style.display === 'none') return false;
-        if (card.offsetHeight === 0 && card.offsetWidth === 0) return false;
-        return true;
-    }
-
-    // 辅助判定卡片是否为命中规则的「有效视频」（非广告、未被隐藏、聚光灯模式下非暗化卡片）
-    function isCardValidTarget(card) {
-        if (!isCardPhysicallyShown(card)) return false;
-        if (card.classList.contains('bili-cleaner-dimmed')) return false;
-        return true;
-    }
-
-    // 标记每页首个视频卡片与首个有效（可见）视频卡片
-    function refreshPageAnchors() {
+    // 依据可视窗口内卡片的物理行数实时计算当前所在页（不打标记，每 6 行为一页，窗口中出现多页时取最大页数）
+    function updateViewportPage() {
+        if (!isWaterfall) return;
         const mainContainer = getMainListContainer(document);
         if (!mainContainer) return;
 
-        const cards = Array.from(mainContainer.children).filter(el => 
-            el && 
-            el.id !== 'bili-waterfall-loader' && 
-            (el.classList.contains('video-list-item') || el.matches('div[class*="col_"]') || el.querySelector('.bili-video-card'))
-        );
-        if (!cards.length) return;
-
-        // 默认将尚未标注所属页码的卡片归入第 1 页
-        cards.forEach(card => {
-            if (!card.dataset.page) {
-                card.dataset.page = '1';
-            }
-        });
-
-        // 收集所有已知页码并按数字升序遍历
-        const pages = Array.from(new Set(cards.map(c => parseInt(c.dataset.page, 10) || 1))).sort((a, b) => a - b);
-
-        pages.forEach(p => {
-            const pageCards = cards.filter(c => (parseInt(c.dataset.page, 10) || 1) === p);
-            if (!pageCards.length) return;
-
-            // 1. 每页第一个视频卡片打上页数标记（只要页面物理显示出来，即便暗化亦打标）
-            const firstCard = pageCards[0];
-            if (isCardPhysicallyShown(firstCard)) {
-                firstCard.dataset.pageMarker = String(p);
-            }
-
-            // 2. 每页第一个有效（命中关键词、非暗化、非隐藏）视频卡片打上页数标记
-            let firstValidCard = null;
-            for (const c of pageCards) {
-                if (isCardValidTarget(c)) {
-                    firstValidCard = c;
-                    break;
-                }
-            }
-            if (firstValidCard) {
-                firstValidCard.dataset.pageMarker = String(p);
-            }
-
-            // 清除本页其他既不是第一个视频、也不是第一个有效视频卡片上的旧标记
-            pageCards.forEach(c => {
-                if (c !== firstCard && c !== firstValidCard) {
-                    delete c.dataset.pageMarker;
-                }
-            });
-        });
-    }
-
-    // 依据可视窗口内显式出现的打标卡片校准当前窗口所在页（出现多页卡片时取最大页数）
-    function updateViewportPage() {
-        if (!isWaterfall) return;
-        const markers = document.querySelectorAll('[data-page-marker]');
-        if (!markers.length) return;
-
         const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+        const children = mainContainer.children;
+        const len = children.length;
+        if (!len) return;
+
+        let currentRow = 0;
+        let lastTop = -9999;
         const inViewPages = [];
         let lastPassedPage = 1;
 
-        markers.forEach(card => {
-            // 必须是打了标记并且在页面中显示出来的视频卡片（包含暗化显示的卡片）
-            if (!isCardPhysicallyShown(card)) return;
+        for (let i = 0; i < len; i++) {
+            const el = children[i];
+            if (el.id === 'bili-waterfall-loader' || el.classList.contains('flex_center')) continue;
+            if (el.offsetHeight === 0) continue;
 
-            const rect = card.getBoundingClientRect();
-            const page = parseInt(card.dataset.pageMarker, 10);
-            if (isNaN(page)) return;
+            const isCard = el.classList.contains('video-list-item') || 
+                           el.matches('div[class*="col_"]') || 
+                           el.querySelector('.bili-video-card');
+            if (!isCard) continue;
 
-            // 判定是否在可视窗口中出现（与视口垂直相交）
-            if (rect.top < viewportHeight && rect.bottom > 0) {
-                inViewPages.push(page);
+            const top = el.offsetTop;
+            if (Math.abs(top - lastTop) > 6) {
+                currentRow++;
+                lastTop = top;
             }
-            // 记录已经滚过或正处于视口中的最大页数（用于窗口处于两页打标卡片空隙时的定位）
+
+            // 每 6 行为一页
+            const cardPage = Math.floor((currentRow - 1) / 6) + 1;
+
+            const rect = el.getBoundingClientRect();
+            // 判定是否在当前可视窗口中出现（与视口垂直相交）
+            if (rect.top < viewportHeight && rect.bottom > 0) {
+                inViewPages.push(cardPage);
+            }
+            // 记录已经滚过或正处于视口中的最大页数（用于视口位于行空隙时的兜底定位）
             if (rect.top < viewportHeight) {
-                if (page > lastPassedPage) {
-                    lastPassedPage = page;
+                if (cardPage > lastPassedPage) {
+                    lastPassedPage = cardPage;
                 }
             }
-        });
+        }
 
         let newPage = currentViewportPage;
         if (inViewPages.length > 0) {
             // 如果可视窗口中出现多个页中的视频卡片则显示最大页数那个
             newPage = Math.max(...inViewPages);
-        } else {
-            // 可视窗口内暂时没有打标卡片露头时，维持最后滚过的有效打标页码
+        } else if (currentRow > 0) {
             newPage = lastPassedPage;
         }
 
@@ -1550,7 +1498,7 @@
     }
 
     // 向主视频列表容器批量追加卡片并执行去重
-    function appendCards(items, pageNum = 1) {
+    function appendCards(items) {
         if (!Array.isArray(items) || items.length === 0) return 0;
         const mainContainer = getMainListContainer(document);
         if (!mainContainer) return 0;
@@ -1574,9 +1522,8 @@
                 }
             }
 
-            // 直接构建卡片并打上所属页码
+            // 直接构建卡片，不在此处筛选，留给后续安检模块
             const cardNode = createCardElement(item);
-            cardNode.dataset.page = String(pageNum);
             fragment.appendChild(cardNode);
             addedCount++;
         }
@@ -1584,7 +1531,6 @@
         if (addedCount > 0) {
             mainContainer.appendChild(fragment);
             filterDOMElements();
-            refreshPageAnchors();
             updateViewportPage();
         }
         return addedCount;
@@ -1684,7 +1630,7 @@
                 }
 
                 if (videoItems.length > 0) {
-                    appendCards(videoItems, nextPage);
+                    appendCards(videoItems);
                     currentRequestedPage = nextPage;
 
                     // 达到末页时标记为已全部加载完毕
@@ -1880,7 +1826,6 @@
 
         isPaging = false;
         refreshSeenBvidsFromDOM();
-        refreshPageAnchors();
         updateViewportPage();
         updateBadge();
 
@@ -1910,7 +1855,6 @@
         cachedCardTemplate = null;
         isPaging = false;
         refreshSeenBvidsFromDOM();
-        refreshPageAnchors();
         updateViewportPage();
         bindWaterfallObserver();
         updateBadge();
@@ -2065,7 +2009,6 @@
             isAllLoaded = maxWaterfallPage <= 1;
             isPaging = false;
 
-            refreshPageAnchors();
             updateViewportPage();
             getOrCreateBadge();
             updateBadge();
