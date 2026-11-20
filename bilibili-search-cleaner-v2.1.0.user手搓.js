@@ -1032,7 +1032,7 @@
             loader.className = 'bili-waterfall-loader';
             loader.innerHTML = `
                 <div class="bili-waterfall-spinner"></div>
-                <span class="bili-waterfall-loader-text">正在加载...</span>
+                <span class="bili-waterfall-loader-text">正在筛选...</span>
             `;
         }
         const targetPager = pager || document.querySelector('.vui_pagenation, .vui_pagenation--btns');
@@ -1222,13 +1222,12 @@
 
     // 生成终态文案
     function getEndedTipHtml() {
-        const { total, target: count } = getVideoCounts();
-        const reasonText = `已无更多`;
+        const reasonText = `没有更多了`;
         return `<span>${reasonText}</span>`;
     }
 
     // 更新加载状态条：展示加载动画或平滑隐藏
-    function updateLoader(show, text = '正在加载...') {
+    function updateLoader(show, text = '正在筛选...') {
         const loader = getOrCreateLoader();
         if (!loader) return;
         const txtEl = loader.querySelector('.bili-waterfall-loader-text');
@@ -1241,7 +1240,7 @@
             }
         } else {
             if (txtEl && !isAllLoaded) {
-                txtEl.textContent = '正在加载...';
+                txtEl.textContent = '正在筛选...';
             }
             if (!isAllLoaded) {
                 loader.classList.remove('active', 'ended');
