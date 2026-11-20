@@ -1241,8 +1241,8 @@
                            currentRequestedPage >= 34;
         const count = getVisibleVideoCount();
         const reasonText = isMaxLimit 
-            ? `已达系统检索上限（已有视频数量: ${count}）` 
-            : `已展示全部相关视频（已有视频数量: ${count}）`;
+            ? `已达系统检索上限（目标视频数量: ${count}）` 
+            : `已展示全部相关视频（目标视频数量: ${count}）`;
         return `<span>${reasonText}</span><span style="margin: 0 4px; opacity: 0.5;">·</span><a class="bili-waterfall-back-to-top" role="button">⬆ 回到顶部</a>`;
     }
 
