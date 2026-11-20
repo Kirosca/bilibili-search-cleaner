@@ -1132,6 +1132,17 @@
         if (txtEl) {
             txtEl.innerHTML = getEndedTipHtml();
         }
+        // 终态提示渲染完成后，统计并输出当前页面实际处于可见状态的有效视频卡片总数
+        try {
+            const count = Array.from(document.querySelectorAll('.video-list.row .video-list-item'))
+                .filter(el => {
+                    if (!el.isConnected || el.getClientRects().length === 0) return false;
+                    const cs = getComputedStyle(el);
+                    return cs.visibility !== 'hidden' && cs.visibility !== 'collapse';
+                })
+                .length;
+            console.log(`[Bilibili 搜索净化] 已有视频数量: ${count}`);
+        } catch (e) {}
     }
 
     function createCardElement(item) {
