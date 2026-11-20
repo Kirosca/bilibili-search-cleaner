@@ -751,6 +751,9 @@
     // ==========================================
     let isWaterfallPaused = false;
     let isPaging = false;
+    let currentPagingPromise = null;
+    let pagingAbortController = null;
+    let pagingSessionSeq = 0;
     let isAllLoaded = false;
     let currentRequestedPage = 1;
     let maxWaterfallPage = 34;
@@ -1466,95 +1469,131 @@
         return addedCount;
     }
 
-    // 异步请求下一页视频数据并驱动瀑布流追加渲染
+    // 强制终止当前进行中的分页拉取事务并释放互斥锁
+    function abortRunningPaging() {
+        pagingSessionSeq++;
+        if (pagingAbortController) {
+            try {
+                pagingAbortController.abort();
+            } catch (e) {}
+            pagingAbortController = null;
+        }
+        isPaging = false;
+        currentPagingPromise = null;
+    }
+
+    // 异步请求下一页视频数据并驱动瀑布流追加渲染（严格单例互斥：一次只能运行一个）
     async function triggerLoadNextPage() {
-        if (!isWaterfall || isWaterfallPaused || isPaging || isAllLoaded) return;
+        if (!isWaterfall || isWaterfallPaused || isAllLoaded) return null;
+        if (currentPagingPromise || isPaging) return currentPagingPromise;
+
         updateDynamicMaxPage();
         if (currentRequestedPage >= maxWaterfallPage) {
             isAllLoaded = true;
             updateBadge();
             showEndedLoader();
-            return;
+            return null;
         }
 
         const urlParams = new URLSearchParams(window.location.search);
         const rawKeyword = urlParams.get('keyword');
-        if (!rawKeyword) return;
+        if (!rawKeyword) return null;
 
         const nextPage = currentRequestedPage + 1;
         isPaging = true;
         updateBadge();
         updateLoader(true, `正在加载第 ${nextPage} 页视频...`);
 
-        try {
-            const keys = await getWbiKeys();
-            if (!keys) {
-                finishPaging(false);
-                return;
-            }
+        const sessionSeq = pagingSessionSeq;
+        const controller = new AbortController();
+        pagingAbortController = controller;
 
-            // 统一采用 B 站官方网页翻页专用的 /search/type 纯视频接口，单页步长动态自适应对齐官方原生规格
-            const apiBase = 'https://api.bilibili.com/x/web-interface/wbi/search/type';
-
-            const queryObj = {
-                category_id: urlParams.get('category_id') || '',
-                search_type: 'video',
-                ad_resource: 5654,
-                __refresh__: true,
-                _extra: '',
-                context: '',
-                page: nextPage,
-                page_size: getDynamicPageSize(),
-                order: urlParams.get('order') || 'totalrank',
-                pubtime_begin_s: urlParams.get('pubtime_begin_s') || 0,
-                pubtime_end_s: urlParams.get('pubtime_end_s') || 0,
-                duration: urlParams.get('duration') || '0',
-                tids: urlParams.get('tids') || '0',
-                from_source: urlParams.get('from_source') || 'web_search',
-                from_spmid: '333.337',
-                platform: 'pc',
-                highlight: 1,
-                single_column: 0,
-                keyword: getCleanApiKeyword() || decodeURIComponent(rawKeyword.replace(/\+/g, ' ')),
-                source_tag: 3,
-                gaia_vtoken: '',
-                web_location: 1430654,
-                'x-bili-device-req-json': JSON.stringify({ platform: 'web', device: 'pc', spmid: '333.337', mobi_app: 'web_cn' }),
-                'x-bili-locale-json': JSON.stringify({ c_locale: { language: 'zh', script: 'Hans' }, always_translate: false })
-            };
-
-            const signedQs = signWbi(queryObj, keys.img_key, keys.sub_key);
-            const res = await targetWindow.fetch(`${apiBase}?${signedQs}`, {
-                headers: { 'Referer': 'https://search.bilibili.com/' }
-            });
-            const data = await res.json();
-
-            let videoItems = [];
-            if (data?.data?.result) {
-                if (Array.isArray(data.data.result)) {
-                    videoItems = data.data.result;
+        currentPagingPromise = (async () => {
+            let success = false;
+            try {
+                const keys = await getWbiKeys();
+                if (controller.signal.aborted || sessionSeq !== pagingSessionSeq) return;
+                if (!keys) {
+                    return;
                 }
-            }
 
-            if (videoItems.length > 0) {
-                appendCards(videoItems);
-                currentRequestedPage = nextPage;
+                // 统一采用 B 站官方网页翻页专用的 /search/type 纯视频接口，单页步长动态自适应对齐官方原生规格
+                const apiBase = 'https://api.bilibili.com/x/web-interface/wbi/search/type';
 
-                // 达到末页时标记为已全部加载完毕
-                updateDynamicMaxPage();
-                if (currentRequestedPage >= maxWaterfallPage) {
+                const queryObj = {
+                    category_id: urlParams.get('category_id') || '',
+                    search_type: 'video',
+                    ad_resource: 5654,
+                    __refresh__: true,
+                    _extra: '',
+                    context: '',
+                    page: nextPage,
+                    page_size: getDynamicPageSize(),
+                    order: urlParams.get('order') || 'totalrank',
+                    pubtime_begin_s: urlParams.get('pubtime_begin_s') || 0,
+                    pubtime_end_s: urlParams.get('pubtime_end_s') || 0,
+                    duration: urlParams.get('duration') || '0',
+                    tids: urlParams.get('tids') || '0',
+                    from_source: urlParams.get('from_source') || 'web_search',
+                    from_spmid: '333.337',
+                    platform: 'pc',
+                    highlight: 1,
+                    single_column: 0,
+                    keyword: getCleanApiKeyword() || decodeURIComponent(rawKeyword.replace(/\+/g, ' ')),
+                    source_tag: 3,
+                    gaia_vtoken: '',
+                    web_location: 1430654,
+                    'x-bili-device-req-json': JSON.stringify({ platform: 'web', device: 'pc', spmid: '333.337', mobi_app: 'web_cn' }),
+                    'x-bili-locale-json': JSON.stringify({ c_locale: { language: 'zh', script: 'Hans' }, always_translate: false })
+                };
+
+                const signedQs = signWbi(queryObj, keys.img_key, keys.sub_key);
+                const res = await targetWindow.fetch(`${apiBase}?${signedQs}`, {
+                    headers: { 'Referer': 'https://search.bilibili.com/' },
+                    signal: controller.signal
+                });
+                const data = await res.json();
+                if (controller.signal.aborted || sessionSeq !== pagingSessionSeq) return;
+
+                let videoItems = [];
+                if (data?.data?.result) {
+                    if (Array.isArray(data.data.result)) {
+                        videoItems = data.data.result;
+                    }
+                }
+
+                if (videoItems.length > 0) {
+                    appendCards(videoItems);
+                    currentRequestedPage = nextPage;
+
+                    // 达到末页时标记为已全部加载完毕
+                    updateDynamicMaxPage();
+                    if (currentRequestedPage >= maxWaterfallPage) {
+                        isAllLoaded = true;
+                    }
+                } else {
+                    // 接口返回空数据（数据已自然到底），校准最大页数与实际已展示页数一致
+                    maxWaterfallPage = currentRequestedPage;
                     isAllLoaded = true;
                 }
-            } else {
-                // 接口返回空数据（数据已自然到底），校准最大页数与实际已展示页数一致
-                maxWaterfallPage = currentRequestedPage;
-                isAllLoaded = true;
+                success = true;
+            } catch (e) {
+                if (e.name !== 'AbortError') {
+                    console.error('[Bilibili 搜索净化] 瀑布流加载下一页失败:', e);
+                }
+            } finally {
+                isPaging = false;
+                if (pagingAbortController === controller) {
+                    pagingAbortController = null;
+                }
+                currentPagingPromise = null;
+                if (!controller.signal.aborted && sessionSeq === pagingSessionSeq) {
+                    finishPaging(success);
+                }
             }
-        } catch (e) {
-            console.error('[Bilibili 搜索净化] 瀑布流加载下一页失败:', e);
-        } finally {
-            finishPaging(true);
-        }
+        })();
+
+        return currentPagingPromise;
     }
 
     // 判定当前是否满足触发下一页加载的条件（视口进入预加载缓冲带且尚未全部加载完毕）
@@ -1569,7 +1608,6 @@
 
     // 结束单次分页拉取事务，重置加载状态并按需触发视口连续预加载
     function finishPaging(success = true) {
-        isPaging = false;
         updateBadge();
 
         if (isAllLoaded) {
@@ -1581,7 +1619,7 @@
         if (success && !isWaterfallPaused && isPagingConditionMet()) {
             updateLoader(true, `正在加载第 ${currentRequestedPage + 1} 页视频...`);
             setTimeout(() => {
-                if (!isPaging && !isAllLoaded && !isWaterfallPaused && isPagingConditionMet()) {
+                if (!isPaging && !currentPagingPromise && !isAllLoaded && !isWaterfallPaused && isPagingConditionMet()) {
                     triggerLoadNextPage();
                 }
             }, 60);
@@ -1605,7 +1643,7 @@
 
     // 视口相交检测与分页拉取触发器：兼备监听器离线脱落自愈功能
     function checkAndTriggerPaging() {
-        if (!isWaterfall || isWaterfallPaused || isPaging || isAllLoaded) return;
+        if (!isWaterfall || isWaterfallPaused || isPaging || currentPagingPromise || isAllLoaded) return;
         const pager = document.querySelector('.vui_pagenation, .vui_pagenation--btns') || document.getElementById('bili-waterfall-loader');
         if (!pager) return;
 
@@ -1644,7 +1682,9 @@
         waterfallObserver = new IntersectionObserver((entries) => {
             const entry = entries[0];
             if (entry && entry.isIntersecting) {
-                triggerLoadNextPage();
+                if (!isPaging && !currentPagingPromise) {
+                    triggerLoadNextPage();
+                }
             }
         }, {
             root: null,
@@ -1683,6 +1723,7 @@
         const urlPage = isNaN(p) ? 1 : p;
 
         if (signChanged || isNewSearch) {
+            abortRunningPaging();
             // 新搜索场景：强制回到第 1 页并解除已全部加载完毕的状态
             currentRequestedPage = 1;
             cachedCardTemplate = null;
@@ -1737,6 +1778,7 @@
         const p = parseInt(new URLSearchParams(window.location.search).get('page') || '1', 10);
         const urlPage = isNaN(p) ? 1 : p;
         if (urlPage === 1) {
+            abortRunningPaging();
             currentRequestedPage = 1;
             isAllLoaded = maxWaterfallPage <= 1;
         }
@@ -1883,6 +1925,7 @@
                 return;
             }
 
+            abortRunningPaging();
             document.documentElement.classList.add('bili-waterfall-enabled');
 
             lastSearchSign = getSearchSignature();
@@ -1905,6 +1948,7 @@
             // 首屏初始化后校验视口高度，若大屏或首屏卡片较少导致缓冲不足，提前静默预载下一页
             setTimeout(checkAndTriggerPaging, 300);
         } else {
+            abortRunningPaging();
             document.documentElement.classList.remove('bili-waterfall-enabled');
             if (waterfallObserver) {
                 waterfallObserver.disconnect();
