@@ -336,6 +336,37 @@
             border-color: rgba(148, 153, 160, 0.35);
             color: #61666d;
         }
+
+        /* 6. 瀑布流封面雪碧图动态预览相关样式 */
+        .bili-cleaner-videoshot-layer {
+            position: absolute;
+            inset: 0;
+            z-index: 5;
+            pointer-events: none;
+            background-repeat: no-repeat;
+            opacity: 0;
+            border-radius: 6px;
+            transition: opacity 0.18s ease;
+            background-color: transparent;
+        }
+        .bili-cleaner-videoshot-layer.active {
+            opacity: 1;
+        }
+        .bili-cleaner-videoshot-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 2.5px;
+            background: #00aeec;
+            z-index: 6;
+            pointer-events: none;
+            width: 0%;
+            transition: width 0.06s linear, opacity 0.18s ease;
+            opacity: 0;
+        }
+        .bili-cleaner-videoshot-bar.active {
+            opacity: 1;
+        }
     `;
     (document.head || document.documentElement).appendChild(styleElement);
  
@@ -2062,11 +2093,292 @@
         }
     }
 
+    // ==========================================
+    // 11. 瀑布流封面雪碧图动态预览模块 (Videoshot)
+    // ==========================================
+    const videoshotMetaCache = new Map();
+    let activePreview = null;
+
+    // 从 DOM 卡片提取视频时长秒数
+    function getCardDurationSeconds(card) {
+        if (!card) return 0;
+        const durEl = card.querySelector('.bili-video-card__stats__duration');
+        if (!durEl) return 0;
+        const txt = durEl.textContent.trim();
+        if (!txt) return 0;
+        const parts = txt.split(':').map(p => parseInt(p.trim(), 10) || 0);
+        if (parts.length === 2) {
+            return parts[0] * 60 + parts[1];
+        } else if (parts.length >= 3) {
+            return parts[0] * 3600 + parts[1] * 60 + parts[2];
+        }
+        return 0;
+    }
+
+    // 从接口拉取视频的雪碧图元数据
+    async function fetchVideoshotMeta(bvid, durationSeconds = 0) {
+        if (videoshotMetaCache.has(bvid)) {
+            return videoshotMetaCache.get(bvid);
+        }
+        try {
+            const res = await targetWindow.fetch(`https://api.bilibili.com/x/player/videoshot?bvid=${encodeURIComponent(bvid)}&index=1`);
+            const data = await res.json();
+            if (data?.code === 0 && data.data?.image && data.data.image.length > 0) {
+                const xLen = data.data.img_x_len || 10;
+                const yLen = data.data.img_y_len || 10;
+                const singleSheetCount = xLen * yLen;
+                const images = data.data.image.map(img => img.startsWith('http') ? img : 'https:' + img);
+                
+                // 三级精准截断：
+                // 1. 优先读取 index 数组长度；
+                // 2. 长视频或合集卡片（B站为了轻量化将索引存入 pvdata 二进制文件，index 为空）：
+                //    自动异步读取 pvdata (通常仅数十字节至2KB)，按 byteLength / 2 绝对精准解析实际截帧数（彻底解决40小时等教程合集卡片P1尾部黑屏）；
+                // 3. 兜底结合视频卡片时长（按每5秒一帧）双重限幅，杜绝任何情况滑入雪碧图黑色留白区
+                let totalFrames = images.length * singleSheetCount;
+                if (Array.isArray(data.data.index) && data.data.index.length > 0) {
+                    totalFrames = data.data.index.length;
+                } else if (data.data.pvdata) {
+                    try {
+                        const binUrl = data.data.pvdata.startsWith('http') ? data.data.pvdata : 'https:' + data.data.pvdata;
+                        const binRes = await targetWindow.fetch(binUrl);
+                        const binBuf = await binRes.arrayBuffer();
+                        if (binBuf && binBuf.byteLength >= 2) {
+                            totalFrames = Math.floor(binBuf.byteLength / 2);
+                        }
+                    } catch (e) {
+                        const maxTheoretical = durationSeconds > 0 ? Math.ceil(durationSeconds / 5) : 0;
+                        if (maxTheoretical > 0) {
+                            totalFrames = Math.min(totalFrames, maxTheoretical);
+                        }
+                    }
+                } else {
+                    const maxTheoretical = durationSeconds > 0 ? Math.ceil(durationSeconds / 5) : 0;
+                    if (maxTheoretical > 0) {
+                        totalFrames = Math.min(totalFrames, maxTheoretical);
+                    }
+                }
+
+                const meta = {
+                    images,
+                    xLen,
+                    yLen,
+                    singleSheetCount,
+                    totalFrames
+                };
+                if (videoshotMetaCache.size >= 200) {
+                    const firstKey = videoshotMetaCache.keys().next().value;
+                    videoshotMetaCache.delete(firstKey);
+                }
+                videoshotMetaCache.set(bvid, meta);
+                return meta;
+            }
+        } catch (e) {}
+        videoshotMetaCache.set(bvid, null);
+        return null;
+    }
+
+    // 渲染特定帧到预览层
+    function renderVideoshotFrame(layer, bar, meta, frameIndex) {
+        if (!layer || !meta || meta.totalFrames <= 0) return;
+        const boundedIndex = Math.max(0, Math.min(frameIndex, meta.totalFrames - 1));
+        const sheetIndex = Math.floor(boundedIndex / meta.singleSheetCount);
+        const subIndex = boundedIndex % meta.singleSheetCount;
+
+        const imgUrl = meta.images[sheetIndex];
+        if (!imgUrl) return;
+
+        const c = subIndex % meta.xLen;
+        const r = Math.floor(subIndex / meta.xLen);
+        const posX = meta.xLen > 1 ? (c / (meta.xLen - 1)) * 100 : 0;
+        const posY = meta.yLen > 1 ? (r / (meta.yLen - 1)) * 100 : 0;
+
+        layer.style.backgroundImage = `url("${imgUrl}")`;
+        layer.style.backgroundSize = `${meta.xLen * 100}% ${meta.yLen * 100}%`;
+        layer.style.backgroundPosition = `${posX.toFixed(2)}% ${posY.toFixed(2)}%`;
+        layer.classList.add('active');
+
+        if (bar) {
+            const percent = ((boundedIndex + 1) / meta.totalFrames) * 100;
+            bar.style.width = `${percent.toFixed(1)}%`;
+            bar.classList.add('active');
+        }
+    }
+
+    // 停止并清理当前预览
+    function stopActivePreview() {
+        if (!activePreview) return;
+        if (activePreview.timer) {
+            clearInterval(activePreview.timer);
+        }
+        if (activePreview.debounceTimer) {
+            clearTimeout(activePreview.debounceTimer);
+        }
+        if (activePreview.scrubResumeTimer) {
+            clearTimeout(activePreview.scrubResumeTimer);
+        }
+        if (activePreview.layer) {
+            activePreview.layer.classList.remove('active');
+        }
+        if (activePreview.bar) {
+            activePreview.bar.classList.remove('active');
+            activePreview.bar.style.width = '0%';
+        }
+        activePreview = null;
+    }
+
+    // 启动指定容器的雪碧图预览
+    function startVideoshotPreview(wrapEl, bvid, durationSeconds = 0) {
+        stopActivePreview();
+
+        let layer = wrapEl.querySelector('.bili-cleaner-videoshot-layer');
+        if (!layer) {
+            layer = document.createElement('div');
+            layer.className = 'bili-cleaner-videoshot-layer';
+            wrapEl.appendChild(layer);
+        }
+
+        let bar = wrapEl.querySelector('.bili-cleaner-videoshot-bar');
+        if (!bar) {
+            bar = document.createElement('div');
+            bar.className = 'bili-cleaner-videoshot-bar';
+            wrapEl.appendChild(bar);
+        }
+
+        const state = {
+            wrapEl,
+            bvid,
+            durationSeconds,
+            layer,
+            bar,
+            currentFrame: 0,
+            timer: null,
+            debounceTimer: null,
+            scrubResumeTimer: null,
+            meta: null
+        };
+        activePreview = state;
+
+        state.debounceTimer = setTimeout(async () => {
+            if (activePreview !== state) return;
+            const meta = await fetchVideoshotMeta(bvid, durationSeconds);
+            if (activePreview !== state || !meta) return;
+            state.meta = meta;
+
+            // 并发预加载该视频的所有雪碧图分片（彻底避免左右移动跨图时的网络延迟白屏/黑屏）
+            meta.images.forEach(url => {
+                const preImg = new Image();
+                preImg.src = url;
+            });
+
+            const img = new Image();
+            img.src = meta.images[0];
+            img.onload = () => {
+                if (activePreview !== state) return;
+                renderVideoshotFrame(layer, bar, meta, 0);
+
+                state.timer = setInterval(() => {
+                    if (activePreview !== state) return;
+                    state.currentFrame = (state.currentFrame + 1) % meta.totalFrames;
+                    renderVideoshotFrame(layer, bar, meta, state.currentFrame);
+                }, 120);
+            };
+        }, 180);
+    }
+
+    // 鼠标在封面上移动时实现随鼠标滑动精准寻帧 (Scrubbing)
+    function onCoverMouseMove(e, wrapEl) {
+        if (!activePreview || activePreview.wrapEl !== wrapEl || !activePreview.meta) return;
+        const rect = wrapEl.getBoundingClientRect();
+        if (rect.width <= 0) return;
+
+        if (activePreview.timer) {
+            clearInterval(activePreview.timer);
+            activePreview.timer = null;
+        }
+
+        const offsetX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+        const ratio = offsetX / rect.width;
+        const frame = Math.floor(ratio * activePreview.meta.totalFrames);
+        activePreview.currentFrame = frame;
+        renderVideoshotFrame(activePreview.layer, activePreview.bar, activePreview.meta, frame);
+
+        if (activePreview.scrubResumeTimer) {
+            clearTimeout(activePreview.scrubResumeTimer);
+        }
+        activePreview.scrubResumeTimer = setTimeout(() => {
+            if (!activePreview || activePreview.wrapEl !== wrapEl || !activePreview.meta || activePreview.timer) return;
+            activePreview.timer = setInterval(() => {
+                if (!activePreview || activePreview.wrapEl !== wrapEl) return;
+                activePreview.currentFrame = (activePreview.currentFrame + 1) % activePreview.meta.totalFrames;
+                renderVideoshotFrame(activePreview.layer, activePreview.bar, activePreview.meta, activePreview.currentFrame);
+            }, 120);
+        }, 1000);
+    }
+
+    // 统一绑定全局事件委托，监听封面 hover 与 mousemove
+    function initVideoshotObserver() {
+        document.addEventListener('mouseover', (e) => {
+            const wrapEl = e.target.closest('.bili-video-card__image--wrap, .bili-video-card__cover');
+            if (!wrapEl) {
+                if (activePreview && !e.target.closest('.bili-cleaner-videoshot-layer, .bili-cleaner-videoshot-bar')) {
+                    stopActivePreview();
+                }
+                return;
+            }
+
+            if (activePreview && activePreview.wrapEl === wrapEl) {
+                return;
+            }
+
+            const card = wrapEl.closest('.video-list-item, div[class*="col_"], .bili-video-card');
+            if (!card) return;
+
+            // 若卡片已存在官方活动播放器实例，不介入
+            if (card.querySelector('.v-inline-player, .bpx-docker, video')) {
+                return;
+            }
+
+            let bvid = '';
+            const bvidEl = card.querySelector('[data-bsb-bvid]');
+            if (bvidEl) {
+                bvid = bvidEl.getAttribute('data-bsb-bvid');
+            }
+            if (!bvid) {
+                const link = card.querySelector('a[href*="/video/"]');
+                const m = link ? link.href.match(/\/video\/([A-Za-z0-9]+)/) : null;
+                if (m) bvid = m[1];
+            }
+
+            if (bvid) {
+                const durationSeconds = getCardDurationSeconds(card);
+                startVideoshotPreview(wrapEl, bvid, durationSeconds);
+            }
+        }, true);
+
+        document.addEventListener('mousemove', (e) => {
+            if (!activePreview) return;
+            const wrapEl = e.target.closest('.bili-video-card__image--wrap, .bili-video-card__cover');
+            if (wrapEl && wrapEl === activePreview.wrapEl) {
+                onCoverMouseMove(e, wrapEl);
+            }
+        }, { passive: true });
+
+        document.addEventListener('mouseout', (e) => {
+            if (!activePreview) return;
+            const related = e.relatedTarget;
+            if (!related || !activePreview.wrapEl.contains(related)) {
+                stopActivePreview();
+            }
+        }, true);
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
         syncWaterfallLifecycle();
+        initVideoshotObserver();
     });
     window.addEventListener('load', () => {
         syncWaterfallLifecycle();
+        initVideoshotObserver();
     });
 
     console.log('[Bilibili 搜索净化] 2.1.0 已启动。');
