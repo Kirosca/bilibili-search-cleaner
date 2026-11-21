@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Bilibili 去掉搜索无关视频 2.1 发布版 => 2.2 手搓
+// @name         Bilibili 去掉搜索无关视频
 // @namespace    http://tampermonkey.net/
-// @version      2.1.0
-// @description  自动隐藏 Bilibili 搜索结果中不包含关键词的无关视频，支持 @UP主 定向筛选、-排除词 与 #Tag 专项筛选，彻底净化搜索体验。（支持简繁）
+// @version      3.0.0
+// @description  自动隐藏 Bilibili 搜索结果中不包含关键词的无关视频，支持 @UP主 定向筛选、-排除词 与 #Tag 专项筛选，内置 WBI 签名协议栈、无缝瀑布流与聚光灯高亮模式，彻底净化搜索体验。（支持简繁归一化）
 // @author       Kirosca
 // @match        *://search.bilibili.com/*
 // @icon         https://www.bilibili.com/favicon.ico
@@ -2077,5 +2077,5 @@
         syncWaterfallLifecycle();
     });
 
-    console.log('[Bilibili 搜索净化] 2.1.0 已启动。');
+    console.log('[Bilibili 搜索净化] 3.0.0 已启动。');
 })();
