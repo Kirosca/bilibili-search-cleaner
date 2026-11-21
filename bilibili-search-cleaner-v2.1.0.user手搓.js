@@ -247,20 +247,22 @@
         html.bili-waterfall-enabled .vui_pagenation,
         html.bili-waterfall-enabled .vui_pagenation--btns {
             visibility: hidden !important;
-            position: relative !important;
+            position: absolute !important;
+            pointer-events: none !important;
+            opacity: 0 !important;
         }
         .bili-waterfall-loader {
             display: none;
             align-items: center;
             justify-content: center;
-            width: fit-content;
-            max-width: 100%;
-            margin: 0 auto;
+            width: 100% !important;
+            box-sizing: border-box;
+            margin: 24px auto !important;
             color: #00aeec;
             font-size: 14px;
             font-weight: 500;
             padding: 0 !important;
-            position: relative;
+            position: static !important;
         }
         .bili-waterfall-loader.active {
             display: flex !important;
@@ -986,6 +988,9 @@
                 if (cardPage > lastPassedPage) {
                     lastPassedPage = cardPage;
                 }
+            } else if (rect.top >= viewportHeight + 100) {
+                // 当前卡片已完全超出可视区下方，后续在文档流更下方的卡片无需再算，提前退出
+                break;
             }
         }
 
@@ -1003,23 +1008,14 @@
         }
     }
 
-    // 动态计算 position: relative 左右居中偏移量：将 loader 水平中轴线精准对齐至主列表容器中轴线，上下高度完全不干预
+    // 居中样式改由 CSS Flexbox 原生驱动，移除高频 JS 回流计算，保留方法供历史调用兼容
     function adjustLoaderCentering() {
         const loader = document.getElementById('bili-waterfall-loader');
-        if (!loader) return;
-        loader.style.position = 'relative';
-        loader.style.removeProperty('top');
-
-        const mainContainer = getMainListContainer(document) || document.querySelector('.search-page-video, .video.i_wrapper') || document.body;
-        const targetRect = mainContainer ? mainContainer.getBoundingClientRect() : { left: 0, width: window.innerWidth };
-        const targetCenterX = targetRect.left + targetRect.width / 2;
-
-        const currentLeft = parseFloat(loader.style.left) || 0;
-        const loaderRect = loader.getBoundingClientRect();
-        const rawLoaderCenterX = loaderRect.left - currentLeft + loaderRect.width / 2;
-
-        const offsetLeft = Math.round(targetCenterX - rawLoaderCenterX);
-        loader.style.left = `${offsetLeft}px`;
+        if (loader && loader.style.left) {
+            loader.style.removeProperty('left');
+            loader.style.removeProperty('position');
+            loader.style.removeProperty('top');
+        }
     }
 
     // 维护加载器位置：保证 loader 节点始终插在当前活跃分页器的正前方（避免因 Vue 重新渲染导致 loader 脱落或位移）
@@ -1128,19 +1124,23 @@
         );
         if (!firstCard || firstCard.offsetWidth === 0) return 5;
 
-        // 1. 扫描第一行与第二行的卡片物理数量，取数量较多的一行作为实际栅格列数
-        const allCards = Array.from(mainContainer.children).filter(el => 
-            el.id !== 'bili-waterfall-loader' && 
-            el.offsetHeight > 0 && 
-            (el.classList.contains('video-list-item') || el.matches('div[class*="col_"]') || el.querySelector('.bili-video-card'))
-        );
-
+        // 1. 扫描第一行与第二行的卡片物理数量，仅遍历前两行即刻提前退出，杜绝千级 DOM 全量回流
         let row1Count = 0;
         let row2Count = 0;
         let row1Top = null;
         let row2Top = null;
 
-        for (const card of allCards) {
+        const children = mainContainer.children;
+        const len = children.length;
+        for (let i = 0; i < len; i++) {
+            const card = children[i];
+            if (!card || card.id === 'bili-waterfall-loader' || card.classList.contains('flex_center')) continue;
+            if (card.offsetHeight === 0) continue;
+            const isCard = card.classList.contains('video-list-item') || 
+                           card.matches('div[class*="col_"]') || 
+                           Boolean(card.querySelector('.bili-video-card'));
+            if (!isCard) continue;
+
             const top = card.offsetTop;
             if (row1Top === null) {
                 row1Top = top;
@@ -1153,7 +1153,7 @@
             } else if (Math.abs(top - row2Top) <= 6) {
                 row2Count++;
             } else {
-                // 已扫描完前两行，提前退出
+                // 已扫描完前两行，立即退出
                 break;
             }
         }
@@ -1938,43 +1938,43 @@
             }
         }, true);
 
-        // 视口滚动兜底监听：在观察者偶发失效或极端快速滚动时，确保触底能正常触发增量拉取
+        // 视口滚动兜底监听：加入 rAF 调度防止高频触发引发掉帧
+        let scrollRafId = null;
         window.addEventListener('scroll', () => {
-            updateViewportPage();
-            if (!isWaterfall || isWaterfallPaused || isPaging || isAllLoaded) return;
+            if (!isWaterfall) return;
+            if (!scrollRafId) {
+                scrollRafId = requestAnimationFrame(() => {
+                    scrollRafId = null;
+                    updateViewportPage();
+                });
+            }
+            if (isWaterfallPaused || isPaging || isAllLoaded) return;
             checkAndTriggerPaging();
         }, { passive: true });
 
         // 视口尺寸变化监听（响应式栅格切换自适应）：
-        // 当用户缩放窗口、最大化或跨屏拖拽时，B 站栅格列数将在 4/5/6/7 列间响应式切换。
-        // 此处引入 200ms 防抖，等待页面完成响应式断点重排后，直接测量第一行卡片物理数量重算步长与终态：
+        // 居中与响应式栅格完全交由 CSS 引擎处理，拖拽过程中零 JS 排版介入；
+        // 引入 150ms 防抖，待窗口尺寸稳定后统一校准视口页码与最大翻页边界：
         let resizeTimer = null;
         window.addEventListener('resize', () => {
             if (!isWaterfall) return;
 
-            // 1. 实时校准加载器位置，确保其水平中轴线始终对齐主视频列表
-            adjustLoaderCentering();
-
-            // 2. 防抖重算第一行物理列数，并联动校准最大页数与终态边界
-            // 核心约束：当 loader 已存在 ended 类（已到达终态）时，即使窗口尺寸变动也绝不触发状态与页数校准
-            const loader = document.getElementById('bili-waterfall-loader');
-            if (loader && loader.classList.contains('ended')) return;
-
             if (resizeTimer) clearTimeout(resizeTimer);
             resizeTimer = setTimeout(() => {
+                updateViewportPage();
+
                 const curLoader = document.getElementById('bili-waterfall-loader');
                 if (curLoader && curLoader.classList.contains('ended')) return;
 
-                // 重新解析分页器提取当前最大页数（翻页 page_size 将直接基于 DOM 第一行卡片物理测量值计算：列数 × 6）
+                // 重新解析分页器提取当前最大页数（基于前两行轻量测量列数 × 6）
                 updateDynamicMaxPage();
 
-                // 3. 动态重校终态边界状态：
+                // 动态重校终态边界状态
                 if (!isAllLoaded && currentRequestedPage >= maxWaterfallPage) {
-                    // 若窗口缩小导致列数减少、总页数下调，且当前已达新上限：立即转入终态展示
                     isAllLoaded = true;
                     showEndedLoader();
                 }
-            }, 200);
+            }, 150);
         }, { passive: true });
     } catch (e) {}
 
