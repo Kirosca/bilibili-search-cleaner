@@ -210,8 +210,16 @@
             filter: none !important;
             position: relative;
             border-radius: 8px;
-            box-shadow: 0 0 0 2px #00aeec, 0 8px 24px rgba(0, 174, 236, 0.22) !important;
+            margin-top: 4px !important;
+            margin-bottom: 4px !important;
+            overflow: hidden !important;
+            outline: 2.4px solid #00aeec !important;
+            outline-offset: 1px !important;
             transition: box-shadow 0.25s ease, transform 0.25s ease !important;
+        }
+        .bili-cleaner-highlighted .bili-video-card__info--tit,
+        .bili-cleaner-highlighted .bili-video-card__info--bottom {
+            padding-left: 0.25rem !important;
         }
         .bili-cleaner-highlighted::before {
             content: "🎯 目标匹配";
@@ -611,20 +619,24 @@
                     shouldHide = true;
                 }
 
+                const innerCard = card.querySelector('.bili-video-card, .bili-live-card') || card;
+
                 // 聚光灯高亮 vs 传统物理隐藏判定（跟随全局/菜单选项 isSpotlight）
                 if (isSpotlight) {
                     card.style.removeProperty('display');
+                    card.classList.remove('bili-cleaner-highlighted', 'bili-cleaner-dimmed');
                     if (!shouldHide) {
-                        // 目标匹配（命中规则）：全彩高亮 + 蓝青微光 + 右上角微标
-                        card.classList.add('bili-cleaner-highlighted');
-                        card.classList.remove('bili-cleaner-dimmed');
+                        // 目标匹配（命中规则）：全彩高亮 + 蓝青微光 + 右上角微标（精准作用于内层卡片，消除外层栅格列缝隙错位）
+                        innerCard.classList.add('bili-cleaner-highlighted');
+                        innerCard.classList.remove('bili-cleaner-dimmed');
                     } else {
                         // 未匹配（不符合规则）：常态半透明去色暗化
-                        card.classList.add('bili-cleaner-dimmed');
-                        card.classList.remove('bili-cleaner-highlighted');
+                        innerCard.classList.add('bili-cleaner-dimmed');
+                        innerCard.classList.remove('bili-cleaner-highlighted');
                     }
                 } else {
                     card.classList.remove('bili-cleaner-highlighted', 'bili-cleaner-dimmed');
+                    innerCard.classList.remove('bili-cleaner-highlighted', 'bili-cleaner-dimmed');
                     if (shouldHide) {
                         card.style.setProperty('display', 'none', 'important');
                     } else {
@@ -1348,6 +1360,7 @@
         const tpl = sampleCol.cloneNode(true);
         delete tpl.dataset.purifiedQuery;
         tpl.classList.remove('bili-cleaner-highlighted', 'bili-cleaner-dimmed');
+        tpl.querySelectorAll('.bili-cleaner-highlighted, .bili-cleaner-dimmed').forEach(el => el.classList.remove('bili-cleaner-highlighted', 'bili-cleaner-dimmed'));
 
         // 彻底清理直播专属节点（内联直播播放器、直播中状态标等）及残留的活动播放器
         tpl.querySelectorAll('.v-inline-live-player, .bili-video-card__info--living, .v-inline-player, .bpx-docker, video').forEach(el => el.remove());
