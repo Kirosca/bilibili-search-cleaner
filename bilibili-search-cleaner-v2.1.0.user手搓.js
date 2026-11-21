@@ -60,7 +60,7 @@
         const filterStickyLabel = `⚓ 搜索筛选常驻: ${isFilterSticky ? '✅ 已开启' : '❌ 已关闭'}`;
         filterStickyMenuId = GM_registerMenuCommand(filterStickyLabel, toggleFilterSticky);
 
-        const spotlightLabel = `🔦 聚光灯高亮模式: ${isSpotlight ? '✅ 已开启' : '❌ 已关闭'}`;
+        const spotlightLabel = `🔦 目标匹配标识: ${isSpotlight ? '✅ 已开启' : '❌ 已关闭'}`;
         spotlightMenuId = GM_registerMenuCommand(spotlightLabel, toggleSpotlight);
 
         const dimmedLabel = `🌫️ 虚化显示模糊内容: ${isDimmed ? '✅ 已开启' : '❌ 已关闭'}`;
