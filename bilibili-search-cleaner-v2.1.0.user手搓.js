@@ -225,20 +225,12 @@
             contain-intrinsic-size: auto 300px;
         }
 
-        /* 1. 目标匹配卡片：全彩饱和 + 蓝青发光微框 + 右上角徽章 */
+        /* 1. 目标匹配卡片：全彩饱和 + 悬浮外发光 + 右上角徽章 */
         .bili-cleaner-highlighted {
             opacity: 1 !important;
             filter: none !important;
             position: relative;
-            border-radius: 8px;
-            overflow: hidden !important;
-            outline: 2.4px solid #00aeec !important;
-            outline-offset: 1px !important;
             transition: box-shadow 0.25s ease, transform 0.25s ease !important;
-        }
-        .bili-cleaner-highlighted .bili-video-card__info--tit,
-        .bili-cleaner-highlighted .bili-video-card__info--bottom {
-            padding-left: 0.25rem !important;
         }
         .bili-cleaner-highlighted::before {
             content: "🎯 目标匹配";
