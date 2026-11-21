@@ -2248,14 +2248,8 @@
     // 停止并清理当前预览
     function stopActivePreview() {
         if (!activePreview) return;
-        if (activePreview.timer) {
-            clearInterval(activePreview.timer);
-        }
         if (activePreview.debounceTimer) {
             clearTimeout(activePreview.debounceTimer);
-        }
-        if (activePreview.scrubResumeTimer) {
-            clearTimeout(activePreview.scrubResumeTimer);
         }
         if (activePreview.layer) {
             activePreview.layer.classList.remove('active');
@@ -2292,9 +2286,7 @@
             layer,
             bar,
             currentStep: 0,
-            timer: null,
             debounceTimer: null,
-            scrubResumeTimer: null,
             meta: null
         };
         activePreview = state;
@@ -2316,48 +2308,23 @@
             img.src = meta.images[0];
             img.onload = () => {
                 if (activePreview !== state) return;
+                // 静止模式：仅载入首帧预览，绝对不自动轮播播放，保持视线清爽
                 renderVideoshotStep(layer, bar, meta, 0);
-
-                // 稳重幻灯片节奏：每 750ms 步进翻动 1 张剧情提纲
-                state.timer = setInterval(() => {
-                    if (activePreview !== state) return;
-                    state.currentStep = (state.currentStep + 1) % meta.keyframeCount;
-                    renderVideoshotStep(layer, bar, meta, state.currentStep);
-                }, 750);
             };
         }, 350);
     }
 
-    // 鼠标在封面上移动时实现 10 步机械段落感精准寻帧 (Scrubbing)
+    // 鼠标在封面上移动时实现 10 步机械段落感精准寻帧 (纯手动滑动交互，无自动播放)
     function onCoverMouseMove(e, wrapEl) {
         if (!activePreview || activePreview.wrapEl !== wrapEl || !activePreview.meta) return;
         const rect = wrapEl.getBoundingClientRect();
         if (rect.width <= 0) return;
-
-        // 挂起自动轮播
-        if (activePreview.timer) {
-            clearInterval(activePreview.timer);
-            activePreview.timer = null;
-        }
 
         const offsetX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
         const ratio = offsetX / rect.width;
         const step = Math.min(activePreview.meta.keyframeCount - 1, Math.floor(ratio * activePreview.meta.keyframeCount));
         activePreview.currentStep = step;
         renderVideoshotStep(activePreview.layer, activePreview.bar, activePreview.meta, step);
-
-        // 鼠标停顿 1 秒后无缝恢复稳重轮播
-        if (activePreview.scrubResumeTimer) {
-            clearTimeout(activePreview.scrubResumeTimer);
-        }
-        activePreview.scrubResumeTimer = setTimeout(() => {
-            if (!activePreview || activePreview.wrapEl !== wrapEl || !activePreview.meta || activePreview.timer) return;
-            activePreview.timer = setInterval(() => {
-                if (!activePreview || activePreview.wrapEl !== wrapEl) return;
-                activePreview.currentStep = (activePreview.currentStep + 1) % activePreview.meta.keyframeCount;
-                renderVideoshotStep(activePreview.layer, activePreview.bar, activePreview.meta, activePreview.currentStep);
-            }, 750);
-        }, 1000);
     }
 
     // 统一绑定全局事件委托，监听封面 hover 与 mousemove
