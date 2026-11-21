@@ -1305,10 +1305,21 @@
             return `${mm}:${ss}`;
         }
 
-        // 冒号分隔格式（解决 B 站 API 返回未补零的 "1:6" 或 "3:1" -> 对齐官方规范 "01:06" 或 "03:01"）
+        // 冒号分隔格式（处理 B 站接口返回的分钟累加格式，如 "403:22" -> "06:43:22"）
         if (str.includes(':')) {
-            const parts = str.split(':').map(p => p.trim());
-            return parts.map(p => p.padStart(2, '0')).join(':');
+            const parts = str.split(':').map(p => parseInt(p.trim(), 10) || 0);
+            if (parts.length === 2) {
+                const [totalM, s] = parts;
+                if (totalM >= 60) {
+                    const h = Math.floor(totalM / 60);
+                    const m = totalM % 60;
+                    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                }
+                return `${String(totalM).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            } else if (parts.length >= 3) {
+                const [h, m, s] = parts;
+                return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            }
         }
 
         return str;
