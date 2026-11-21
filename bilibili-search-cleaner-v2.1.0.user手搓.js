@@ -197,6 +197,12 @@
             display: none !important;
         }
 
+        /* 0.1 长列表离屏渲染优化：跳过视口外离屏卡片的绘制与重排，节约内存与 CPU */
+        .video-list-item, div[class*="col_"] {
+            content-visibility: auto;
+            contain-intrinsic-size: auto 300px;
+        }
+
         /* 1. 目标匹配卡片：全彩饱和 + 蓝青发光微框 + 右上角徽章 */
         .bili-cleaner-highlighted {
             opacity: 1 !important;
@@ -536,8 +542,8 @@
     // 6. DOM 层执行安检：支持高性能状态缓存与繁简归一化
     let isProcessing = false;
  
-    // 遍历匹配 DOM 卡片元素并执行多维度安检过滤
-    function filterDOMElements() {
+    // 遍历匹配 DOM 卡片元素并执行多维度安检过滤（支持全量扫描或针对新增卡片数组的增量净化）
+    function filterDOMElements(target = document) {
         if (isProcessing) return;
         isProcessing = true;
  
@@ -552,7 +558,16 @@
  
             const currentSearchQuery = window.location.search;
             const currentQueryKey = currentSearchQuery + '_' + (isSpotlight ? 'spotlight' : 'hide');
-            const elements = document.querySelectorAll('.bili-video-card, .video-list-item, div[class*="col_"], .bili-live-card');
+            let elements = [];
+            if (Array.isArray(target)) {
+                elements = target;
+            } else if (target && target.nodeType) {
+                elements = target.querySelectorAll 
+                    ? target.querySelectorAll('.bili-video-card, .video-list-item, div[class*="col_"], .bili-live-card')
+                    : [target];
+            } else {
+                elements = document.querySelectorAll('.bili-video-card, .video-list-item, div[class*="col_"], .bili-live-card');
+            }
  
             elements.forEach(el => {
                 const card = el.closest('[class*="col_"], .video-list-item, .bili-live-card') || el;
@@ -1188,42 +1203,36 @@
         return cols * 6;
     }
 
-    // 生成终态文案（方案 B+C 融合：客观归因区分真实到底与系统检索上限，并内置行动闭环入口）
-    // 统计当前页面视频卡片总数（含目标与非目标）及实际可见的目标视频数
-    function getVideoCounts() {
-        try {
-            const container = getMainListContainer(document);
-            if (!container) return { total: 0, target: 0 };
-            const allCards = Array.from(container.children).filter(el => {
-                if (!el || !el.isConnected) return false;
-                if (el.id === 'bili-waterfall-loader' || el.classList.contains('flex_center')) return false;
-                if (el.classList.contains('activity-game-list') || el.classList.contains('activity-card')) return false;
-                return el.classList.contains('video-list-item') || 
-                       el.matches('div[class*="col_"]') || 
-                       Boolean(el.querySelector('.bili-video-card'));
-            });
-            const total = allCards.length;
-            const target = allCards.filter(el => {
-                if (isSpotlight && el.classList.contains('bili-cleaner-dimmed')) return false;
-                if (el.style.display === 'none') return false;
-                if (el.offsetHeight === 0 && el.offsetWidth === 0) return false;
-                const cs = window.getComputedStyle(el);
-                return cs.display !== 'none' && cs.visibility !== 'hidden';
-            }).length;
-            return { total, target };
-        } catch (e) {
-            return { total: 0, target: 0 };
-        }
-    }
-
-    function getVisibleVideoCount() {
-        return getVideoCounts().target;
-    }
-
     // 生成终态文案
     function getEndedTipHtml() {
         const reasonText = `没有更多了`;
         return `<span>${reasonText}</span>`;
+    }
+
+    // 渲染网络/接口异常提示，并提供一键重试交互
+    function showErrorLoader() {
+        const loader = getOrCreateLoader();
+        if (!loader) return;
+        loader.classList.add('active');
+        loader.classList.remove('ended');
+        const txtEl = loader.querySelector('.bili-waterfall-loader-text');
+        if (txtEl) {
+            txtEl.innerHTML = `<span class="bili-waterfall-retry-btn" style="cursor: pointer; color: #ff6699; font-weight: 500;">⚠️ 加载失败，点击重试</span>`;
+        }
+        const spinner = loader.querySelector('.bili-waterfall-spinner');
+        if (spinner) {
+            spinner.style.display = 'none';
+        }
+        const onRetryClick = (e) => {
+            const btn = e.target.closest('.bili-waterfall-retry-btn');
+            if (btn) {
+                loader.removeEventListener('click', onRetryClick);
+                if (spinner) spinner.style.removeProperty('display');
+                updateLoader(true);
+                triggerLoadNextPage();
+            }
+        };
+        loader.addEventListener('click', onRetryClick);
     }
 
     // 更新加载状态条：展示加载动画或平滑隐藏
@@ -1231,9 +1240,13 @@
         const loader = getOrCreateLoader();
         if (!loader) return;
         const txtEl = loader.querySelector('.bili-waterfall-loader-text');
+        const spinner = loader.querySelector('.bili-waterfall-spinner');
         if (show) {
             loader.classList.add('active');
             loader.classList.remove('ended');
+            if (spinner) {
+                spinner.style.removeProperty('display');
+            }
             adjustLoaderCentering();
             if (txtEl) {
                 txtEl.textContent = text;
@@ -1248,7 +1261,7 @@
         }
     }
 
-    // 专属终态展示：调用 getEndedTipHtml() 渲染客观终态提示（已展示全部筛选内容 / 已达系统检索上限）
+    // 专属终态展示：调用 getEndedTipHtml() 渲染客观终态提示
     function showEndedLoader() {
         const loader = getOrCreateLoader();
         if (!loader) return;
@@ -1258,11 +1271,6 @@
         if (txtEl) {
             txtEl.innerHTML = getEndedTipHtml();
         }
-        // 终态提示渲染完成后，统计并输出当前页面实际处于可见状态的有效视频卡片总数
-        try {
-            const count = getVisibleVideoCount();
-            console.log(`[Bilibili 搜索净化] 已有视频数量: ${count}`);
-        } catch (e) {}
     }
 
     // 格式化播放量与弹幕数统计数字（支持万/亿转换）
@@ -1502,6 +1510,7 @@
         if (!mainContainer) return 0;
 
         const fragment = document.createDocumentFragment();
+        const newCards = [];
         let addedCount = 0;
 
         for (const item of items) {
@@ -1520,15 +1529,17 @@
                 }
             }
 
-            // 直接构建卡片，不在此处筛选，留给后续安检模块
+            // 直接构建卡片
             const cardNode = createCardElement(item);
             fragment.appendChild(cardNode);
+            newCards.push(cardNode);
             addedCount++;
         }
 
         if (addedCount > 0) {
+            // 增量预净化：在挂载入主 DOM 树前完成类名与样式设定，杜绝页面闪烁与全量扫描
+            filterDOMElements(newCards);
             mainContainer.appendChild(fragment);
-            filterDOMElements();
             updateViewportPage();
         }
         return addedCount;
@@ -1671,7 +1682,7 @@
         return rect.top < (window.innerHeight + 1000) && rect.bottom > -100;
     }
 
-    // 结束单次分页拉取事务，重置加载状态并按需触发视口连续预加载
+    // 结束单次分页拉取事务，重置加载状态并按需触发视口连续预加载或异常重试引导
     function finishPaging(success = true) {
         updateBadge();
 
@@ -1680,8 +1691,13 @@
             return;
         }
 
+        if (!success) {
+            showErrorLoader();
+            return;
+        }
+
         // 核心优化：若添加视频后依然符合已有的「加载下一页」视口判定，则不移除 active 类，保持连贯加载
-        if (success && !isWaterfallPaused && isPagingConditionMet()) {
+        if (!isWaterfallPaused && isPagingConditionMet()) {
             updateLoader(true);
             setTimeout(() => {
                 if (!isPaging && !currentPagingPromise && !isAllLoaded && !isWaterfallPaused && isPagingConditionMet()) {
@@ -1691,7 +1707,7 @@
         } else {
             // 已推移至预加载缓冲带之外，平滑收起加载状态条
             updateLoader(false);
-            if (success && !isAllLoaded && !isWaterfallPaused) {
+            if (!isAllLoaded && !isWaterfallPaused) {
                 setTimeout(checkAndTriggerPaging, 300);
             }
         }
