@@ -101,6 +101,7 @@
         // 2. 强制重置瀑布流核心状态到第 1 页
         currentRequestedPage = 1;
         seenBvidMap.clear();
+        totalRequestedVideos = 0;
         cachedCardTemplate = null;
         isAllLoaded = false;
         isPaging = false;
@@ -282,16 +283,6 @@
         }
         .bili-waterfall-loader.ended .bili-waterfall-spinner {
             display: none !important;
-        }
-        .bili-waterfall-loader.ended::before,
-        .bili-waterfall-loader.ended::after {
-            content: '';
-            display: inline-block;
-            width: 48px;
-            height: 1px;
-            background: rgba(148, 153, 160, 0.25);
-            vertical-align: middle;
-            margin: 0 14px;
         }
         .bili-waterfall-spinner {
             width: 20px;
@@ -771,6 +762,7 @@
     let currentObservedPager = null;
     let isInternalPaging = false;
     const seenBvidMap = new Set();
+    let totalRequestedVideos = 0;
     let cachedWbiKeys = null;
     let cachedCardTemplate = null;
 
@@ -1205,7 +1197,7 @@
 
     // 生成终态文案
     function getEndedTipHtml() {
-        const reasonText = `没有更多了`;
+        const reasonText = `已展示全部匹配视频`;
         return `<span>${reasonText}</span>`;
     }
 
@@ -1235,12 +1227,21 @@
         loader.addEventListener('click', onRetryClick);
     }
 
+    // 生成动态加载文案：按请求过的原始视频总数展示实时进度
+    function getLoaderText(customText) {
+        if (customText) return customText;
+        return totalRequestedVideos > 0 
+            ? `正在筛选... (已检索 ${totalRequestedVideos} 条)` 
+            : '正在筛选...';
+    }
+
     // 更新加载状态条：展示加载动画或平滑隐藏
-    function updateLoader(show, text = '正在筛选...') {
+    function updateLoader(show, text = null) {
         const loader = getOrCreateLoader();
         if (!loader) return;
         const txtEl = loader.querySelector('.bili-waterfall-loader-text');
         const spinner = loader.querySelector('.bili-waterfall-spinner');
+        const displayText = getLoaderText(text);
         if (show) {
             loader.classList.add('active');
             loader.classList.remove('ended');
@@ -1249,11 +1250,11 @@
             }
             adjustLoaderCentering();
             if (txtEl) {
-                txtEl.textContent = text;
+                txtEl.textContent = displayText;
             }
         } else {
             if (txtEl && !isAllLoaded) {
-                txtEl.textContent = '正在筛选...';
+                txtEl.textContent = displayText;
             }
             if (!isAllLoaded) {
                 loader.classList.remove('active', 'ended');
@@ -1650,6 +1651,12 @@
                 }
 
                 if (videoItems.length > 0) {
+                    totalRequestedVideos += videoItems.length;
+                    const curLoader = document.getElementById('bili-waterfall-loader');
+                    const curTxtEl = curLoader?.querySelector('.bili-waterfall-loader-text');
+                    if (curTxtEl && curLoader.classList.contains('active') && !curLoader.classList.contains('ended')) {
+                        curTxtEl.textContent = getLoaderText();
+                    }
                     appendCards(videoItems);
                     currentRequestedPage = nextPage;
 
@@ -1724,13 +1731,14 @@
         }
     }
 
-    // 重新扫描首屏卡片提取已有视频 BV 号，用于增量去重防抖
+    // 重新扫描首屏卡片提取已有视频 BV 号，用于增量去重防抖与累计请求基数初始化
     function refreshSeenBvidsFromDOM() {
         seenBvidMap.clear();
         document.querySelectorAll('a[href*="/video/"]').forEach(a => {
             const m = a.href.match(/\/video\/([A-Za-z0-9]+)/);
             if (m) seenBvidMap.add(m[1].toLowerCase());
         });
+        totalRequestedVideos = seenBvidMap.size;
     }
 
     // 视口相交检测与分页拉取触发器：兼备监听器离线脱落自愈功能
