@@ -26,13 +26,15 @@
     }
 
     // ==========================================
-    // 菜单管理与持久化配置（聚光灯模式 & 筛选常驻 & 无缝瀑布流）
+    // 菜单管理与持久化配置（聚光灯模式 & 虚化显示 & 筛选常驻 & 无缝瀑布流）
     // ==========================================
     let isSpotlight = localStorage.getItem('bili_cleaner_spotlight') === 'true';
+    let isDimmed = localStorage.getItem('bili_cleaner_dimmed') === 'true';
     let isFilterSticky = localStorage.getItem('bili_cleaner_sticky_filter') === 'true';
     let isWaterfall = localStorage.getItem('bili_cleaner_waterfall') === 'true';
-    let spotlightMenuId = null;
     let filterStickyMenuId = null;
+    let spotlightMenuId = null;
+    let dimmedMenuId = null;
     let waterfallMenuId = null;
 
     // 注册与更新油猴菜单命令
@@ -41,11 +43,14 @@
 
         // 注销上一轮菜单，防止重复追加
         if (typeof GM_unregisterMenuCommand === 'function') {
+            if (filterStickyMenuId !== null) {
+                try { GM_unregisterMenuCommand(filterStickyMenuId); } catch (e) {}
+            }
             if (spotlightMenuId !== null) {
                 try { GM_unregisterMenuCommand(spotlightMenuId); } catch (e) {}
             }
-            if (filterStickyMenuId !== null) {
-                try { GM_unregisterMenuCommand(filterStickyMenuId); } catch (e) {}
+            if (dimmedMenuId !== null) {
+                try { GM_unregisterMenuCommand(dimmedMenuId); } catch (e) {}
             }
             if (waterfallMenuId !== null) {
                 try { GM_unregisterMenuCommand(waterfallMenuId); } catch (e) {}
@@ -58,14 +63,30 @@
         const spotlightLabel = `🔦 聚光灯高亮模式: ${isSpotlight ? '✅ 已开启' : '❌ 已关闭'}`;
         spotlightMenuId = GM_registerMenuCommand(spotlightLabel, toggleSpotlight);
 
+        const dimmedLabel = `🌫️ 虚化显示模糊内容: ${isDimmed ? '✅ 已开启' : '❌ 已关闭'}`;
+        dimmedMenuId = GM_registerMenuCommand(dimmedLabel, toggleDimmed);
+
         const waterfallLabel = `🌊 无缝瀑布流: ${isWaterfall ? '✅ 已开启' : '❌ 已关闭'}`;
         waterfallMenuId = GM_registerMenuCommand(waterfallLabel, toggleWaterfall);
     }
 
-    // 切换聚光灯高亮模式并持久化配置
+    // 切换聚光灯高亮模式并持久化配置（控制匹配卡片是否显示高亮外观）
     function toggleSpotlight() {
         isSpotlight = !isSpotlight;
         localStorage.setItem('bili_cleaner_spotlight', String(isSpotlight));
+        registerMenu();
+
+        // 清空所有卡片的安检缓存标记，并立即触发重新判定
+        document.querySelectorAll('[data-purified-query]').forEach(card => {
+            delete card.dataset.purifiedQuery;
+        });
+        filterDOMElements();
+    }
+
+    // 切换虚化显示模糊内容状态并持久化配置（控制未匹配卡片是半透明虚化还是彻底物理隐藏）
+    function toggleDimmed() {
+        isDimmed = !isDimmed;
+        localStorage.setItem('bili_cleaner_dimmed', String(isDimmed));
         registerMenu();
 
         // 清空所有卡片的安检缓存标记，并立即触发重新判定
@@ -210,8 +231,6 @@
             filter: none !important;
             position: relative;
             border-radius: 8px;
-            margin-top: 4px !important;
-            margin-bottom: 4px !important;
             overflow: hidden !important;
             outline: 2.4px solid #00aeec !important;
             outline-offset: 1px !important;
@@ -556,7 +575,7 @@
             }
  
             const currentSearchQuery = window.location.search;
-            const currentQueryKey = currentSearchQuery + '_' + (isSpotlight ? 'spotlight' : 'hide');
+            const currentQueryKey = currentSearchQuery + '_' + (isSpotlight ? 'spot1' : 'spot0') + '_' + (isDimmed ? 'dim1' : 'dim0');
             let elements = [];
             if (Array.isArray(target)) {
                 elements = target;
@@ -621,26 +640,31 @@
 
                 const innerCard = card.querySelector('.bili-video-card, .bili-live-card') || card;
 
-                // 聚光灯高亮 vs 传统物理隐藏判定（跟随全局/菜单选项 isSpotlight）
-                if (isSpotlight) {
+                // 确保外层列容器不承载高亮或虚化类，维持原生栅格间隙纯净
+                card.classList.remove('bili-cleaner-highlighted', 'bili-cleaner-dimmed');
+
+                if (!shouldHide) {
+                    // 目标匹配（命中全部规则）：
                     card.style.removeProperty('display');
-                    card.classList.remove('bili-cleaner-highlighted', 'bili-cleaner-dimmed');
-                    if (!shouldHide) {
-                        // 目标匹配（命中规则）：全彩高亮 + 蓝青微光 + 右上角微标（精准作用于内层卡片，消除外层栅格列缝隙错位）
+                    innerCard.classList.remove('bili-cleaner-dimmed');
+                    if (isSpotlight) {
+                        // 开启【聚光灯高亮模式】：内层卡片展现高亮微框与徽标
                         innerCard.classList.add('bili-cleaner-highlighted');
-                        innerCard.classList.remove('bili-cleaner-dimmed');
                     } else {
-                        // 未匹配（不符合规则）：常态半透明去色暗化
-                        innerCard.classList.add('bili-cleaner-dimmed');
+                        // 关闭【聚光灯高亮模式】：呈现官方原生普通外观，不高亮
                         innerCard.classList.remove('bili-cleaner-highlighted');
                     }
                 } else {
-                    card.classList.remove('bili-cleaner-highlighted', 'bili-cleaner-dimmed');
-                    innerCard.classList.remove('bili-cleaner-highlighted', 'bili-cleaner-dimmed');
-                    if (shouldHide) {
-                        card.style.setProperty('display', 'none', 'important');
-                    } else {
+                    // 未匹配（不符合规则，需过滤）：
+                    innerCard.classList.remove('bili-cleaner-highlighted');
+                    if (isDimmed) {
+                        // 开启【虚化显示模糊内容】：保留卡片占位，实施半透明去色暗化
                         card.style.removeProperty('display');
+                        innerCard.classList.add('bili-cleaner-dimmed');
+                    } else {
+                        // 关闭【虚化显示模糊内容】：彻底物理隐藏，从页面移除
+                        innerCard.classList.remove('bili-cleaner-dimmed');
+                        card.style.setProperty('display', 'none', 'important');
                     }
                 }
             });
