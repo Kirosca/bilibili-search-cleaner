@@ -26,14 +26,16 @@
     }
 
     // ==========================================
-    // 菜单管理与持久化配置（聚光灯模式 & 筛选常驻 & 无缝瀑布流）
+    // 菜单管理与持久化配置（聚光灯模式 & 筛选常驻 & 无缝瀑布流 & 封面动态预览）
     // ==========================================
     let isSpotlight = localStorage.getItem('bili_cleaner_spotlight') === 'true';
     let isFilterSticky = localStorage.getItem('bili_cleaner_sticky_filter') === 'true';
     let isWaterfall = localStorage.getItem('bili_cleaner_waterfall') === 'true';
+    let isVideoshotPreview = localStorage.getItem('bili_cleaner_videoshot_preview') === 'true';
     let spotlightMenuId = null;
     let filterStickyMenuId = null;
     let waterfallMenuId = null;
+    let videoshotMenuId = null;
 
     // 注册与更新油猴菜单命令
     function registerMenu() {
@@ -50,6 +52,9 @@
             if (waterfallMenuId !== null) {
                 try { GM_unregisterMenuCommand(waterfallMenuId); } catch (e) {}
             }
+            if (videoshotMenuId !== null) {
+                try { GM_unregisterMenuCommand(videoshotMenuId); } catch (e) {}
+            }
         }
 
         const filterStickyLabel = `⚓ 搜索筛选常驻: ${isFilterSticky ? '✅ 已开启' : '❌ 已关闭'}`;
@@ -60,6 +65,19 @@
 
         const waterfallLabel = `🌊 无缝瀑布流: ${isWaterfall ? '✅ 已开启' : '❌ 已关闭'}`;
         waterfallMenuId = GM_registerMenuCommand(waterfallLabel, toggleWaterfall);
+
+        const videoshotLabel = `🎞️ 封面动态预览: ${isVideoshotPreview ? '✅ 已开启' : '❌ 已关闭'}`;
+        videoshotMenuId = GM_registerMenuCommand(videoshotLabel, toggleVideoshotPreview);
+    }
+
+    // 切换封面动态预览状态并持久化配置（默认关闭）
+    function toggleVideoshotPreview() {
+        isVideoshotPreview = !isVideoshotPreview;
+        localStorage.setItem('bili_cleaner_videoshot_preview', String(isVideoshotPreview));
+        registerMenu();
+        if (!isVideoshotPreview && typeof stopActivePreview === 'function') {
+            stopActivePreview();
+        }
     }
 
     // 切换聚光灯高亮模式并持久化配置
@@ -2094,8 +2112,9 @@
     }
 
     // ==========================================
-    // 11. 瀑布流封面雪碧图动态预览模块 (Videoshot)
+    // 11. 瀑布流封面雪碧图动态预览模块 (Videoshot - 10帧理性提纲模式)
     // ==========================================
+    const VIDEOSHOT_KEYFRAME_COUNT = 10; // 固定稀疏抽样为 10 张关键帧提纲，杜绝眩晕跑马灯
     const videoshotMetaCache = new Map();
     let activePreview = null;
 
@@ -2115,7 +2134,7 @@
         return 0;
     }
 
-    // 从接口拉取视频的雪碧图元数据
+    // 从接口拉取视频的雪碧图元数据并生成 10 帧等间距关键提纲
     async function fetchVideoshotMeta(bvid, durationSeconds = 0) {
         if (videoshotMetaCache.has(bvid)) {
             return videoshotMetaCache.get(bvid);
@@ -2130,31 +2149,41 @@
                 const images = data.data.image.map(img => img.startsWith('http') ? img : 'https:' + img);
                 
                 // 三级精准截断：
-                // 1. 优先读取 index 数组长度；
-                // 2. 长视频或合集卡片（B站为了轻量化将索引存入 pvdata 二进制文件，index 为空）：
-                //    自动异步读取 pvdata (通常仅数十字节至2KB)，按 byteLength / 2 绝对精准解析实际截帧数（彻底解决40小时等教程合集卡片P1尾部黑屏）；
-                // 3. 兜底结合视频卡片时长（按每5秒一帧）双重限幅，杜绝任何情况滑入雪碧图黑色留白区
+                // 核心机制：B站 index 数组（及 pvdata 二进制索引）存储的是时间分段的标尺刻度点（N个视频片段需要N+1个时间刻度点，末尾数值为视频总秒数）；
+                // 因此雪碧图实际有画面的截帧数量严格等于【刻度数量 - 1】！此前未减1导致最后一帧总是落在未分配的纯黑底色格子上。
                 let totalFrames = images.length * singleSheetCount;
                 if (Array.isArray(data.data.index) && data.data.index.length > 0) {
-                    totalFrames = data.data.index.length;
+                    totalFrames = Math.max(1, data.data.index.length - 1);
                 } else if (data.data.pvdata) {
                     try {
                         const binUrl = data.data.pvdata.startsWith('http') ? data.data.pvdata : 'https:' + data.data.pvdata;
                         const binRes = await targetWindow.fetch(binUrl);
                         const binBuf = await binRes.arrayBuffer();
                         if (binBuf && binBuf.byteLength >= 2) {
-                            totalFrames = Math.floor(binBuf.byteLength / 2);
+                            const rawMarks = Math.floor(binBuf.byteLength / 2);
+                            totalFrames = Math.max(1, rawMarks - 1);
                         }
                     } catch (e) {
-                        const maxTheoretical = durationSeconds > 0 ? Math.ceil(durationSeconds / 5) : 0;
+                        const maxTheoretical = durationSeconds > 0 ? Math.ceil(durationSeconds / 5) - 1 : 0;
                         if (maxTheoretical > 0) {
                             totalFrames = Math.min(totalFrames, maxTheoretical);
                         }
                     }
                 } else {
-                    const maxTheoretical = durationSeconds > 0 ? Math.ceil(durationSeconds / 5) : 0;
+                    const maxTheoretical = durationSeconds > 0 ? Math.ceil(durationSeconds / 5) - 1 : 0;
                     if (maxTheoretical > 0) {
                         totalFrames = Math.min(totalFrames, maxTheoretical);
+                    }
+                }
+
+                // 计算 10 帧等间距关键提纲索引列表（若实际总帧数不足10帧则按实际数量）
+                const keyframeCount = Math.max(1, Math.min(VIDEOSHOT_KEYFRAME_COUNT, totalFrames));
+                const keyframeIndices = [];
+                if (keyframeCount <= 1) {
+                    keyframeIndices.push(0);
+                } else {
+                    for (let i = 0; i < keyframeCount; i++) {
+                        keyframeIndices.push(Math.round((i / (keyframeCount - 1)) * (totalFrames - 1)));
                     }
                 }
 
@@ -2163,7 +2192,9 @@
                     xLen,
                     yLen,
                     singleSheetCount,
-                    totalFrames
+                    totalFrames,
+                    keyframeCount,
+                    keyframeIndices
                 };
                 if (videoshotMetaCache.size >= 200) {
                     const firstKey = videoshotMetaCache.keys().next().value;
@@ -2178,7 +2209,7 @@
     }
 
     // 渲染特定帧到预览层
-    function renderVideoshotFrame(layer, bar, meta, frameIndex) {
+    function renderVideoshotFrame(layer, bar, meta, frameIndex, stepIndex = null) {
         if (!layer || !meta || meta.totalFrames <= 0) return;
         const boundedIndex = Math.max(0, Math.min(frameIndex, meta.totalFrames - 1));
         const sheetIndex = Math.floor(boundedIndex / meta.singleSheetCount);
@@ -2198,10 +2229,20 @@
         layer.classList.add('active');
 
         if (bar) {
-            const percent = ((boundedIndex + 1) / meta.totalFrames) * 100;
+            const currentStep = stepIndex !== null ? stepIndex : 0;
+            const totalSteps = meta.keyframeCount || meta.totalFrames;
+            const percent = ((currentStep + 1) / totalSteps) * 100;
             bar.style.width = `${percent.toFixed(1)}%`;
             bar.classList.add('active');
         }
+    }
+
+    // 按 10 步剧情提纲渲染指定步进帧
+    function renderVideoshotStep(layer, bar, meta, stepIndex) {
+        if (!layer || !meta || !meta.keyframeCount) return;
+        const boundedStep = Math.max(0, Math.min(stepIndex, meta.keyframeCount - 1));
+        const realFrameIndex = meta.keyframeIndices[boundedStep] !== undefined ? meta.keyframeIndices[boundedStep] : 0;
+        renderVideoshotFrame(layer, bar, meta, realFrameIndex, boundedStep);
     }
 
     // 停止并清理当前预览
@@ -2250,7 +2291,7 @@
             durationSeconds,
             layer,
             bar,
-            currentFrame: 0,
+            currentStep: 0,
             timer: null,
             debounceTimer: null,
             scrubResumeTimer: null,
@@ -2258,6 +2299,7 @@
         };
         activePreview = state;
 
+        // 350ms 意图识别防抖延迟：彻底过滤指针路过，仅在明确停留时触发
         state.debounceTimer = setTimeout(async () => {
             if (activePreview !== state) return;
             const meta = await fetchVideoshotMeta(bvid, durationSeconds);
@@ -2274,23 +2316,25 @@
             img.src = meta.images[0];
             img.onload = () => {
                 if (activePreview !== state) return;
-                renderVideoshotFrame(layer, bar, meta, 0);
+                renderVideoshotStep(layer, bar, meta, 0);
 
+                // 稳重幻灯片节奏：每 750ms 步进翻动 1 张剧情提纲
                 state.timer = setInterval(() => {
                     if (activePreview !== state) return;
-                    state.currentFrame = (state.currentFrame + 1) % meta.totalFrames;
-                    renderVideoshotFrame(layer, bar, meta, state.currentFrame);
-                }, 120);
+                    state.currentStep = (state.currentStep + 1) % meta.keyframeCount;
+                    renderVideoshotStep(layer, bar, meta, state.currentStep);
+                }, 750);
             };
-        }, 180);
+        }, 350);
     }
 
-    // 鼠标在封面上移动时实现随鼠标滑动精准寻帧 (Scrubbing)
+    // 鼠标在封面上移动时实现 10 步机械段落感精准寻帧 (Scrubbing)
     function onCoverMouseMove(e, wrapEl) {
         if (!activePreview || activePreview.wrapEl !== wrapEl || !activePreview.meta) return;
         const rect = wrapEl.getBoundingClientRect();
         if (rect.width <= 0) return;
 
+        // 挂起自动轮播
         if (activePreview.timer) {
             clearInterval(activePreview.timer);
             activePreview.timer = null;
@@ -2298,10 +2342,11 @@
 
         const offsetX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
         const ratio = offsetX / rect.width;
-        const frame = Math.floor(ratio * activePreview.meta.totalFrames);
-        activePreview.currentFrame = frame;
-        renderVideoshotFrame(activePreview.layer, activePreview.bar, activePreview.meta, frame);
+        const step = Math.min(activePreview.meta.keyframeCount - 1, Math.floor(ratio * activePreview.meta.keyframeCount));
+        activePreview.currentStep = step;
+        renderVideoshotStep(activePreview.layer, activePreview.bar, activePreview.meta, step);
 
+        // 鼠标停顿 1 秒后无缝恢复稳重轮播
         if (activePreview.scrubResumeTimer) {
             clearTimeout(activePreview.scrubResumeTimer);
         }
@@ -2309,15 +2354,18 @@
             if (!activePreview || activePreview.wrapEl !== wrapEl || !activePreview.meta || activePreview.timer) return;
             activePreview.timer = setInterval(() => {
                 if (!activePreview || activePreview.wrapEl !== wrapEl) return;
-                activePreview.currentFrame = (activePreview.currentFrame + 1) % activePreview.meta.totalFrames;
-                renderVideoshotFrame(activePreview.layer, activePreview.bar, activePreview.meta, activePreview.currentFrame);
-            }, 120);
+                activePreview.currentStep = (activePreview.currentStep + 1) % activePreview.meta.keyframeCount;
+                renderVideoshotStep(activePreview.layer, activePreview.bar, activePreview.meta, activePreview.currentStep);
+            }, 750);
         }, 1000);
     }
 
     // 统一绑定全局事件委托，监听封面 hover 与 mousemove
     function initVideoshotObserver() {
         document.addEventListener('mouseover', (e) => {
+            // 油猴独立开关拦截：关闭状态下零请求、零开销、绝对静止
+            if (!isVideoshotPreview) return;
+
             const wrapEl = e.target.closest('.bili-video-card__image--wrap, .bili-video-card__cover');
             if (!wrapEl) {
                 if (activePreview && !e.target.closest('.bili-cleaner-videoshot-layer, .bili-cleaner-videoshot-bar')) {
@@ -2356,7 +2404,7 @@
         }, true);
 
         document.addEventListener('mousemove', (e) => {
-            if (!activePreview) return;
+            if (!isVideoshotPreview || !activePreview) return;
             const wrapEl = e.target.closest('.bili-video-card__image--wrap, .bili-video-card__cover');
             if (wrapEl && wrapEl === activePreview.wrapEl) {
                 onCoverMouseMove(e, wrapEl);
