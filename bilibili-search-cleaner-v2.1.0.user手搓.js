@@ -32,10 +32,12 @@
     let isFilterSticky = localStorage.getItem('bili_cleaner_sticky_filter') === 'true';
     let isWaterfall = localStorage.getItem('bili_cleaner_waterfall') === 'true';
     let isEvaluationBadge = localStorage.getItem('bili_cleaner_eval_badge') === 'true';
+    let isEvalFullMode = localStorage.getItem('bili_cleaner_eval_full_mode') === 'true';
     let filterStickyMenuId = null;
     let dimmedMenuId = null;
     let waterfallMenuId = null;
     let evalBadgeMenuId = null;
+    let evalModeMenuId = null;
 
     // 注册与更新油猴菜单命令
     function registerMenu() {
@@ -55,6 +57,10 @@
             if (evalBadgeMenuId !== null) {
                 try { GM_unregisterMenuCommand(evalBadgeMenuId); } catch (e) {}
             }
+            if (evalModeMenuId !== null) {
+                try { GM_unregisterMenuCommand(evalModeMenuId); } catch (e) {}
+                evalModeMenuId = null;
+            }
         }
 
         const filterStickyLabel = `⚓ 搜索筛选常驻: ${isFilterSticky ? '✅ 已开启' : '❌ 已关闭'}`;
@@ -68,6 +74,25 @@
 
         const evalBadgeLabel = `🏷️ 视频评价体系: ${isEvaluationBadge ? '✅ 已开启' : '❌ 已关闭'}`;
         evalBadgeMenuId = GM_registerMenuCommand(evalBadgeLabel, toggleEvaluationBadge);
+
+        // 二级级联子菜单：仅在评价体系开启时展示显示范围切换
+        if (isEvaluationBadge) {
+            const evalModeLabel = `  └─ 标签范围: ${isEvalFullMode ? '📑 全部完整显示' : '✨ 仅精选高光'}`;
+            evalModeMenuId = GM_registerMenuCommand(evalModeLabel, toggleEvalMode);
+        }
+    }
+
+    // 切换评价体系显示范围（仅精选高光 vs 全部完整显示）
+    function toggleEvalMode() {
+        isEvalFullMode = !isEvalFullMode;
+        localStorage.setItem('bili_cleaner_eval_full_mode', String(isEvalFullMode));
+        registerMenu();
+
+        // 重新安检渲染卡片评价
+        document.querySelectorAll('[data-purified-query]').forEach(card => {
+            delete card.dataset.purifiedQuery;
+        });
+        filterDOMElements();
     }
 
     // 切换视频评价体系显示状态并持久化配置（默认关闭）
@@ -305,7 +330,7 @@
             border: 1px solid rgba(255, 215, 0, 0.5) !important;
             box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4) !important;
         }
-        /* 3. ⭐ 高口碑佳品：清亮透蓝 */
+        /* 3. ⭐ 高口碑佳作：清亮透蓝 */
         .bili-cleaner-badge-pill.q-high-reputation {
             background: linear-gradient(135deg, rgba(0, 174, 236, 0.92), rgba(0, 120, 215, 0.92)) !important;
             color: #ffffff !important;
@@ -1535,15 +1560,6 @@
             if (existing) existing.remove();
             return;
         }
-        let badgeCol = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
-        if (!badgeCol) {
-            badgeCol = document.createElement('div');
-            badgeCol.className = 'bili-cleaner-badge-col';
-            coverEl.appendChild(badgeCol);
-        } else if (coverEl.lastElementChild !== badgeCol) {
-            // 确保始终处于封面类的最后一个子元素
-            coverEl.appendChild(badgeCol);
-        }
 
         const play = stat?.play || 0;
         const like = stat?.like || 0;
@@ -1627,9 +1643,26 @@
             // 8. 🍀 常规日常内容
             quadrant = {
                 className: 'q-routine',
-                tag: '🍀 表现平稳',
+                tag: '🍀 中规中矩',
                 desc: '常规日常内容，按需观看即可'
             };
+        }
+
+        // 精选高光减负策略：未开启“全部显示”时，中规中矩 (q-routine) 与 样本较少 (q-low-sample) 默认留白不显示
+        if (!isEvalFullMode && (!quadrant || quadrant.className === 'q-routine' || quadrant.className === 'q-low-sample')) {
+            const existing = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
+            if (existing) existing.remove();
+            return;
+        }
+
+        let badgeCol = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
+        if (!badgeCol) {
+            badgeCol = document.createElement('div');
+            badgeCol.className = 'bili-cleaner-badge-col';
+            coverEl.appendChild(badgeCol);
+        } else if (coverEl.lastElementChild !== badgeCol) {
+            // 确保始终处于封面类的最后一个子元素
+            coverEl.appendChild(badgeCol);
         }
 
         // 构造悬停提示文本 (Tooltip)
