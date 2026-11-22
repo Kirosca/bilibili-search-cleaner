@@ -211,124 +211,127 @@
             transition: opacity 0.25s ease, filter 0.25s ease, transform 0.25s ease !important;
         }
 
-        /* 1.05 宿主底部信息行开启相对定位 */
-        .bili-video-card__info--bottom {
-            position: relative !important;
-        }
-
-        /* 1.1 评价勋章托盘（位于 .bili-video-card__info--bottom 居中绝对定位覆盖） */
+        /* 1.1 视频卡片封面评价勋章（右上角横向排布，默认隐藏，鼠标移入卡片时显现） */
         .bili-cleaner-badge-col {
             position: absolute !important;
-            top: 50% !important;
-            left: 50% !important;
-            transform: translate(-50%, -50%) !important;
+            top: 6px !important;
+            right: 6px !important;
             display: flex !important;
             flex-direction: row !important;
             align-items: center !important;
-            justify-content: center !important;
             gap: 4px !important;
-            padding: 2px 6px !important;
-            background: rgba(24, 25, 28, 0.88) !important;
-            border-radius: 12px !important;
-            border: none !important;
-            z-index: 5 !important;
+            z-index: 10 !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transform: translateY(-2px);
+            transition: opacity 0.2s ease, transform 0.2s ease !important;
+        }
+        .bili-video-card:hover .bili-cleaner-badge-col,
+        div[class*="col_"]:hover .bili-cleaner-badge-col,
+        .video-list-item:hover .bili-cleaner-badge-col,
+        .bili-cleaner-badge-col:hover {
+            opacity: 1 !important;
             pointer-events: auto !important;
-            white-space: nowrap !important;
+            transform: translateY(0) !important;
         }
         .bili-cleaner-badge-item {
-            width: 18px !important;
-            height: 18px !important;
+            width: 20px !important;
+            height: 20px !important;
             border-radius: 50% !important;
-            border: none !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            text-align: center !important;
+            font-size: 11px !important;
+            line-height: 1 !important;
+            user-select: none !important;
             box-sizing: border-box !important;
-            padding: 0 !important;
-            margin: 0 !important;
+            backdrop-filter: blur(4px) !important;
+            -webkit-backdrop-filter: blur(4px) !important;
             cursor: pointer !important;
-            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease !important;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, opacity 0.2s ease !important;
         }
         .bili-cleaner-badge-item:hover {
-            transform: scale(1.2) !important;
+            transform: scale(1.22) !important;
             z-index: 2 !important;
-        }
-        .bili-cleaner-badge-num {
-            display: block !important;
-            width: 100% !important;
-            font-size: 10.5px !important;
-            font-weight: 700 !important;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
-            line-height: 1 !important;
-            text-align: center !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            font-variant-numeric: tabular-nums !important;
-            font-feature-settings: "tnum" 1 !important;
-            transform: translateY(-0.5px) !important;
-            pointer-events: none !important;
         }
 
         /* --- 口碑等级 (👍 Like) --- */
-        /* Lv.3 殿堂级：纯深亮蓝 */
+        /* Lv.3 殿堂级：强发光 + 白金微光边框 */
         .bili-cleaner-badge-item.like-tier-3 {
-            background: #0088ff !important;
+            background: linear-gradient(135deg, #00c0ff, #0077ff) !important;
             color: #ffffff !important;
+            border: 1.5px solid #ffffff !important;
+            box-shadow: 0 0 8px rgba(0, 192, 255, 0.8), 0 2px 6px rgba(0, 119, 255, 0.5) !important;
         }
         /* Lv.2 优质级：标准清亮蓝 */
         .bili-cleaner-badge-item.like-tier-2 {
-            background: #00aeec !important;
+            background: linear-gradient(135deg, rgba(0, 174, 236, 0.95), rgba(0, 138, 197, 0.95)) !important;
             color: #ffffff !important;
+            border: 1px solid rgba(255, 255, 255, 0.35) !important;
+            box-shadow: 0 2px 6px rgba(0, 174, 236, 0.45) !important;
         }
-        /* Lv.1 平稳级：低饱和半透蓝 */
+        /* Lv.1 平稳级：低饱和半透蓝微光 */
         .bili-cleaner-badge-item.like-tier-1 {
-            background: rgba(0, 174, 236, 0.4) !important;
-            color: rgba(255, 255, 255, 0.95) !important;
+            background: rgba(0, 174, 236, 0.28) !important;
+            color: rgba(255, 255, 255, 0.9) !important;
+            border: 1px solid rgba(0, 174, 236, 0.4) !important;
         }
 
         /* --- 干货等级 (⭐ Favorite) --- */
-        /* Lv.3 宝藏级：璀璨纯金 */
+        /* Lv.3 宝藏级：璀璨金光 + 白金微光边框 */
         .bili-cleaner-badge-item.fav-tier-3 {
-            background: #ffaa00 !important;
+            background: linear-gradient(135deg, #ffd700, #ff8800) !important;
             color: #ffffff !important;
+            border: 1.5px solid #ffffff !important;
+            box-shadow: 0 0 8px rgba(255, 215, 0, 0.85), 0 2px 6px rgba(255, 136, 0, 0.5) !important;
         }
         /* Lv.2 实用级：琥珀金 */
         .bili-cleaner-badge-item.fav-tier-2 {
-            background: #f59e0b !important;
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(217, 119, 6, 0.95)) !important;
             color: #ffffff !important;
+            border: 1px solid rgba(255, 255, 255, 0.35) !important;
+            box-shadow: 0 2px 6px rgba(245, 158, 11, 0.45) !important;
         }
-        /* Lv.1 收藏级：低饱和半透金 */
+        /* Lv.1 收藏级：低饱和半透金微光 */
         .bili-cleaner-badge-item.fav-tier-1 {
-            background: rgba(245, 158, 11, 0.4) !important;
-            color: rgba(255, 255, 255, 0.95) !important;
+            background: rgba(245, 158, 11, 0.28) !important;
+            color: rgba(255, 255, 255, 0.9) !important;
+            border: 1px solid rgba(245, 158, 11, 0.4) !important;
         }
 
         /* --- 热议等级 (🔥 Danmaku) --- */
-        /* Lv.3 狂欢级：纯鲜红 */
+        /* Lv.3 狂欢级：烈焰霓虹光 + 白金微光边框 */
         .bili-cleaner-badge-item.danmaku-tier-3 {
-            background: #ff3366 !important;
+            background: linear-gradient(135deg, #ff3366, #ff7700) !important;
             color: #ffffff !important;
+            border: 1.5px solid #ffffff !important;
+            box-shadow: 0 0 8px rgba(255, 51, 102, 0.85), 0 2px 6px rgba(255, 119, 0, 0.5) !important;
         }
-        /* Lv.2 活跃级：纯活力橙 */
+        /* Lv.2 活跃级：活力橙红 */
         .bili-cleaner-badge-item.danmaku-tier-2 {
-            background: #f97316 !important;
+            background: linear-gradient(135deg, rgba(255, 102, 153, 0.95), rgba(249, 115, 22, 0.95)) !important;
             color: #ffffff !important;
+            border: 1px solid rgba(255, 255, 255, 0.35) !important;
+            box-shadow: 0 2px 6px rgba(249, 115, 22, 0.45) !important;
         }
-        /* Lv.1 互动级：低饱和半透橙 */
+        /* Lv.1 互动级：低饱和半透橙微光 */
         .bili-cleaner-badge-item.danmaku-tier-1 {
-            background: rgba(249, 115, 22, 0.4) !important;
-            color: rgba(255, 255, 255, 0.95) !important;
+            background: rgba(249, 115, 22, 0.28) !important;
+            color: rgba(255, 255, 255, 0.9) !important;
+            border: 1px solid rgba(249, 115, 22, 0.4) !important;
         }
 
         /* --- Lv.0 表现平平 / 未点亮 --- */
         .bili-cleaner-badge-item.tier-0 {
-            background: rgba(255, 255, 255, 0.1) !important;
+            background: rgba(0, 0, 0, 0.45) !important;
             color: rgba(255, 255, 255, 0.35) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            filter: grayscale(0.85) !important;
+            opacity: 0.55 !important;
         }
         .bili-cleaner-badge-item.tier-0:hover {
-            background: rgba(255, 255, 255, 0.18) !important;
-            color: rgba(255, 255, 255, 0.85) !important;
+            opacity: 0.95 !important;
+            filter: grayscale(0.2) !important;
         }
 
         /* 3. 暗化卡片悬停临时查验 */
@@ -747,14 +750,14 @@
                     }
                 }
 
-                // 在 .bili-video-card__info--bottom 中追加评价勋章，绝对居中覆盖
-                const bottomEl = card.querySelector('.bili-video-card__info--bottom');
-                if (bottomEl && !card.matches('.bili-live-card')) {
+                // 在类 v-img bili-video-card__cover 中追加评价勋章（方案 B：右侧竖向勋章），作为最后一个子元素
+                const coverEl = card.querySelector('.v-img.bili-video-card__cover, .bili-video-card__cover');
+                if (coverEl && !card.matches('.bili-live-card')) {
                     let stat = id ? (videoStatMap.get(id.toLowerCase()) || videoStatMap.get(id)) : null;
                     if (!stat) {
                         stat = extractStatFromCard(card);
                     }
-                    renderBadgeColumn(bottomEl, stat);
+                    renderBadgeColumn(coverEl, stat);
                 }
             });
             if (isWaterfall && typeof updateViewportPage === 'function') {
@@ -1501,16 +1504,17 @@
         return { play, like: 0, favorites: 0, danmaku, duration, review: 0 };
     }
 
-    // 在 .bili-video-card__info--bottom 内挂载/更新评价勋章列，绝对定位在中央覆盖
-    function renderBadgeColumn(targetEl, stat) {
-        if (!targetEl) return;
-        let badgeCol = targetEl.querySelector(':scope > .bili-cleaner-badge-col');
+    // 在视频封面 .v-img.bili-video-card__cover 内挂载/更新评价勋章列（方案 B：右侧竖向成就勋章）
+    function renderBadgeColumn(coverEl, stat) {
+        if (!coverEl) return;
+        let badgeCol = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
         if (!badgeCol) {
             badgeCol = document.createElement('div');
             badgeCol.className = 'bili-cleaner-badge-col';
-            targetEl.appendChild(badgeCol);
-        } else if (targetEl.lastElementChild !== badgeCol) {
-            targetEl.appendChild(badgeCol);
+            coverEl.appendChild(badgeCol);
+        } else if (coverEl.lastElementChild !== badgeCol) {
+            // 确保始终处于封面类的最后一个子元素
+            coverEl.appendChild(badgeCol);
         }
 
         const play = stat?.play || 0;
@@ -1583,32 +1587,27 @@
             }
         }
 
-        // 层级数字归一化（1 ~ 4 级）
-        const likeLevel = likeTier + 1;
-        const favLevel = favTier + 1;
-        const dmLevel = dmTier + 1;
-
         // 构造悬停提示文本 (Tooltip)
         const likeTip = like > 0 
-            ? `【口碑勋章】Lv.${likeLevel} ${likeStars} ${likeDesc}\n赞播比: ${(likeRatio * 100).toFixed(1)}%\n点赞数: ${formatStat(like)}\n播放量: ${formatStat(play)}`
-            : `【口碑勋章】Lv.${likeLevel} ${likeStars} 暂无点赞数据`;
+            ? `【口碑勋章】${likeStars} ${likeDesc}\n赞播比: ${(likeRatio * 100).toFixed(1)}%\n点赞数: ${formatStat(like)}\n播放量: ${formatStat(play)}`
+            : `【口碑勋章】${likeStars} 暂无点赞数据`;
 
         const favTip = favorites > 0
-            ? `【干货勋章】Lv.${favLevel} ${favStars} ${favDesc}\n藏播比: ${(favRatio * 100).toFixed(1)}%\n收藏数: ${formatStat(favorites)}\n播放量: ${formatStat(play)}`
-            : `【干货勋章】Lv.${favLevel} ${favStars} 暂无收藏数据`;
+            ? `【干货勋章】${favStars} ${favDesc}\n藏播比: ${(favRatio * 100).toFixed(1)}%\n收藏数: ${formatStat(favorites)}\n播放量: ${formatStat(play)}`
+            : `【干货勋章】${favStars} 暂无收藏数据`;
 
         const dmTip = danmaku > 0
-            ? `【热议勋章】Lv.${dmLevel} ${dmStars} ${dmDesc}\n弹幕数: ${formatStat(danmaku)}${durationMinutes > 0 ? `\n弹幕密度: ${danmakuDensity.toFixed(1)} 条/分钟` : ''}`
-            : `【热议勋章】Lv.${dmLevel} ${dmStars} 弹幕较少`;
+            ? `【热议勋章】${dmStars} ${dmDesc}\n弹幕数: ${formatStat(danmaku)}${durationMinutes > 0 ? `\n弹幕密度: ${danmakuDensity.toFixed(1)} 条/分钟` : ''}`
+            : `【热议勋章】${dmStars} 弹幕较少`;
 
         const likeClass = likeTier === 3 ? 'like-tier-3' : (likeTier === 2 ? 'like-tier-2' : (likeTier === 1 ? 'like-tier-1' : 'tier-0'));
         const favClass = favTier === 3 ? 'fav-tier-3' : (favTier === 2 ? 'fav-tier-2' : (favTier === 1 ? 'fav-tier-1' : 'tier-0'));
         const dmClass = dmTier === 3 ? 'danmaku-tier-3' : (dmTier === 2 ? 'danmaku-tier-2' : (dmTier === 1 ? 'danmaku-tier-1' : 'tier-0'));
 
         badgeCol.innerHTML = `
-            <div class="bili-cleaner-badge-item ${likeClass}" title="${likeTip}"><span class="bili-cleaner-badge-num">${likeLevel}</span></div>
-            <div class="bili-cleaner-badge-item ${favClass}" title="${favTip}"><span class="bili-cleaner-badge-num">${favLevel}</span></div>
-            <div class="bili-cleaner-badge-item ${dmClass}" title="${dmTip}"><span class="bili-cleaner-badge-num">${dmLevel}</span></div>
+            <div class="bili-cleaner-badge-item ${likeClass}" title="${likeTip}">👍</div>
+            <div class="bili-cleaner-badge-item ${favClass}" title="${favTip}">⭐</div>
+            <div class="bili-cleaner-badge-item ${dmClass}" title="${dmTip}">🔥</div>
         `;
     }
 
@@ -1801,9 +1800,9 @@
             `;
         }
 
-        // 为瀑布流卡片挂载评价勋章，绝对居中挂载在 .bili-video-card__info--bottom
-        const bottomEl = col.querySelector('.bili-video-card__info--bottom');
-        if (bottomEl) {
+        // 为瀑布流卡片挂载评价勋章（方案 B：右侧竖向勋章），作为封面类的最后一个子元素
+        const coverEl = col.querySelector('.v-img.bili-video-card__cover, .bili-video-card__cover');
+        if (coverEl) {
             const stat = {
                 play: Number(item.play) || 0,
                 like: Number(item.like) || 0,
@@ -1812,7 +1811,7 @@
                 duration: item.duration,
                 review: Number(item.review) || 0
             };
-            renderBadgeColumn(bottomEl, stat);
+            renderBadgeColumn(coverEl, stat);
         }
 
         return col;
