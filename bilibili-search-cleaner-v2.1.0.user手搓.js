@@ -340,11 +340,11 @@
             border: 1px solid rgba(254, 202, 202, 0.5) !important;
             box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4) !important;
         }
-        /* 8. 🍀 常规日常内容：质感暗夜灰 */
+        /* 8. 🍀 常规日常内容：深林墨玉绿渐变（典雅沉稳，有分量感） */
         .bili-cleaner-badge-pill.q-routine {
-            background: rgba(24, 25, 28, 0.85) !important;
-            color: rgba(255, 255, 255, 0.88) !important;
-            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            background: linear-gradient(135deg, rgba(16, 110, 75, 0.88), rgba(10, 70, 50, 0.92)) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(74, 222, 128, 0.35) !important;
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
         }
         /* 9. 🌱 样本较少（冷门置信度保护）：低调雾霾蓝灰 */
