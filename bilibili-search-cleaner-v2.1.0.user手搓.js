@@ -309,6 +309,13 @@
             border: 1px solid rgba(255, 255, 255, 0.15) !important;
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
         }
+        /* 9. 🌱 样本较少（冷门置信度保护）：低调雾霾蓝灰 */
+        .bili-cleaner-badge-pill.q-low-sample {
+            background: rgba(30, 41, 59, 0.82) !important;
+            color: rgba(148, 163, 184, 0.95) !important;
+            border: 1px solid rgba(148, 163, 184, 0.25) !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+        }
 
         /* 3. 暗化卡片悬停临时查验 */
         .bili-cleaner-dimmed:hover {
@@ -1503,46 +1510,62 @@
         const favRatio = play > 0 ? (favorites / play) : 0;
         const danmakuDensity = durationMinutes > 0 ? (danmaku / durationMinutes) : 0;
 
-        // 8 大象限综合定性判定
+        // 8 大象限综合定性判定（含冷门置信度保护机制，彻底隔绝小样本高方差误判）
         let quadrant = null;
 
-        if (play >= 20000 && like > 0 && likeRatio < 0.012 && favRatio < 0.005) {
-            // 7. ⚠️ 封面党 / 低质警告
+        // 【冷门置信度第一防线】：播放量不足 3000 或未获取到有效播放量时，实施样本保护
+        if (play < 3000) {
+            // 极少数虽播放较小，但绝对点赞与收藏已扎实破百的高密度小众精品（真·冷门宝藏）
+            if (play >= 1000 && (like >= 150 || favorites >= 80) && (likeRatio >= 0.08 || favRatio >= 0.045)) {
+                quadrant = {
+                    className: 'q-hidden-gem',
+                    tag: '💎 冷门宝藏',
+                    desc: '小众高纯度佳品，播放虽少但互动扎实'
+                };
+            } else {
+                quadrant = {
+                    className: 'q-low-sample',
+                    tag: '🌱 样本较少',
+                    desc: '数据样本量较少（播放量 < 3000），暂不作定性评级'
+                };
+            }
+        } else if (play >= 20000 && like > 0 && likeRatio < 0.012 && favRatio < 0.005) {
+            // 7. ⚠️ 封面党 / 低质警告（需样本充足且转化极低）
             quadrant = {
                 className: 'q-warning',
                 tag: '⚠️ 谨慎观看',
                 desc: '高播放低评价，含金量较低谨慎点击'
             };
-        } else if (play >= 20000 && likeRatio >= 0.07 && favRatio >= 0.035) {
-            // 1. 🏆 殿堂全能神作
+        } else if (play >= 20000 && likeRatio >= 0.07 && favRatio >= 0.035 && like >= 1500 && favorites >= 800) {
+            // 1. 🏆 殿堂全能神作（大样本 + 双率爆棚 + 绝对量达标）
             quadrant = {
                 className: 'q-hall-of-fame',
                 tag: '🏆 殿堂神作',
                 desc: '殿堂级神作，三连爆满无需犹豫'
             };
-        } else if (play > 100 && play < 20000 && (likeRatio >= 0.09 || favRatio >= 0.05)) {
-            // 5. 💎 冷门潜力遗珠
+        } else if (play < 20000 && like >= 200 && favorites >= 80 && (likeRatio >= 0.08 || favRatio >= 0.045)) {
+            // 5. 💎 冷门潜力遗珠（中小样本 + 绝对赞藏过百）
             quadrant = {
                 className: 'q-hidden-gem',
                 tag: '💎 冷门宝藏',
                 desc: '小众冷门宝藏，播放虽少但纯度极高'
             };
-        } else if (favRatio >= 0.04 || (favorites >= 5000 && favRatio >= 0.025)) {
-            // 2. 💡 硬核宝藏干货
+        } else if ((play >= 5000 && favRatio >= 0.04 && favorites >= 250) || (favorites >= 2000 && favRatio >= 0.025)) {
+            // 2. 💡 硬核宝藏干货（样本充足且绝对收藏充足）
             quadrant = {
                 className: 'q-hardcore',
                 tag: '💡 硬核干货',
                 desc: '顶级实用干货，建议立即收藏备用'
             };
-        } else if (likeRatio >= 0.07 || (like >= 10000 && likeRatio >= 0.045)) {
-            // 3. ⭐ 高口碑佳作
+        } else if ((play >= 5000 && likeRatio >= 0.07 && like >= 400) || (like >= 5000 && likeRatio >= 0.045)) {
+            // 3. ⭐ 高口碑佳作（样本充足且绝对点赞充足）
             quadrant = {
                 className: 'q-high-reputation',
                 tag: '⭐ 高口碑佳作',
                 desc: '观众清一色好评，极高品质无踩雷'
             };
-        } else if (danmakuDensity >= 15 || (danmaku >= 5000 && danmakuDensity >= 8)) {
-            // 4. 🔥 弹幕狂欢下饭
+        } else if ((danmakuDensity >= 15 && danmaku >= 300) || (danmaku >= 3000 && danmakuDensity >= 8)) {
+            // 4. 🔥 弹幕狂欢下饭（弹幕绝对量与密度双达标）
             quadrant = {
                 className: 'q-danmaku-carnival',
                 tag: '🔥 弹幕狂欢',
