@@ -211,7 +211,7 @@
             transition: opacity 0.25s ease, filter 0.25s ease, transform 0.25s ease !important;
         }
 
-        /* 1.1 视频卡片封面评价勋章（右上角横向排布，默认隐藏，鼠标移入卡片时显现） */
+        /* 1.1 视频卡片封面评价勋章（右上角胶囊条，默认隐藏，鼠标移入卡片时显现） */
         .bili-cleaner-badge-col {
             position: absolute !important;
             top: 6px !important;
@@ -219,12 +219,12 @@
             display: flex !important;
             flex-direction: row !important;
             align-items: center !important;
-            gap: 4px !important;
             z-index: 10 !important;
             opacity: 0 !important;
             pointer-events: none !important;
             transform: translateY(-2px);
-            transition: opacity 0.2s ease, transform 0.2s ease !important;
+            transition: opacity 0.22s ease, transform 0.22s ease !important;
+            max-width: calc(100% - 12px) !important;
         }
         .bili-video-card:hover .bili-cleaner-badge-col,
         div[class*="col_"]:hover .bili-cleaner-badge-col,
@@ -234,104 +234,101 @@
             pointer-events: auto !important;
             transform: translateY(0) !important;
         }
-        .bili-cleaner-badge-item {
-            width: 20px !important;
-            height: 20px !important;
-            border-radius: 50% !important;
-            display: flex !important;
+        .bili-cleaner-badge-pill {
+            display: inline-flex !important;
             align-items: center !important;
-            justify-content: center !important;
+            gap: 5px !important;
+            padding: 3px 8px !important;
+            border-radius: 12px !important;
             font-size: 11px !important;
-            line-height: 1 !important;
+            font-weight: 600 !important;
+            line-height: 1.2 !important;
             user-select: none !important;
             box-sizing: border-box !important;
-            backdrop-filter: blur(4px) !important;
-            -webkit-backdrop-filter: blur(4px) !important;
+            backdrop-filter: blur(8px) !important;
+            -webkit-backdrop-filter: blur(8px) !important;
             cursor: pointer !important;
-            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, opacity 0.2s ease !important;
+            max-width: 100% !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28) !important;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease !important;
         }
-        .bili-cleaner-badge-item:hover {
-            transform: scale(1.22) !important;
+        .bili-cleaner-badge-pill:hover {
+            transform: scale(1.04) !important;
             z-index: 2 !important;
         }
-
-        /* --- 口碑等级 (👍 Like) --- */
-        /* Lv.3 殿堂级：强发光 + 白金微光边框 */
-        .bili-cleaner-badge-item.like-tier-3 {
-            background: linear-gradient(135deg, #00c0ff, #0077ff) !important;
-            color: #ffffff !important;
-            border: 1.5px solid #ffffff !important;
-            box-shadow: 0 0 8px rgba(0, 192, 255, 0.8), 0 2px 6px rgba(0, 119, 255, 0.5) !important;
+        .bili-cleaner-badge-tag {
+            font-weight: 700 !important;
+            flex-shrink: 0 !important;
+            letter-spacing: 0.2px !important;
         }
-        /* Lv.2 优质级：标准清亮蓝 */
-        .bili-cleaner-badge-item.like-tier-2 {
-            background: linear-gradient(135deg, rgba(0, 174, 236, 0.95), rgba(0, 138, 197, 0.95)) !important;
-            color: #ffffff !important;
-            border: 1px solid rgba(255, 255, 255, 0.35) !important;
-            box-shadow: 0 2px 6px rgba(0, 174, 236, 0.45) !important;
-        }
-        /* Lv.1 平稳级：低饱和半透蓝微光 */
-        .bili-cleaner-badge-item.like-tier-1 {
-            background: rgba(0, 174, 236, 0.28) !important;
-            color: rgba(255, 255, 255, 0.9) !important;
-            border: 1px solid rgba(0, 174, 236, 0.4) !important;
+        .bili-cleaner-badge-desc {
+            font-size: 10.5px !important;
+            font-weight: 500 !important;
+            opacity: 0.92 !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            white-space: nowrap !important;
         }
 
-        /* --- 干货等级 (⭐ Favorite) --- */
-        /* Lv.3 宝藏级：璀璨金光 + 白金微光边框 */
-        .bili-cleaner-badge-item.fav-tier-3 {
-            background: linear-gradient(135deg, #ffd700, #ff8800) !important;
+        /* --- 8 大象限胶囊配色体系 --- */
+        /* 1. 🏆 殿堂全能神作：耀目流金 */
+        .bili-cleaner-badge-pill.q-hall-of-fame {
+            background: linear-gradient(135deg, rgba(255, 170, 0, 0.95), rgba(255, 102, 0, 0.95)) !important;
             color: #ffffff !important;
-            border: 1.5px solid #ffffff !important;
-            box-shadow: 0 0 8px rgba(255, 215, 0, 0.85), 0 2px 6px rgba(255, 136, 0, 0.5) !important;
+            border: 1px solid rgba(255, 235, 180, 0.7) !important;
+            box-shadow: 0 0 10px rgba(255, 170, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
         }
-        /* Lv.2 实用级：琥珀金 */
-        .bili-cleaner-badge-item.fav-tier-2 {
-            background: linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(217, 119, 6, 0.95)) !important;
+        /* 2. 💡 硬核宝藏干货：琥珀密金 */
+        .bili-cleaner-badge-pill.q-hardcore {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.92), rgba(217, 119, 6, 0.92)) !important;
             color: #ffffff !important;
-            border: 1px solid rgba(255, 255, 255, 0.35) !important;
-            box-shadow: 0 2px 6px rgba(245, 158, 11, 0.45) !important;
+            border: 1px solid rgba(255, 215, 0, 0.5) !important;
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4) !important;
         }
-        /* Lv.1 收藏级：低饱和半透金微光 */
-        .bili-cleaner-badge-item.fav-tier-1 {
-            background: rgba(245, 158, 11, 0.28) !important;
-            color: rgba(255, 255, 255, 0.9) !important;
-            border: 1px solid rgba(245, 158, 11, 0.4) !important;
-        }
-
-        /* --- 热议等级 (🔥 Danmaku) --- */
-        /* Lv.3 狂欢级：烈焰霓虹光 + 白金微光边框 */
-        .bili-cleaner-badge-item.danmaku-tier-3 {
-            background: linear-gradient(135deg, #ff3366, #ff7700) !important;
+        /* 3. ⭐ 高口碑佳品：清亮透蓝 */
+        .bili-cleaner-badge-pill.q-high-reputation {
+            background: linear-gradient(135deg, rgba(0, 174, 236, 0.92), rgba(0, 120, 215, 0.92)) !important;
             color: #ffffff !important;
-            border: 1.5px solid #ffffff !important;
-            box-shadow: 0 0 8px rgba(255, 51, 102, 0.85), 0 2px 6px rgba(255, 119, 0, 0.5) !important;
+            border: 1px solid rgba(180, 230, 255, 0.5) !important;
+            box-shadow: 0 2px 8px rgba(0, 174, 236, 0.4) !important;
         }
-        /* Lv.2 活跃级：活力橙红 */
-        .bili-cleaner-badge-item.danmaku-tier-2 {
-            background: linear-gradient(135deg, rgba(255, 102, 153, 0.95), rgba(249, 115, 22, 0.95)) !important;
+        /* 4. 🔥 弹幕狂欢下饭：烈焰霓橙 */
+        .bili-cleaner-badge-pill.q-danmaku-carnival {
+            background: linear-gradient(135deg, rgba(255, 68, 102, 0.92), rgba(255, 120, 40, 0.92)) !important;
             color: #ffffff !important;
-            border: 1px solid rgba(255, 255, 255, 0.35) !important;
-            box-shadow: 0 2px 6px rgba(249, 115, 22, 0.45) !important;
+            border: 1px solid rgba(255, 200, 210, 0.5) !important;
+            box-shadow: 0 2px 8px rgba(255, 68, 102, 0.4) !important;
         }
-        /* Lv.1 互动级：低饱和半透橙微光 */
-        .bili-cleaner-badge-item.danmaku-tier-1 {
-            background: rgba(249, 115, 22, 0.28) !important;
-            color: rgba(255, 255, 255, 0.9) !important;
-            border: 1px solid rgba(249, 115, 22, 0.4) !important;
+        /* 5. 💎 冷门潜力遗珠：神秘晶紫 */
+        .bili-cleaner-badge-pill.q-hidden-gem {
+            background: linear-gradient(135deg, rgba(147, 51, 234, 0.92), rgba(99, 102, 241, 0.92)) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(220, 180, 255, 0.5) !important;
+            box-shadow: 0 2px 8px rgba(147, 51, 234, 0.4) !important;
         }
-
-        /* --- Lv.0 表现平平 / 未点亮 --- */
-        .bili-cleaner-badge-item.tier-0 {
-            background: rgba(0, 0, 0, 0.45) !important;
-            color: rgba(255, 255, 255, 0.35) !important;
-            border: 1px solid rgba(255, 255, 255, 0.08) !important;
-            filter: grayscale(0.85) !important;
-            opacity: 0.55 !important;
+        /* 6. ⚡ 高转快餐短频：薄荷鲜绿 */
+        .bili-cleaner-badge-pill.q-fast-short {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.92), rgba(6, 148, 162, 0.92)) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(167, 243, 208, 0.5) !important;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4) !important;
         }
-        .bili-cleaner-badge-item.tier-0:hover {
-            opacity: 0.95 !important;
-            filter: grayscale(0.2) !important;
+        /* 7. ⚠️ 封面党/低质警告：警示赤红 */
+        .bili-cleaner-badge-pill.q-warning {
+            background: linear-gradient(135deg, rgba(220, 38, 38, 0.92), rgba(153, 27, 27, 0.92)) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(254, 202, 202, 0.5) !important;
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4) !important;
+        }
+        /* 8. 🍃 常规日常内容：质感暗夜灰 */
+        .bili-cleaner-badge-pill.q-routine {
+            background: rgba(24, 25, 28, 0.85) !important;
+            color: rgba(255, 255, 255, 0.88) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
         }
 
         /* 3. 暗化卡片悬停临时查验 */
@@ -1527,87 +1524,96 @@
         const favRatio = play > 0 ? (favorites / play) : 0;
         const danmakuDensity = durationMinutes > 0 ? (danmaku / durationMinutes) : 0;
 
-        // 1. 👍 口碑层级细分判定 (Like / 赞播比)
-        let likeTier = 0;
-        let likeStars = '☆☆☆';
-        let likeDesc = '表现平平';
-        if (like > 0) {
-            if (likeRatio >= 0.10 || (like >= 30000 && likeRatio >= 0.07)) {
-                likeTier = 3;
-                likeStars = '★★★';
-                likeDesc = '殿堂爆款 (极高认可)';
-            } else if (likeRatio >= 0.06 || (like >= 10000 && likeRatio >= 0.04)) {
-                likeTier = 2;
-                likeStars = '★★☆';
-                likeDesc = '优质好评';
-            } else if (likeRatio >= 0.03 || like >= 1000) {
-                likeTier = 1;
-                likeStars = '★☆☆';
-                likeDesc = '平稳及格';
-            }
-        }
+        // 8 大象限综合定性判定
+        let quadrant = null;
 
-        // 2. ⭐ 干货层级细分判定 (Favorite / 藏播比)
-        let favTier = 0;
-        let favStars = '☆☆☆';
-        let favDesc = '收藏较少';
-        if (favorites > 0) {
-            if (favRatio >= 0.05 || (favorites >= 15000 && favRatio >= 0.03)) {
-                favTier = 3;
-                favStars = '★★★';
-                favDesc = '顶级宝藏 (必藏精品)';
-            } else if (favRatio >= 0.025 || (favorites >= 5000 && favRatio >= 0.015)) {
-                favTier = 2;
-                favStars = '★★☆';
-                favDesc = '实用干货';
-            } else if (favRatio >= 0.01 || favorites >= 500) {
-                favTier = 1;
-                favStars = '★☆☆';
-                favDesc = '随手收藏';
-            }
-        }
-
-        // 3. 🔥 热议层级细分判定 (Danmaku / 弹幕密度)
-        let dmTier = 0;
-        let dmStars = '☆☆☆';
-        let dmDesc = '弹幕较少';
-        if (danmaku > 0) {
-            if (danmakuDensity >= 30 || danmaku >= 10000) {
-                dmTier = 3;
-                dmStars = '★★★';
-                dmDesc = '狂欢满屏 (极度热闹)';
-            } else if (danmakuDensity >= 12 || danmaku >= 2000) {
-                dmTier = 2;
-                dmStars = '★★☆';
-                dmDesc = '活跃热评';
-            } else if (danmakuDensity >= 4 || danmaku >= 500) {
-                dmTier = 1;
-                dmStars = '★☆☆';
-                dmDesc = '讨论平稳';
-            }
+        if (play >= 20000 && like > 0 && likeRatio < 0.012 && favRatio < 0.005) {
+            // 7. ⚠️ 封面党 / 低质警告
+            quadrant = {
+                className: 'q-warning',
+                tag: '⚠️ 谨慎观看',
+                desc: '高播放低评价，含金量较低谨慎点击'
+            };
+        } else if (play >= 20000 && likeRatio >= 0.07 && favRatio >= 0.035) {
+            // 1. 🏆 殿堂全能神作
+            quadrant = {
+                className: 'q-hall-of-fame',
+                tag: '🏆 殿堂神作',
+                desc: '殿堂级神作，三连爆满无需犹豫'
+            };
+        } else if (play > 100 && play < 20000 && (likeRatio >= 0.09 || favRatio >= 0.05)) {
+            // 5. 💎 冷门潜力遗珠
+            quadrant = {
+                className: 'q-hidden-gem',
+                tag: '💎 冷门宝藏',
+                desc: '小众冷门宝藏，播放虽少但纯度极高'
+            };
+        } else if (favRatio >= 0.04 || (favorites >= 5000 && favRatio >= 0.025)) {
+            // 2. 💡 硬核宝藏干货
+            quadrant = {
+                className: 'q-hardcore',
+                tag: '💡 硬核干货',
+                desc: '顶级实用干货，建议立即收藏备用'
+            };
+        } else if (likeRatio >= 0.07 || (like >= 10000 && likeRatio >= 0.045)) {
+            // 3. ⭐ 高口碑佳作
+            quadrant = {
+                className: 'q-high-reputation',
+                tag: '⭐ 高口碑佳作',
+                desc: '观众清一色好评，极高品质无踩雷'
+            };
+        } else if (danmakuDensity >= 15 || (danmaku >= 5000 && danmakuDensity >= 8)) {
+            // 4. 🔥 弹幕狂欢下饭
+            quadrant = {
+                className: 'q-danmaku-carnival',
+                tag: '🔥 弹幕狂欢',
+                desc: '满屏弹幕狂欢，绝佳下饭/乐子神作'
+            };
+        } else if (durationMinutes > 0 && durationMinutes <= 1.5 && (likeRatio >= 0.035 || play >= 20000)) {
+            // 6. ⚡ 高转快餐短频
+            quadrant = {
+                className: 'q-fast-short',
+                tag: '⚡ 轻松下饭',
+                desc: '快节奏短视频，随手一刷轻松解压'
+            };
+        } else {
+            // 8. 🍃 常规日常内容
+            quadrant = {
+                className: 'q-routine',
+                tag: '🍃 表现平稳',
+                desc: '常规日常内容，按需观看即可'
+            };
         }
 
         // 构造悬停提示文本 (Tooltip)
-        const likeTip = like > 0 
-            ? `【口碑勋章】${likeStars} ${likeDesc}\n赞播比: ${(likeRatio * 100).toFixed(1)}%\n点赞数: ${formatStat(like)}\n播放量: ${formatStat(play)}`
-            : `【口碑勋章】${likeStars} 暂无点赞数据`;
+        const tipLines = [
+            `【${quadrant.tag}】${quadrant.desc}`,
+            '────────────────────'
+        ];
+        if (like > 0) {
+            tipLines.push(`👍 赞播比: ${(likeRatio * 100).toFixed(1)}% (${formatStat(like)})`);
+        }
+        if (favorites > 0) {
+            tipLines.push(`⭐ 藏播比: ${(favRatio * 100).toFixed(1)}% (${formatStat(favorites)})`);
+        }
+        if (play > 0) {
+            tipLines.push(`▶️ 播放量: ${formatStat(play)}`);
+        }
+        if (danmaku > 0) {
+            const densityText = durationMinutes > 0 ? ` (${danmakuDensity.toFixed(1)}条/分)` : '';
+            tipLines.push(`💬 弹幕数: ${formatStat(danmaku)}${densityText}`);
+        }
+        if (stat?.duration) {
+            tipLines.push(`⏱️ 视频时长: ${formatDuration(stat.duration)}`);
+        }
 
-        const favTip = favorites > 0
-            ? `【干货勋章】${favStars} ${favDesc}\n藏播比: ${(favRatio * 100).toFixed(1)}%\n收藏数: ${formatStat(favorites)}\n播放量: ${formatStat(play)}`
-            : `【干货勋章】${favStars} 暂无收藏数据`;
-
-        const dmTip = danmaku > 0
-            ? `【热议勋章】${dmStars} ${dmDesc}\n弹幕数: ${formatStat(danmaku)}${durationMinutes > 0 ? `\n弹幕密度: ${danmakuDensity.toFixed(1)} 条/分钟` : ''}`
-            : `【热议勋章】${dmStars} 弹幕较少`;
-
-        const likeClass = likeTier === 3 ? 'like-tier-3' : (likeTier === 2 ? 'like-tier-2' : (likeTier === 1 ? 'like-tier-1' : 'tier-0'));
-        const favClass = favTier === 3 ? 'fav-tier-3' : (favTier === 2 ? 'fav-tier-2' : (favTier === 1 ? 'fav-tier-1' : 'tier-0'));
-        const dmClass = dmTier === 3 ? 'danmaku-tier-3' : (dmTier === 2 ? 'danmaku-tier-2' : (dmTier === 1 ? 'danmaku-tier-1' : 'tier-0'));
+        const tip = tipLines.join('\n');
 
         badgeCol.innerHTML = `
-            <div class="bili-cleaner-badge-item ${likeClass}" title="${likeTip}">👍</div>
-            <div class="bili-cleaner-badge-item ${favClass}" title="${favTip}">⭐</div>
-            <div class="bili-cleaner-badge-item ${dmClass}" title="${dmTip}">🔥</div>
+            <div class="bili-cleaner-badge-pill ${quadrant.className}" title="${tip}">
+                <span class="bili-cleaner-badge-tag">${quadrant.tag}</span>
+                <span class="bili-cleaner-badge-desc">${quadrant.desc}</span>
+            </div>
         `;
     }
 
