@@ -211,118 +211,132 @@
             transition: opacity 0.25s ease, filter 0.25s ease, transform 0.25s ease !important;
         }
 
-        /* 1.1 视频卡片封面评价勋章（右上角极简扁平风格） */
+        /* 1.1 视频卡片封面评价勋章（右上角横向排布） */
         .bili-cleaner-badge-col {
             position: absolute !important;
             top: 6px !important;
             right: 6px !important;
-            display: inline-flex !important;
+            display: flex !important;
             flex-direction: row !important;
             align-items: center !important;
-            gap: 3px !important;
-            padding: 2px 3px !important;
-            background: #18191c !important;
-            border: 1px solid #2f323a !important;
-            border-radius: 4px !important;
-            box-shadow: none !important;
-            backdrop-filter: none !important;
-            -webkit-backdrop-filter: none !important;
+            gap: 4px !important;
             z-index: 10 !important;
             pointer-events: auto !important;
         }
-        .bili-cleaner-badge-col:hover {
-            border-color: #4e535e !important;
-        }
         .bili-cleaner-badge-item {
-            width: 18px !important;
-            height: 18px !important;
-            border-radius: 3px !important;
+            width: 20px !important;
+            height: 20px !important;
+            border-radius: 50% !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            font-size: 11px !important;
-            line-height: 1 !important;
-            user-select: none !important;
+            text-align: center !important;
             box-sizing: border-box !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            overflow: hidden !important;
+            backdrop-filter: blur(4px) !important;
+            -webkit-backdrop-filter: blur(4px) !important;
             cursor: pointer !important;
-            box-shadow: none !important;
-            transition: opacity 0.15s ease !important;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, opacity 0.2s ease !important;
         }
         .bili-cleaner-badge-item:hover {
-            opacity: 1 !important;
+            transform: scale(1.22) !important;
+            z-index: 2 !important;
+        }
+        .bili-cleaner-badge-num {
+            display: block !important;
+            width: 100% !important;
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+            line-height: 1 !important;
+            text-align: center !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            font-variant-numeric: tabular-nums !important;
+            font-feature-settings: "tnum" 1 !important;
+            transform: translateY(-0.5px) !important;
+            pointer-events: none !important;
         }
 
         /* --- 口碑等级 (👍 Like) --- */
-        /* Lv.3 殿堂级：纯色高亮蓝 + 纯白实线边框 */
+        /* Lv.3 殿堂级：强发光 + 白金微光边框 */
         .bili-cleaner-badge-item.like-tier-3 {
-            background: #00aeec !important;
+            background: linear-gradient(135deg, #00c0ff, #0077ff) !important;
             color: #ffffff !important;
             border: 1px solid #ffffff !important;
+            box-shadow: 0 0 8px rgba(0, 192, 255, 0.8), 0 2px 6px rgba(0, 119, 255, 0.5) !important;
         }
-        /* Lv.2 优质级：经典纯色蓝 */
+        /* Lv.2 优质级：标准清亮蓝 */
         .bili-cleaner-badge-item.like-tier-2 {
-            background: #008ac5 !important;
+            background: linear-gradient(135deg, rgba(0, 174, 236, 0.95), rgba(0, 138, 197, 0.95)) !important;
             color: #ffffff !important;
-            border: 1px solid #00aeec !important;
+            border: 1px solid rgba(255, 255, 255, 0.35) !important;
+            box-shadow: 0 2px 6px rgba(0, 174, 236, 0.45) !important;
         }
-        /* Lv.1 平稳级：暗蓝底 + 蓝边框 */
+        /* Lv.1 平稳级：低饱和半透蓝微光 */
         .bili-cleaner-badge-item.like-tier-1 {
-            background: #142838 !important;
-            color: #70c7ff !important;
-            border: 1px solid #1e4566 !important;
+            background: rgba(0, 174, 236, 0.28) !important;
+            color: rgba(255, 255, 255, 0.9) !important;
+            border: 1px solid rgba(0, 174, 236, 0.4) !important;
         }
 
         /* --- 干货等级 (⭐ Favorite) --- */
-        /* Lv.3 宝藏级：纯色金黄 + 纯白实线边框 */
+        /* Lv.3 宝藏级：璀璨金光 + 白金微光边框 */
         .bili-cleaner-badge-item.fav-tier-3 {
-            background: #f59e0b !important;
+            background: linear-gradient(135deg, #ffd700, #ff8800) !important;
             color: #ffffff !important;
             border: 1px solid #ffffff !important;
+            box-shadow: 0 0 8px rgba(255, 215, 0, 0.85), 0 2px 6px rgba(255, 136, 0, 0.5) !important;
         }
-        /* Lv.2 实用级：纯色暖橙黄 */
+        /* Lv.2 实用级：琥珀金 */
         .bili-cleaner-badge-item.fav-tier-2 {
-            background: #d97706 !important;
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(217, 119, 6, 0.95)) !important;
             color: #ffffff !important;
-            border: 1px solid #f59e0b !important;
+            border: 1px solid rgba(255, 255, 255, 0.35) !important;
+            box-shadow: 0 2px 6px rgba(245, 158, 11, 0.45) !important;
         }
-        /* Lv.1 收藏级：暗金底 + 金边框 */
+        /* Lv.1 收藏级：低饱和半透金微光 */
         .bili-cleaner-badge-item.fav-tier-1 {
-            background: #36260a !important;
-            color: #fcd34d !important;
-            border: 1px solid #5c410e !important;
+            background: rgba(245, 158, 11, 0.28) !important;
+            color: rgba(255, 255, 255, 0.9) !important;
+            border: 1px solid rgba(245, 158, 11, 0.4) !important;
         }
 
         /* --- 热议等级 (🔥 Danmaku) --- */
-        /* Lv.3 狂欢级：纯色赤红 + 纯白实线边框 */
+        /* Lv.3 狂欢级：烈焰霓虹光 + 白金微光边框 */
         .bili-cleaner-badge-item.danmaku-tier-3 {
-            background: #f43f5e !important;
+            background: linear-gradient(135deg, #ff3366, #ff7700) !important;
             color: #ffffff !important;
             border: 1px solid #ffffff !important;
+            box-shadow: 0 0 8px rgba(255, 51, 102, 0.85), 0 2px 6px rgba(255, 119, 0, 0.5) !important;
         }
-        /* Lv.2 活跃级：纯色橙红 */
+        /* Lv.2 活跃级：活力橙红 */
         .bili-cleaner-badge-item.danmaku-tier-2 {
-            background: #ea580c !important;
+            background: linear-gradient(135deg, rgba(255, 102, 153, 0.95), rgba(249, 115, 22, 0.95)) !important;
             color: #ffffff !important;
-            border: 1px solid #fb923c !important;
+            border: 1px solid rgba(255, 255, 255, 0.35) !important;
+            box-shadow: 0 2px 6px rgba(249, 115, 22, 0.45) !important;
         }
-        /* Lv.1 互动级：暗红底 + 橙红边框 */
+        /* Lv.1 互动级：低饱和半透橙微光 */
         .bili-cleaner-badge-item.danmaku-tier-1 {
-            background: #381816 !important;
-            color: #fca5a5 !important;
-            border: 1px solid #5e2420 !important;
+            background: rgba(249, 115, 22, 0.28) !important;
+            color: rgba(255, 255, 255, 0.9) !important;
+            border: 1px solid rgba(249, 115, 22, 0.4) !important;
         }
 
         /* --- Lv.0 表现平平 / 未点亮 --- */
         .bili-cleaner-badge-item.tier-0 {
-            background: #202228 !important;
-            color: #61666d !important;
-            border: 1px solid #2b2e37 !important;
-            filter: grayscale(1) !important;
-            opacity: 0.5 !important;
+            background: rgba(0, 0, 0, 0.45) !important;
+            color: rgba(255, 255, 255, 0.35) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            filter: grayscale(0.85) !important;
+            opacity: 0.55 !important;
         }
         .bili-cleaner-badge-item.tier-0:hover {
-            opacity: 0.85 !important;
-            filter: grayscale(0.3) !important;
+            opacity: 0.95 !important;
+            filter: grayscale(0.2) !important;
         }
 
         /* 3. 暗化卡片悬停临时查验 */
@@ -1578,27 +1592,32 @@
             }
         }
 
+        // 层级数字归一化（1 ~ 4 级）
+        const likeLevel = likeTier + 1;
+        const favLevel = favTier + 1;
+        const dmLevel = dmTier + 1;
+
         // 构造悬停提示文本 (Tooltip)
         const likeTip = like > 0 
-            ? `【口碑勋章】${likeStars} ${likeDesc}\n赞播比: ${(likeRatio * 100).toFixed(1)}%\n点赞数: ${formatStat(like)}\n播放量: ${formatStat(play)}`
-            : `【口碑勋章】${likeStars} 暂无点赞数据`;
+            ? `【口碑勋章】Lv.${likeLevel} ${likeStars} ${likeDesc}\n赞播比: ${(likeRatio * 100).toFixed(1)}%\n点赞数: ${formatStat(like)}\n播放量: ${formatStat(play)}`
+            : `【口碑勋章】Lv.${likeLevel} ${likeStars} 暂无点赞数据`;
 
         const favTip = favorites > 0
-            ? `【干货勋章】${favStars} ${favDesc}\n藏播比: ${(favRatio * 100).toFixed(1)}%\n收藏数: ${formatStat(favorites)}\n播放量: ${formatStat(play)}`
-            : `【干货勋章】${favStars} 暂无收藏数据`;
+            ? `【干货勋章】Lv.${favLevel} ${favStars} ${favDesc}\n藏播比: ${(favRatio * 100).toFixed(1)}%\n收藏数: ${formatStat(favorites)}\n播放量: ${formatStat(play)}`
+            : `【干货勋章】Lv.${favLevel} ${favStars} 暂无收藏数据`;
 
         const dmTip = danmaku > 0
-            ? `【热议勋章】${dmStars} ${dmDesc}\n弹幕数: ${formatStat(danmaku)}${durationMinutes > 0 ? `\n弹幕密度: ${danmakuDensity.toFixed(1)} 条/分钟` : ''}`
-            : `【热议勋章】${dmStars} 弹幕较少`;
+            ? `【热议勋章】Lv.${dmLevel} ${dmStars} ${dmDesc}\n弹幕数: ${formatStat(danmaku)}${durationMinutes > 0 ? `\n弹幕密度: ${danmakuDensity.toFixed(1)} 条/分钟` : ''}`
+            : `【热议勋章】Lv.${dmLevel} ${dmStars} 弹幕较少`;
 
         const likeClass = likeTier === 3 ? 'like-tier-3' : (likeTier === 2 ? 'like-tier-2' : (likeTier === 1 ? 'like-tier-1' : 'tier-0'));
         const favClass = favTier === 3 ? 'fav-tier-3' : (favTier === 2 ? 'fav-tier-2' : (favTier === 1 ? 'fav-tier-1' : 'tier-0'));
         const dmClass = dmTier === 3 ? 'danmaku-tier-3' : (dmTier === 2 ? 'danmaku-tier-2' : (dmTier === 1 ? 'danmaku-tier-1' : 'tier-0'));
 
         badgeCol.innerHTML = `
-            <div class="bili-cleaner-badge-item ${likeClass}" title="${likeTip}">👍</div>
-            <div class="bili-cleaner-badge-item ${favClass}" title="${favTip}">⭐</div>
-            <div class="bili-cleaner-badge-item ${dmClass}" title="${dmTip}">🔥</div>
+            <div class="bili-cleaner-badge-item ${likeClass}" title="${likeTip}"><span class="bili-cleaner-badge-num">${likeLevel}</span></div>
+            <div class="bili-cleaner-badge-item ${favClass}" title="${favTip}"><span class="bili-cleaner-badge-num">${favLevel}</span></div>
+            <div class="bili-cleaner-badge-item ${dmClass}" title="${dmTip}"><span class="bili-cleaner-badge-num">${dmLevel}</span></div>
         `;
     }
 
