@@ -211,25 +211,33 @@
             transition: opacity 0.25s ease, filter 0.25s ease, transform 0.25s ease !important;
         }
 
-        /* 1.1 视频卡片封面评价勋章（右上角胶囊托盘底座 + 纯色无边框圆勋章） */
+        /* 1.05 宿主底部信息行开启相对定位 */
+        .bili-video-card__info--bottom {
+            position: relative !important;
+        }
+
+        /* 1.1 评价勋章托盘（位于 .bili-video-card__info--bottom 居中绝对定位覆盖） */
         .bili-cleaner-badge-col {
             position: absolute !important;
-            top: 6px !important;
-            right: 6px !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
             display: flex !important;
             flex-direction: row !important;
             align-items: center !important;
+            justify-content: center !important;
             gap: 4px !important;
-            padding: 2px 4px !important;
-            background: rgba(0, 0, 0, 0.55) !important;
-            border-radius: 14px !important;
+            padding: 2px 6px !important;
+            background: rgba(24, 25, 28, 0.88) !important;
+            border-radius: 12px !important;
             border: none !important;
-            z-index: 10 !important;
+            z-index: 5 !important;
             pointer-events: auto !important;
+            white-space: nowrap !important;
         }
         .bili-cleaner-badge-item {
-            width: 20px !important;
-            height: 20px !important;
+            width: 18px !important;
+            height: 18px !important;
             border-radius: 50% !important;
             border: none !important;
             display: flex !important;
@@ -243,13 +251,13 @@
             transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease !important;
         }
         .bili-cleaner-badge-item:hover {
-            transform: scale(1.18) !important;
+            transform: scale(1.2) !important;
             z-index: 2 !important;
         }
         .bili-cleaner-badge-num {
             display: block !important;
             width: 100% !important;
-            font-size: 11px !important;
+            font-size: 10.5px !important;
             font-weight: 700 !important;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
             line-height: 1 !important;
@@ -739,14 +747,14 @@
                     }
                 }
 
-                // 在类 v-img bili-video-card__cover 中追加评价勋章（方案 B：右侧竖向勋章），作为最后一个子元素
-                const coverEl = card.querySelector('.v-img.bili-video-card__cover, .bili-video-card__cover');
-                if (coverEl && !card.matches('.bili-live-card')) {
+                // 在 .bili-video-card__info--bottom 中追加评价勋章，绝对居中覆盖
+                const bottomEl = card.querySelector('.bili-video-card__info--bottom');
+                if (bottomEl && !card.matches('.bili-live-card')) {
                     let stat = id ? (videoStatMap.get(id.toLowerCase()) || videoStatMap.get(id)) : null;
                     if (!stat) {
                         stat = extractStatFromCard(card);
                     }
-                    renderBadgeColumn(coverEl, stat);
+                    renderBadgeColumn(bottomEl, stat);
                 }
             });
             if (isWaterfall && typeof updateViewportPage === 'function') {
@@ -1493,17 +1501,16 @@
         return { play, like: 0, favorites: 0, danmaku, duration, review: 0 };
     }
 
-    // 在视频封面 .v-img.bili-video-card__cover 内挂载/更新评价勋章列（方案 B：右侧竖向成就勋章）
-    function renderBadgeColumn(coverEl, stat) {
-        if (!coverEl) return;
-        let badgeCol = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
+    // 在 .bili-video-card__info--bottom 内挂载/更新评价勋章列，绝对定位在中央覆盖
+    function renderBadgeColumn(targetEl, stat) {
+        if (!targetEl) return;
+        let badgeCol = targetEl.querySelector(':scope > .bili-cleaner-badge-col');
         if (!badgeCol) {
             badgeCol = document.createElement('div');
             badgeCol.className = 'bili-cleaner-badge-col';
-            coverEl.appendChild(badgeCol);
-        } else if (coverEl.lastElementChild !== badgeCol) {
-            // 确保始终处于封面类的最后一个子元素
-            coverEl.appendChild(badgeCol);
+            targetEl.appendChild(badgeCol);
+        } else if (targetEl.lastElementChild !== badgeCol) {
+            targetEl.appendChild(badgeCol);
         }
 
         const play = stat?.play || 0;
@@ -1794,9 +1801,9 @@
             `;
         }
 
-        // 为瀑布流卡片挂载评价勋章（方案 B：右侧竖向勋章），作为封面类的最后一个子元素
-        const coverEl = col.querySelector('.v-img.bili-video-card__cover, .bili-video-card__cover');
-        if (coverEl) {
+        // 为瀑布流卡片挂载评价勋章，绝对居中挂载在 .bili-video-card__info--bottom
+        const bottomEl = col.querySelector('.bili-video-card__info--bottom');
+        if (bottomEl) {
             const stat = {
                 play: Number(item.play) || 0,
                 like: Number(item.like) || 0,
@@ -1805,7 +1812,7 @@
                 duration: item.duration,
                 review: Number(item.review) || 0
             };
-            renderBadgeColumn(coverEl, stat);
+            renderBadgeColumn(bottomEl, stat);
         }
 
         return col;
