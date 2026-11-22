@@ -211,13 +211,13 @@
             transition: opacity 0.25s ease, filter 0.25s ease, transform 0.25s ease !important;
         }
 
-        /* 1.1 视频卡片封面评价勋章列（方案 B：右侧竖向勋章） */
+        /* 1.1 视频卡片封面评价勋章（右上角横向排布） */
         .bili-cleaner-badge-col {
             position: absolute !important;
             top: 6px !important;
             right: 6px !important;
             display: flex !important;
-            flex-direction: column !important;
+            flex-direction: row !important;
             align-items: center !important;
             gap: 4px !important;
             z-index: 10 !important;
