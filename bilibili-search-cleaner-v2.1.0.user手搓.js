@@ -211,7 +211,7 @@
             transition: opacity 0.25s ease, filter 0.25s ease, transform 0.25s ease !important;
         }
 
-        /* 1.1 视频卡片封面评价勋章（右上角胶囊条，默认隐藏，鼠标移入卡片时显现） */
+        /* 1.1 视频卡片封面评价勋章（右上角常驻胶囊标签，直接常驻展示） */
         .bili-cleaner-badge-col {
             position: absolute !important;
             top: 6px !important;
@@ -220,26 +220,15 @@
             flex-direction: row !important;
             align-items: center !important;
             z-index: 10 !important;
-            opacity: 0 !important;
-            pointer-events: none !important;
-            transform: translateY(-2px);
-            transition: opacity 0.22s ease, transform 0.22s ease !important;
-            max-width: calc(100% - 12px) !important;
-        }
-        .bili-video-card:hover .bili-cleaner-badge-col,
-        div[class*="col_"]:hover .bili-cleaner-badge-col,
-        .video-list-item:hover .bili-cleaner-badge-col,
-        .bili-cleaner-badge-col:hover {
-            opacity: 1 !important;
             pointer-events: auto !important;
-            transform: translateY(0) !important;
+            max-width: calc(100% - 12px) !important;
         }
         .bili-cleaner-badge-pill {
             display: inline-flex !important;
             align-items: center !important;
-            gap: 5px !important;
-            padding: 3px 8px !important;
-            border-radius: 12px !important;
+            gap: 4px !important;
+            padding: 2.5px 7px !important;
+            border-radius: 10px !important;
             font-size: 11px !important;
             font-weight: 600 !important;
             line-height: 1.2 !important;
@@ -250,27 +239,17 @@
             cursor: pointer !important;
             max-width: 100% !important;
             white-space: nowrap !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28) !important;
             transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease !important;
         }
         .bili-cleaner-badge-pill:hover {
-            transform: scale(1.04) !important;
+            transform: scale(1.08) !important;
             z-index: 2 !important;
         }
         .bili-cleaner-badge-tag {
             font-weight: 700 !important;
             flex-shrink: 0 !important;
             letter-spacing: 0.2px !important;
-        }
-        .bili-cleaner-badge-desc {
-            font-size: 10.5px !important;
-            font-weight: 500 !important;
-            opacity: 0.92 !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
-            white-space: nowrap !important;
         }
 
         /* --- 8 大象限胶囊配色体系 --- */
@@ -1612,7 +1591,6 @@
         badgeCol.innerHTML = `
             <div class="bili-cleaner-badge-pill ${quadrant.className}" title="${tip}">
                 <span class="bili-cleaner-badge-tag">${quadrant.tag}</span>
-                <span class="bili-cleaner-badge-desc">${quadrant.desc}</span>
             </div>
         `;
     }
