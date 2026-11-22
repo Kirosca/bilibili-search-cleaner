@@ -26,14 +26,16 @@
     }
 
     // ==========================================
-    // 菜单管理与持久化配置（虚化显示 & 筛选常驻 & 无缝瀑布流）
+    // 菜单管理与持久化配置（虚化显示 & 筛选常驻 & 无缝瀑布流 & 评价体系）
     // ==========================================
     let isDimmed = localStorage.getItem('bili_cleaner_dimmed') === 'true';
     let isFilterSticky = localStorage.getItem('bili_cleaner_sticky_filter') === 'true';
     let isWaterfall = localStorage.getItem('bili_cleaner_waterfall') === 'true';
+    let isEvaluationBadge = localStorage.getItem('bili_cleaner_eval_badge') === 'true';
     let filterStickyMenuId = null;
     let dimmedMenuId = null;
     let waterfallMenuId = null;
+    let evalBadgeMenuId = null;
 
     // 注册与更新油猴菜单命令
     function registerMenu() {
@@ -50,6 +52,9 @@
             if (waterfallMenuId !== null) {
                 try { GM_unregisterMenuCommand(waterfallMenuId); } catch (e) {}
             }
+            if (evalBadgeMenuId !== null) {
+                try { GM_unregisterMenuCommand(evalBadgeMenuId); } catch (e) {}
+            }
         }
 
         const filterStickyLabel = `⚓ 搜索筛选常驻: ${isFilterSticky ? '✅ 已开启' : '❌ 已关闭'}`;
@@ -60,6 +65,33 @@
 
         const waterfallLabel = `🌊 无缝瀑布流: ${isWaterfall ? '✅ 已开启' : '❌ 已关闭'}`;
         waterfallMenuId = GM_registerMenuCommand(waterfallLabel, toggleWaterfall);
+
+        const evalBadgeLabel = `🏷️ 视频评价体系: ${isEvaluationBadge ? '✅ 已开启' : '❌ 已关闭'}`;
+        evalBadgeMenuId = GM_registerMenuCommand(evalBadgeLabel, toggleEvaluationBadge);
+    }
+
+    // 切换视频评价体系显示状态并持久化配置（默认关闭）
+    function toggleEvaluationBadge() {
+        isEvaluationBadge = !isEvaluationBadge;
+        localStorage.setItem('bili_cleaner_eval_badge', String(isEvaluationBadge));
+        registerMenu();
+        applyEvaluationBadgeState();
+
+        if (isEvaluationBadge) {
+            document.querySelectorAll('[data-purified-query]').forEach(card => {
+                delete card.dataset.purifiedQuery;
+            });
+            filterDOMElements();
+        } else {
+            document.querySelectorAll('.bili-cleaner-badge-col').forEach(el => el.remove());
+        }
+    }
+
+    // 应用视频评价体系的 CSS 根类名
+    function applyEvaluationBadgeState() {
+        if (document.documentElement) {
+            document.documentElement.classList.toggle('bili-eval-badge-enabled', isEvaluationBadge);
+        }
     }
 
     // 切换虚化显示模糊内容状态并持久化配置（控制未匹配卡片是半透明虚化还是彻底物理隐藏）
@@ -144,6 +176,7 @@
 
     registerMenu();
     applyFilterStickyState();
+    applyEvaluationBadgeState();
  
     // 0. 接入 OpenCC 单例转换器（由 @require 本地持久化驱动）
     let sConverter = null;
@@ -211,17 +244,22 @@
             transition: opacity 0.25s ease, filter 0.25s ease, transform 0.25s ease !important;
         }
 
-        /* 1.1 视频卡片封面评价勋章（右上角常驻胶囊标签，直接常驻展示） */
+        /* 1.1 视频卡片封面评价勋章（左上角常驻胶囊标签，直接常驻展示） */
         .bili-cleaner-badge-col {
             position: absolute !important;
             top: 6px !important;
-            right: 6px !important;
+            left: 6px !important;
             display: flex !important;
             flex-direction: row !important;
             align-items: center !important;
             z-index: 10 !important;
             pointer-events: auto !important;
             max-width: calc(100% - 12px) !important;
+        }
+
+        /* 评价体系菜单未开启时彻底物理隐藏 */
+        html:not(.bili-eval-badge-enabled) .bili-cleaner-badge-col {
+            display: none !important;
         }
         .bili-cleaner-badge-pill {
             display: inline-flex !important;
@@ -302,7 +340,7 @@
             border: 1px solid rgba(254, 202, 202, 0.5) !important;
             box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4) !important;
         }
-        /* 8. 🍃 常规日常内容：质感暗夜灰 */
+        /* 8. 🍀 常规日常内容：质感暗夜灰 */
         .bili-cleaner-badge-pill.q-routine {
             background: rgba(24, 25, 28, 0.85) !important;
             color: rgba(255, 255, 255, 0.88) !important;
@@ -549,11 +587,13 @@
     }
     scanInitialState();
     window.addEventListener('DOMContentLoaded', () => {
+        applyEvaluationBadgeState();
         scanInitialState();
         filterDOMElements();
         bindStickyObserver();
     });
     window.addEventListener('load', () => {
+        applyEvaluationBadgeState();
         scanInitialState();
         filterDOMElements();
         bindStickyObserver();
@@ -1487,9 +1527,14 @@
         return { play, like: 0, favorites: 0, danmaku, duration, review: 0 };
     }
 
-    // 在视频封面 .v-img.bili-video-card__cover 内挂载/更新评价勋章列（方案 B：右侧竖向成就勋章）
+    // 在视频封面 .v-img.bili-video-card__cover 内挂载/更新评价勋章列
     function renderBadgeColumn(coverEl, stat) {
         if (!coverEl) return;
+        if (!isEvaluationBadge) {
+            const existing = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
+            if (existing) existing.remove();
+            return;
+        }
         let badgeCol = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
         if (!badgeCol) {
             badgeCol = document.createElement('div');
@@ -1579,10 +1624,10 @@
                 desc: '快节奏短视频，随手一刷轻松解压'
             };
         } else {
-            // 8. 🍃 常规日常内容
+            // 8. 🍀 常规日常内容
             quadrant = {
                 className: 'q-routine',
-                tag: '🍃 表现平稳',
+                tag: '🍀 表现平稳',
                 desc: '常规日常内容，按需观看即可'
             };
         }
