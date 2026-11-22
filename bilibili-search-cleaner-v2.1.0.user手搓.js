@@ -211,21 +211,35 @@
             transition: opacity 0.25s ease, filter 0.25s ease, transform 0.25s ease !important;
         }
 
-        /* 1.1 视频卡片封面评价勋章（右上角横向排布） */
+        /* 1.1 视频卡片封面评价勋章（右上角灵动岛胶囊） */
         .bili-cleaner-badge-col {
             position: absolute !important;
             top: 6px !important;
             right: 6px !important;
-            display: flex !important;
+            display: inline-flex !important;
             flex-direction: row !important;
             align-items: center !important;
-            gap: 4px !important;
+            gap: 5px !important;
+            padding: 3px 5px !important;
+            background: rgba(15, 17, 21, 0.72) !important;
+            backdrop-filter: blur(12px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
+            border-radius: 20px !important;
+            border: 1px solid rgba(255, 255, 255, 0.14) !important;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), 0 0 1px rgba(255, 255, 255, 0.2) inset !important;
             z-index: 10 !important;
             pointer-events: auto !important;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+        .bili-cleaner-badge-col:hover {
+            background: rgba(12, 14, 18, 0.88) !important;
+            border-color: rgba(255, 255, 255, 0.25) !important;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45), 0 0 1px rgba(255, 255, 255, 0.3) inset !important;
+            transform: translateY(-1px) !important;
         }
         .bili-cleaner-badge-item {
-            width: 20px !important;
-            height: 20px !important;
+            width: 19px !important;
+            height: 19px !important;
             border-radius: 50% !important;
             display: flex !important;
             align-items: center !important;
@@ -234,8 +248,6 @@
             line-height: 1 !important;
             user-select: none !important;
             box-sizing: border-box !important;
-            backdrop-filter: blur(4px) !important;
-            -webkit-backdrop-filter: blur(4px) !important;
             cursor: pointer !important;
             transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, opacity 0.2s ease !important;
         }
@@ -312,14 +324,14 @@
 
         /* --- Lv.0 表现平平 / 未点亮 --- */
         .bili-cleaner-badge-item.tier-0 {
-            background: rgba(0, 0, 0, 0.45) !important;
-            color: rgba(255, 255, 255, 0.35) !important;
-            border: 1px solid rgba(255, 255, 255, 0.08) !important;
-            filter: grayscale(0.85) !important;
+            background: rgba(255, 255, 255, 0.06) !important;
+            color: rgba(255, 255, 255, 0.32) !important;
+            border: 1px solid rgba(255, 255, 255, 0.05) !important;
+            filter: grayscale(1) !important;
             opacity: 0.55 !important;
         }
         .bili-cleaner-badge-item.tier-0:hover {
-            opacity: 0.95 !important;
+            opacity: 0.9 !important;
             filter: grayscale(0.2) !important;
         }
 
