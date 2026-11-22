@@ -2,7 +2,7 @@
 // @name         Bilibili 去掉搜索无关视频
 // @namespace    http://tampermonkey.net/
 // @version      3.0.0
-// @description  自动隐藏 Bilibili 搜索结果中不包含关键词的无关视频，支持 @UP主 定向筛选、-排除词 与 #Tag 专项筛选，内置 WBI 签名协议栈、无缝瀑布流与聚光灯高亮模式，彻底净化搜索体验。（支持简繁归一化）
+// @description  自动隐藏 Bilibili 搜索结果中不包含关键词的无关视频，支持 @UP主 定向筛选、-排除词 与 #Tag 专项筛选，内置 WBI 签名协议栈与无缝瀑布流，彻底净化搜索体验。（支持简繁归一化）
 // @author       Kirosca
 // @match        *://search.bilibili.com/*
 // @icon         https://www.bilibili.com/favicon.ico
@@ -26,14 +26,12 @@
     }
 
     // ==========================================
-    // 菜单管理与持久化配置（聚光灯模式 & 虚化显示 & 筛选常驻 & 无缝瀑布流）
+    // 菜单管理与持久化配置（虚化显示 & 筛选常驻 & 无缝瀑布流）
     // ==========================================
-    let isSpotlight = localStorage.getItem('bili_cleaner_spotlight') === 'true';
     let isDimmed = localStorage.getItem('bili_cleaner_dimmed') === 'true';
     let isFilterSticky = localStorage.getItem('bili_cleaner_sticky_filter') === 'true';
     let isWaterfall = localStorage.getItem('bili_cleaner_waterfall') === 'true';
     let filterStickyMenuId = null;
-    let spotlightMenuId = null;
     let dimmedMenuId = null;
     let waterfallMenuId = null;
 
@@ -46,9 +44,6 @@
             if (filterStickyMenuId !== null) {
                 try { GM_unregisterMenuCommand(filterStickyMenuId); } catch (e) {}
             }
-            if (spotlightMenuId !== null) {
-                try { GM_unregisterMenuCommand(spotlightMenuId); } catch (e) {}
-            }
             if (dimmedMenuId !== null) {
                 try { GM_unregisterMenuCommand(dimmedMenuId); } catch (e) {}
             }
@@ -60,27 +55,11 @@
         const filterStickyLabel = `⚓ 搜索筛选常驻: ${isFilterSticky ? '✅ 已开启' : '❌ 已关闭'}`;
         filterStickyMenuId = GM_registerMenuCommand(filterStickyLabel, toggleFilterSticky);
 
-        const spotlightLabel = `🔦 目标匹配标识: ${isSpotlight ? '✅ 已开启' : '❌ 已关闭'}`;
-        spotlightMenuId = GM_registerMenuCommand(spotlightLabel, toggleSpotlight);
-
         const dimmedLabel = `🌫️ 虚化显示模糊内容: ${isDimmed ? '✅ 已开启' : '❌ 已关闭'}`;
         dimmedMenuId = GM_registerMenuCommand(dimmedLabel, toggleDimmed);
 
         const waterfallLabel = `🌊 无缝瀑布流: ${isWaterfall ? '✅ 已开启' : '❌ 已关闭'}`;
         waterfallMenuId = GM_registerMenuCommand(waterfallLabel, toggleWaterfall);
-    }
-
-    // 切换聚光灯高亮模式并持久化配置（控制匹配卡片是否显示高亮外观）
-    function toggleSpotlight() {
-        isSpotlight = !isSpotlight;
-        localStorage.setItem('bili_cleaner_spotlight', String(isSpotlight));
-        registerMenu();
-
-        // 清空所有卡片的安检缓存标记，并立即触发重新判定
-        document.querySelectorAll('[data-purified-query]').forEach(card => {
-            delete card.dataset.purifiedQuery;
-        });
-        filterDOMElements();
     }
 
     // 切换虚化显示模糊内容状态并持久化配置（控制未匹配卡片是半透明虚化还是彻底物理隐藏）
@@ -225,30 +204,7 @@
             contain-intrinsic-size: auto 300px;
         }
 
-        /* 1. 目标匹配卡片：全彩饱和 + 悬浮外发光 + 右上角徽章 */
-        .bili-cleaner-highlighted {
-            opacity: 1 !important;
-            filter: none !important;
-            position: relative;
-            transition: box-shadow 0.25s ease, transform 0.25s ease !important;
-        }
-        .bili-cleaner-highlighted::before {
-            content: "🎯 目标匹配";
-            position: absolute;
-            top: 6px;
-            right: 6px;
-            background: linear-gradient(135deg, #00aeec, #008ac5);
-            color: #fff;
-            font-size: 11px;
-            font-weight: bold;
-            padding: 2px 6px;
-            border-radius: 4px;
-            z-index: 10;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
-            pointer-events: none;
-        }
-
-        /* 2. 未匹配卡片常态暗化：深度半透明 + 灰度去色 + 占位保留 */
+        /* 1. 未匹配卡片常态暗化：深度半透明 + 灰度去色 + 占位保留 */
         .bili-cleaner-dimmed {
             opacity: 0.16 !important;
             filter: grayscale(85%) contrast(85%) !important;
@@ -570,7 +526,7 @@
             }
  
             const currentSearchQuery = window.location.search;
-            const currentQueryKey = currentSearchQuery + '_' + (isSpotlight ? 'spot1' : 'spot0') + '_' + (isDimmed ? 'dim1' : 'dim0');
+            const currentQueryKey = currentSearchQuery + '_' + (isDimmed ? 'dim1' : 'dim0');
             let elements = [];
             if (Array.isArray(target)) {
                 elements = target;
@@ -635,23 +591,15 @@
 
                 const innerCard = card.querySelector('.bili-video-card, .bili-live-card') || card;
 
-                // 确保外层列容器不承载高亮或虚化类，维持原生栅格间隙纯净
-                card.classList.remove('bili-cleaner-highlighted', 'bili-cleaner-dimmed');
+                // 确保外层列容器不承载虚化类，维持原生栅格间隙纯净
+                card.classList.remove('bili-cleaner-dimmed');
 
                 if (!shouldHide) {
-                    // 目标匹配（命中全部规则）：
+                    // 目标匹配（命中全部规则）：正常显示
                     card.style.removeProperty('display');
                     innerCard.classList.remove('bili-cleaner-dimmed');
-                    if (isSpotlight) {
-                        // 开启【聚光灯高亮模式】：内层卡片展现高亮微框与徽标
-                        innerCard.classList.add('bili-cleaner-highlighted');
-                    } else {
-                        // 关闭【聚光灯高亮模式】：呈现官方原生普通外观，不高亮
-                        innerCard.classList.remove('bili-cleaner-highlighted');
-                    }
                 } else {
                     // 未匹配（不符合规则，需过滤）：
-                    innerCard.classList.remove('bili-cleaner-highlighted');
                     if (isDimmed) {
                         // 开启【虚化显示模糊内容】：保留卡片占位，实施半透明去色暗化
                         card.style.removeProperty('display');
@@ -1381,8 +1329,8 @@
         // 克隆并预清洗为纯净模板骨架
         const tpl = sampleCol.cloneNode(true);
         delete tpl.dataset.purifiedQuery;
-        tpl.classList.remove('bili-cleaner-highlighted', 'bili-cleaner-dimmed');
-        tpl.querySelectorAll('.bili-cleaner-highlighted, .bili-cleaner-dimmed').forEach(el => el.classList.remove('bili-cleaner-highlighted', 'bili-cleaner-dimmed'));
+        tpl.classList.remove('bili-cleaner-dimmed');
+        tpl.querySelectorAll('.bili-cleaner-dimmed').forEach(el => el.classList.remove('bili-cleaner-dimmed'));
 
         // 彻底清理直播专属节点（内联直播播放器、直播中状态标等）及残留的活动播放器
         tpl.querySelectorAll('.v-inline-live-player, .bili-video-card__info--living, .v-inline-player, .bpx-docker, video').forEach(el => el.remove());
