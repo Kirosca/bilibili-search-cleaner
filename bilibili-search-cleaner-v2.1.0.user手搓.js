@@ -1758,8 +1758,8 @@
         tpl.querySelectorAll('.bili-cleaner-dimmed').forEach(el => el.classList.remove('bili-cleaner-dimmed'));
         tpl.querySelectorAll('.bili-cleaner-badge-col').forEach(el => el.remove());
 
-        // 彻底清理直播专属节点（内联直播播放器、直播中状态标等）及残留的活动播放器
-        tpl.querySelectorAll('.v-inline-live-player, .bili-video-card__info--living, .v-inline-player, .bpx-docker, video').forEach(el => el.remove());
+        // 彻底清理直播专属节点、赞助商角标（如 SponsorBlock/插件注入的 sponsorThumbnailLabel）及残留播放器
+        tpl.querySelectorAll('.v-inline-live-player, .bili-video-card__info--living, .v-inline-player, .bpx-docker, video, .sponsorThumbnailLabel, [class*="sponsorThumbnailLabel"]').forEach(el => el.remove());
 
         // 清理 picture 内部残留的旧 source 标签，防止干扰后续动态封面
         const pictureEl = tpl.querySelector('picture');
@@ -1802,6 +1802,9 @@
             col.querySelectorAll('a[href*="/video/"], a[href*="live.bilibili.com"], a[href*="/cheese/"]').forEach(a => {
                 a.href = videoHref;
             });
+
+            // 彻底移除母卡上残留的赞助商角标（如 sponsorThumbnailLabel 等扩展注入元素）
+            col.querySelectorAll('.sponsorThumbnailLabel, [class*="sponsorThumbnailLabel"]').forEach(el => el.remove());
 
             const titEl = col.querySelector('.bili-video-card__info--tit, h3');
             if (titEl) {
