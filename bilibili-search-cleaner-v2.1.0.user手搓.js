@@ -365,7 +365,7 @@
             border: 1px solid rgba(254, 202, 202, 0.5) !important;
             box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4) !important;
         }
-        /* 8. 🍀 常规日常内容：深林墨玉绿渐变（典雅沉稳，有分量感） */
+        /* 8. 🍀 稳健良作：深林墨玉绿渐变（典雅沉稳，有分量感） */
         .bili-cleaner-badge-pill.q-routine {
             background: linear-gradient(135deg, rgba(16, 110, 75, 0.88), rgba(10, 70, 50, 0.92)) !important;
             color: #ffffff !important;
@@ -1640,15 +1640,15 @@
                 desc: '快节奏短视频，随手一刷轻松解压'
             };
         } else {
-            // 8. 🍀 常规日常内容
+            // 8. 🍀 稳健良作（综合均衡）
             quadrant = {
                 className: 'q-routine',
-                tag: '🍀 中规中矩',
-                desc: '常规日常内容，按需观看即可'
+                tag: '🍀 稳健良作',
+                desc: '各项数据均衡扎实，品质稳健可靠'
             };
         }
 
-        // 精选高光减负策略：未开启“全部显示”时，中规中矩 (q-routine) 与 样本较少 (q-low-sample) 默认留白不显示
+        // 精选高光减负策略：未开启“全部显示”时，稳健良作 (q-routine) 与 样本较少 (q-low-sample) 默认留白不显示
         if (!isEvalFullMode && (!quadrant || quadrant.className === 'q-routine' || quadrant.className === 'q-low-sample')) {
             const existing = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
             if (existing) existing.remove();
