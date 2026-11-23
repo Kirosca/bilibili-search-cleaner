@@ -1099,17 +1099,63 @@
 
     // 挂载/更新品质药丸筛选行（位置 A：嵌入 .more-conditions）
     const QUALITY_FILTER_OPTIONS = [
-        { key: 'all', label: '全部', isAll: true },
-        { key: 'q-hall-of-fame', label: '🏆 殿堂神作' },
-        { key: 'q-hardcore', label: '💡 硬核干货' },
-        { key: 'q-high-reputation', label: '⭐ 高口碑佳作' },
-        { key: 'q-balanced-masterpiece', label: '🏅 综合标杆' },
-        { key: 'q-hidden-gem', label: '💎 冷门宝藏' },
-        { key: 'q-routine', label: '🍀 稳健良作' },
-        { key: 'q-opinion-storm', label: '💥 话题焦点' },
-        { key: 'q-heated-debate', label: '💬 激辩热议' },
-        { key: 'q-danmaku-carnival', label: '🔥 弹幕密集' },
-        { key: 'exclude_warning', label: '🚫 排除避坑', isExclude: true }
+        {
+            key: 'all',
+            label: '全部',
+            isAll: true,
+            criteria: '不限制品质分类，展示当前搜索词下的全部有效视频'
+        },
+        {
+            key: 'q-hall-of-fame',
+            label: '🏆 殿堂神作',
+            criteria: '播放 ≥ 2万 且 赞播比 ≥ 7%，藏播比 ≥ 3.5%，赞 ≥ 1500，藏 ≥ 800\n【特点】双率断层爆棚，三连拉满的顶峰神作'
+        },
+        {
+            key: 'q-hardcore',
+            label: '💡 硬核干货',
+            criteria: '(播放 ≥ 5000 且 藏播比 ≥ 4%，藏 ≥ 250) 或 (藏 ≥ 2000 且 藏播比 ≥ 2.5%)\n【特点】收藏转化极高，顶级实用干货与知识合集'
+        },
+        {
+            key: 'q-high-reputation',
+            label: '⭐ 高口碑佳作',
+            criteria: '(播放 ≥ 5000 且 赞播比 ≥ 7%，赞 ≥ 400) 或 (赞 ≥ 5000 且 赞播比 ≥ 4.5%)\n【特点】观众清一色好评点赞，高认可度优质佳作'
+        },
+        {
+            key: 'q-balanced-masterpiece',
+            label: '🏅 综合标杆',
+            criteria: '播放 ≥ 1万 且 赞播比 ≥ 4.5%，藏播比 ≥ 2.2%，赞 ≥ 600，藏 ≥ 300\n【特点】赞藏双优全面扎实，六边形无短板水准'
+        },
+        {
+            key: 'q-hidden-gem',
+            label: '💎 冷门宝藏',
+            criteria: '播放 < 2万，赞 ≥ 200，藏 ≥ 80，且 (赞播比 ≥ 8% 或 藏播比 ≥ 4.5%)\n【特点】中小样本下的极高纯度遗珠，小众高分佳作'
+        },
+        {
+            key: 'q-routine',
+            label: '🍀 稳健良作',
+            criteria: '播放 ≥ 3000，且未触碰避坑线 (赞播比≥1.2%或藏播比≥0.5%)，各项数据平稳均衡\n【特点】品质可靠健康，内容扎实的中流砥柱良品'
+        },
+        {
+            key: 'q-opinion-storm',
+            label: '💥 话题焦点',
+            criteria: '弹幕密集 (密度≥15条/分且弹幕≥300，或弹幕≥3000且密度≥8) 且 评赞比 ≥ 10%\n【特点】弹幕刷屏与评论热议齐飞，全网热议/深度探讨'
+        },
+        {
+            key: 'q-heated-debate',
+            label: '💬 激辩热议',
+            criteria: '评赞比 ≥ 10% 且 评论绝对量大 (评≥300且评播比≥0.35% 或 评≥1500且评播比≥0.2%)\n【特点】长篇评论密集对线，观点激烈深度碰撞'
+        },
+        {
+            key: 'q-danmaku-carnival',
+            label: '🔥 弹幕密集',
+            criteria: '弹幕密度 ≥ 15条/分 且 弹幕 ≥ 300，或 弹幕总量 ≥ 3000 且密度 ≥ 8条/分\n【特点】弹幕高频如潮，高能互动、笑点或名场面聚集'
+        },
+        {
+            key: 'exclude_warning',
+            label: '🚫 排除避坑',
+            isExclude: true,
+            criteria: '拦截排除：播放 ≥ 2万 且 赞播比 < 1.2% 且 藏播比 < 0.5% (时长≤15分)\n【特点】独立防踩雷开关，全局剔除标题党与低质高播劣作'
+        }
     ];
 
     // 参与范围选择与单选排他的基础品质分类键（有序）
@@ -1156,8 +1202,13 @@
                 if (opt.isExclude) btn.classList.add('pill-exclude');
                 btn.dataset.key = opt.key;
                 btn.textContent = opt.label;
-                if (!opt.isAll && !opt.isExclude) {
-                    btn.title = '点击单选 | 按住 Ctrl 点击多选 | 按住 Shift 点击范围连选';
+                if (opt.criteria) {
+                    const actionTip = opt.isAll 
+                        ? '点击重置为全部' 
+                        : (opt.isExclude 
+                            ? '点击切换独立防踩雷开关' 
+                            : '点击单选 | 按住 Ctrl 点击多选 | 按住 Shift 点击范围连选');
+                    btn.title = `【${opt.label}】筛选标准：\n${opt.criteria}\n────────────────────\n💡 ${actionTip}`;
                 }
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
