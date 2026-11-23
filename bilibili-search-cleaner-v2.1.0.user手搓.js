@@ -29,7 +29,6 @@
     // 菜单管理与持久化配置（虚化显示 & 筛选常驻 & 无缝瀑布流 & 评价体系）
     // ==========================================
     let isDimmed = localStorage.getItem('bili_cleaner_dimmed') === 'true';
-    let isMatchTop = localStorage.getItem('bili_cleaner_match_top') !== 'false';
     let isFilterSticky = localStorage.getItem('bili_cleaner_sticky_filter') === 'true';
     let isWaterfall = localStorage.getItem('bili_cleaner_waterfall') === 'true';
     let isEvaluationBadge = localStorage.getItem('bili_cleaner_eval_badge') === 'true';
@@ -45,7 +44,6 @@
     } catch (e) {}
     let filterStickyMenuId = null;
     let dimmedMenuId = null;
-    let matchTopMenuId = null;
     let waterfallMenuId = null;
     let evalBadgeMenuId = null;
     let evalModeMenuId = null;
@@ -61,9 +59,6 @@
             }
             if (dimmedMenuId !== null) {
                 try { GM_unregisterMenuCommand(dimmedMenuId); } catch (e) {}
-            }
-            if (matchTopMenuId !== null) {
-                try { GM_unregisterMenuCommand(matchTopMenuId); } catch (e) {}
             }
             if (waterfallMenuId !== null) {
                 try { GM_unregisterMenuCommand(waterfallMenuId); } catch (e) {}
@@ -82,9 +77,6 @@
 
         const dimmedLabel = `🌫️ 虚化显示模糊内容: ${isDimmed ? '✅ 已开启' : '❌ 已关闭'}`;
         dimmedMenuId = GM_registerMenuCommand(dimmedLabel, toggleDimmed);
-
-        const matchTopLabel = `🧲 命中内容置顶: ${isMatchTop ? '✅ 已开启' : '❌ 已关闭'}`;
-        matchTopMenuId = GM_registerMenuCommand(matchTopLabel, toggleMatchTop);
 
         const waterfallLabel = `🌊 无缝瀑布流: ${isWaterfall ? '✅ 已开启' : '❌ 已关闭'}`;
         waterfallMenuId = GM_registerMenuCommand(waterfallLabel, toggleWaterfall);
@@ -147,21 +139,6 @@
             delete card.dataset.purifiedQuery;
         });
         filterDOMElements();
-    }
-
-    // 切换命中内容置顶吸附状态并更新样式根类名
-    function toggleMatchTop() {
-        isMatchTop = !isMatchTop;
-        localStorage.setItem('bili_cleaner_match_top', String(isMatchTop));
-        registerMenu();
-        applyMatchTopState();
-    }
-
-    // 应用命中内容置顶吸附的 CSS 根类名
-    function applyMatchTopState() {
-        if (document.documentElement) {
-            document.documentElement.classList.toggle('bili-match-top-enabled', isMatchTop);
-        }
     }
 
     // 切换搜索筛选常驻状态并更新样式
@@ -234,7 +211,6 @@
     registerMenu();
     applyFilterStickyState();
     applyEvaluationBadgeState();
-    applyMatchTopState();
  
     // 0. 接入 OpenCC 单例转换器（由 @require 本地持久化驱动）
     let sConverter = null;
@@ -522,48 +498,6 @@
             border-color: #ef4444 !important;
             color: #ffffff !important;
             box-shadow: 0 2px 8px rgba(239, 68, 68, 0.35);
-        }
-
-        /* 4.6 命中内容置顶吸附 (方案 A: CSS Flex order 极简无侵入排序) */
-        .video-list.row,
-        .video-list,
-        .search-all-list .row {
-            display: flex !important;
-            flex-wrap: wrap !important;
-        }
-
-        /* 命中目标卡片：赋予高优先级 order，紧凑吸附排列在顶部 */
-        html.bili-match-top-enabled .video-list.row > .bili-cleaner-card-matched,
-        html.bili-match-top-enabled .video-list > .bili-cleaner-card-matched,
-        html.bili-match-top-enabled [class*="search-all-list"] .row > .bili-cleaner-card-matched {
-            order: 1 !important;
-        }
-
-        /* 虚化/未命中卡片：赋予沉底 order，排在命中内容之后保持半透明展示 */
-        html.bili-match-top-enabled .video-list.row > .bili-cleaner-card-dimmed,
-        html.bili-match-top-enabled .video-list > .bili-cleaner-card-dimmed,
-        html.bili-match-top-enabled [class*="search-all-list"] .row > .bili-cleaner-card-dimmed {
-            order: 10 !important;
-        }
-
-        /* 瀑布流底部加载条、占位容器与原生分页器：绝对保底居于列表最末尾 */
-        html.bili-match-top-enabled .video-list.row > #bili-waterfall-loader,
-        html.bili-match-top-enabled .video-list.row > .bili-waterfall-loader,
-        html.bili-match-top-enabled .video-list.row > div.flex_center,
-        html.bili-match-top-enabled .video-list.row > .vui_pagenation,
-        html.bili-match-top-enabled .video-list.row > .vui_pagenation--btns,
-        html.bili-match-top-enabled .video-list > #bili-waterfall-loader,
-        html.bili-match-top-enabled .video-list > .bili-waterfall-loader,
-        html.bili-match-top-enabled .video-list > div.flex_center,
-        html.bili-match-top-enabled .video-list > .vui_pagenation,
-        html.bili-match-top-enabled .video-list > .vui_pagenation--btns,
-        html.bili-match-top-enabled [class*="search-all-list"] .row > #bili-waterfall-loader,
-        html.bili-match-top-enabled [class*="search-all-list"] .row > .bili-waterfall-loader,
-        html.bili-match-top-enabled [class*="search-all-list"] .row > div.flex_center,
-        html.bili-match-top-enabled [class*="search-all-list"] .row > .vui_pagenation,
-        html.bili-match-top-enabled [class*="search-all-list"] .row > .vui_pagenation--btns {
-            order: 999 !important;
-            width: 100% !important;
         }
 
         /* 5. 瀑布流相关样式 */
@@ -1032,7 +966,6 @@
                 // 1. 若品质筛选不匹配（或属于排除避坑），彻底物理隐藏（只留下筛选的内容）
                 if (isQualityFail) {
                     innerCard.classList.remove('bili-cleaner-dimmed');
-                    card.classList.remove('bili-cleaner-card-matched', 'bili-cleaner-card-dimmed');
                     card.style.setProperty('display', 'none', 'important');
                 } else {
                     // 2. 品质筛选匹配（无论是否虚化，只要是这个品质的都留下）
@@ -1042,18 +975,13 @@
                     if (isSyntaxFail) {
                         if (isDimmed) {
                             innerCard.classList.add('bili-cleaner-dimmed');
-                            card.classList.remove('bili-cleaner-card-matched');
-                            card.classList.add('bili-cleaner-card-dimmed');
                         } else {
                             innerCard.classList.remove('bili-cleaner-dimmed');
-                            card.classList.remove('bili-cleaner-card-matched', 'bili-cleaner-card-dimmed');
                             card.style.setProperty('display', 'none', 'important');
                         }
                     } else {
-                        // 语法亦完全通过：正常清晰显示，打上命中置顶吸附标记
+                        // 语法亦完全通过：正常清晰显示
                         innerCard.classList.remove('bili-cleaner-dimmed');
-                        card.classList.add('bili-cleaner-card-matched');
-                        card.classList.remove('bili-cleaner-card-dimmed');
                     }
                 }
             });
@@ -1795,7 +1723,6 @@
         const tpl = sampleCol.cloneNode(true);
         delete tpl.dataset.purifiedQuery;
         tpl.classList.remove('bili-cleaner-dimmed');
-        tpl.classList.remove('bili-cleaner-card-matched', 'bili-cleaner-card-dimmed');
         tpl.querySelectorAll('.bili-cleaner-dimmed').forEach(el => el.classList.remove('bili-cleaner-dimmed'));
         tpl.querySelectorAll('.bili-cleaner-badge-col').forEach(el => el.remove());
 
