@@ -849,7 +849,8 @@
             }
  
             const currentSearchQuery = window.location.search;
-            const currentQueryKey = currentSearchQuery + '_' + (isDimmed ? 'dim1' : 'dim0') + '_' + (isSyntaxFilter ? 'syn1' : 'syn0');
+            const qualityFilterKey = Array.from(activeQualityFilters).sort().join(',');
+            const currentQueryKey = currentSearchQuery + '_' + (isDimmed ? 'dim1' : 'dim0') + '_' + (isSyntaxFilter ? 'syn1' : 'syn0') + '_' + qualityFilterKey;
             let elements = [];
             if (Array.isArray(target)) {
                 elements = target;
@@ -899,40 +900,18 @@
                 const rawAuthor = authorEl ? (authorEl.getAttribute('title') || authorEl.textContent || '') : '';
                 const author = cleanText(rawAuthor.replace(/[\s·•].*$/, ''));
  
-                let shouldHide = false;
- 
+                let isSyntaxFail = false;
+
                 // 四道安检关卡（仅在开启【筛选语法过滤】时执行）
                 if (isSyntaxFilter) {
                     if (exclude.some(k => title.includes(k))) {
-                        shouldHide = true;
+                        isSyntaxFail = true;
                     } else if (normal.length && !normal.every(k => title.includes(k))) {
-                        shouldHide = true;
+                        isSyntaxFail = true;
                     } else if (tags.length && !tags.every(k => videoTags.includes(k))) {
-                        shouldHide = true;
+                        isSyntaxFail = true;
                     } else if (ups.length && !ups.some(k => author.includes(k))) {
-                        shouldHide = true;
-                    }
-                }
-
-                const innerCard = card.querySelector('.bili-video-card, .bili-live-card') || card;
-
-                // 确保外层列容器不承载虚化类，维持原生栅格间隙纯净
-                card.classList.remove('bili-cleaner-dimmed');
-
-                if (!shouldHide) {
-                    // 目标匹配（命中全部规则）：正常显示
-                    card.style.removeProperty('display');
-                    innerCard.classList.remove('bili-cleaner-dimmed');
-                } else {
-                    // 未匹配（不符合规则，需过滤）：
-                    if (isDimmed) {
-                        // 开启【虚化显示模糊内容】：保留卡片占位，实施半透明去色暗化
-                        card.style.removeProperty('display');
-                        innerCard.classList.add('bili-cleaner-dimmed');
-                    } else {
-                        // 关闭【虚化显示模糊内容】：彻底物理隐藏，从页面移除
-                        innerCard.classList.remove('bili-cleaner-dimmed');
-                        card.style.setProperty('display', 'none', 'important');
+                        isSyntaxFail = true;
                     }
                 }
 
@@ -949,12 +928,13 @@
                 }
 
                 // 第五道安检关卡：品质药丸多选筛选过滤
-                if (!shouldHide && activeQualityFilters.size > 0) {
+                let isQualityFail = false;
+                if (activeQualityFilters.size > 0) {
                     const qClass = quadrant?.className || 'q-routine';
                     
-                    // 1. 独立防踩雷规则：若开启【🚫 排除避坑】，遇到 q-warning 直接隐藏
+                    // 1. 独立防踩雷规则：若开启【🚫 排除避坑】，遇到 q-warning 直接淘汰
                     if (activeQualityFilters.has('exclude_warning') && qClass === 'q-warning') {
-                        shouldHide = true;
+                        isQualityFail = true;
                     }
 
                     // 2. 正向多选品质分类过滤：排除掉 'exclude_warning' 后的选用品质集合
@@ -963,20 +943,38 @@
                     );
 
                     // 只有当用户勾选了具体的品质标签（非全量）时，才实施正向归属白名单检查
-                    if (!shouldHide && selectedQualityCategories.size > 0) {
+                    if (!isQualityFail && selectedQualityCategories.size > 0) {
                         if (!selectedQualityCategories.has(qClass)) {
-                            shouldHide = true;
+                            isQualityFail = true;
                         }
                     }
+                }
 
-                    if (shouldHide) {
+                const innerCard = card.querySelector('.bili-video-card, .bili-live-card') || card;
+
+                // 确保外层列容器不承载虚化类，维持原生栅格间隙纯净
+                card.classList.remove('bili-cleaner-dimmed');
+
+                // 核心渲染与可见性决策：
+                // 1. 若品质筛选不匹配（或属于排除避坑），彻底物理隐藏（只留下筛选的内容）
+                if (isQualityFail) {
+                    innerCard.classList.remove('bili-cleaner-dimmed');
+                    card.style.setProperty('display', 'none', 'important');
+                } else {
+                    // 2. 品质筛选匹配（无论是否虚化，只要是这个品质的都留下）
+                    card.style.removeProperty('display');
+
+                    // 3. 语法未通过判定：若处于虚化模式，保持虚化（但不解除虚化）；若处于隐藏模式，则物理隐藏
+                    if (isSyntaxFail) {
                         if (isDimmed) {
-                            card.style.removeProperty('display');
                             innerCard.classList.add('bili-cleaner-dimmed');
                         } else {
                             innerCard.classList.remove('bili-cleaner-dimmed');
                             card.style.setProperty('display', 'none', 'important');
                         }
+                    } else {
+                        // 语法亦完全通过：正常清晰显示
+                        innerCard.classList.remove('bili-cleaner-dimmed');
                     }
                 }
             });
