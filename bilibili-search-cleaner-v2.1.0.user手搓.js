@@ -33,6 +33,14 @@
     let isWaterfall = localStorage.getItem('bili_cleaner_waterfall') === 'true';
     let isEvaluationBadge = localStorage.getItem('bili_cleaner_eval_badge') === 'true';
     let isEvalFullMode = localStorage.getItem('bili_cleaner_eval_full_mode') === 'true';
+    // 选中的品质标签筛选集合（多选，空集合代表全部/不限）
+    let activeQualityFilters = new Set();
+    try {
+        const savedFilters = JSON.parse(localStorage.getItem('bili_cleaner_active_quality_filters') || '[]');
+        if (Array.isArray(savedFilters)) {
+            savedFilters.forEach(k => activeQualityFilters.add(k));
+        }
+    } catch (e) {}
     let filterStickyMenuId = null;
     let dimmedMenuId = null;
     let waterfallMenuId = null;
@@ -406,6 +414,84 @@
         html.bili-filter-sticky-enabled :has(> div.search-channel-item.mt_sm.ml_sm),
         html.bili-filter-sticky-enabled button.vui_button.vui_button--active-shrink.i_button_more {
             display: none !important;
+        }
+
+        /* 4.5. 搜索结果顶部品质药丸多选筛选栏 (嵌入 .more-conditions) */
+        .bili-cleaner-quality-filter-row {
+            display: flex;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            padding: 8px 0;
+            margin-top: 6px;
+            border-top: 1px dashed rgba(148, 153, 160, 0.25);
+            font-size: 13px;
+            user-select: none;
+            gap: 6px 8px;
+        }
+        .bili-cleaner-filter-label {
+            color: #61666d;
+            font-weight: 500;
+            line-height: 26px;
+            margin-right: 6px;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .bili-cleaner-filter-pills-box {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px 8px;
+            flex: 1;
+        }
+        .bili-cleaner-filter-pill-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 14px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid rgba(148, 153, 160, 0.35);
+            background: rgba(255, 255, 255, 0.8);
+            color: #61666d;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            line-height: 1.5;
+        }
+        .bili-cleaner-filter-pill-btn:hover {
+            border-color: #00aeec;
+            color: #00aeec;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(0, 174, 236, 0.15);
+        }
+        .bili-cleaner-filter-pill-btn.active {
+            background: #00aeec;
+            border-color: #00aeec;
+            color: #ffffff !important;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(0, 174, 236, 0.35);
+        }
+        .bili-cleaner-filter-pill-btn.pill-all.active {
+            background: #18191c;
+            border-color: #18191c;
+            color: #ffffff !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+        }
+        .bili-cleaner-filter-pill-btn.pill-exclude {
+            border-color: rgba(239, 68, 68, 0.4);
+            color: #ef4444;
+        }
+        .bili-cleaner-filter-pill-btn.pill-exclude:hover {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.08);
+        }
+        .bili-cleaner-filter-pill-btn.pill-exclude.active {
+            background: #ef4444 !important;
+            border-color: #ef4444 !important;
+            color: #ffffff !important;
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.35);
         }
 
         /* 5. 瀑布流相关样式 */
@@ -814,13 +900,38 @@
                 }
 
                 // 在类 v-img bili-video-card__cover 中追加评价勋章（方案 B：右侧竖向勋章），作为最后一个子元素
+                let quadrant = null;
                 const coverEl = card.querySelector('.v-img.bili-video-card__cover, .bili-video-card__cover');
                 if (coverEl && !card.matches('.bili-live-card')) {
                     let stat = id ? (videoStatMap.get(id.toLowerCase()) || videoStatMap.get(id)) : null;
                     if (!stat) {
                         stat = extractStatFromCard(card);
                     }
+                    quadrant = getQualityQuadrant(stat);
                     renderBadgeColumn(coverEl, stat);
+                }
+
+                // 第五道安检关卡：品质药丸多选筛选过滤
+                if (!shouldHide && activeQualityFilters.size > 0) {
+                    const qClass = quadrant?.className || 'q-routine';
+                    // 特殊筛选规则：'exclude_warning' 代表一键排除谨慎观看/避坑卡片
+                    if (activeQualityFilters.has('exclude_warning') && qClass === 'q-warning') {
+                        shouldHide = true;
+                    } else if (!activeQualityFilters.has('exclude_warning')) {
+                        // 常规多选模式：卡片品质 class 必须命中选中集合中的任意一个
+                        if (!activeQualityFilters.has(qClass)) {
+                            shouldHide = true;
+                        }
+                    }
+                    if (shouldHide) {
+                        if (isDimmed) {
+                            card.style.removeProperty('display');
+                            innerCard.classList.add('bili-cleaner-dimmed');
+                        } else {
+                            innerCard.classList.remove('bili-cleaner-dimmed');
+                            card.style.setProperty('display', 'none', 'important');
+                        }
+                    }
                 }
             });
             if (isWaterfall && typeof updateViewportPage === 'function') {
@@ -923,18 +1034,145 @@
 
     // 监听筛选条件面板 DOM 变动，确保面板始终处于展开状态
     function bindStickyObserver() {
-        if (!isFilterSticky) return;
         const targets = document.querySelectorAll('div.more-conditions');
         targets.forEach(el => {
-            if (!el.dataset.stickyObserved) {
-                el.dataset.stickyObserved = 'true';
-                stickyObserver.observe(el, {
-                    attributes: true,
-                    attributeFilter: ['class', 'style']
-                });
+            if (isFilterSticky) {
+                if (!el.dataset.stickyObserved) {
+                    el.dataset.stickyObserved = 'true';
+                    stickyObserver.observe(el, {
+                        attributes: true,
+                        attributeFilter: ['class', 'style']
+                    });
+                }
+                enforceConditions(el);
             }
-            enforceConditions(el);
+            injectQualityFilterRow(el);
         });
+    }
+
+    // 挂载/更新品质药丸筛选行（位置 A：嵌入 .more-conditions）
+    const QUALITY_FILTER_OPTIONS = [
+        { key: 'all', label: '全部', isAll: true },
+        { key: 'q-hall-of-fame', label: '🏆 殿堂神作' },
+        { key: 'q-hardcore', label: '💡 硬核干货' },
+        { key: 'q-high-reputation', label: '⭐ 高口碑佳作' },
+        { key: 'q-balanced-masterpiece', label: '🏅 综合标杆' },
+        { key: 'q-hidden-gem', label: '💎 冷门宝藏' },
+        { key: 'q-opinion-storm', label: '💥 舆论风暴' },
+        { key: 'q-heated-debate', label: '💬 激辩热议' },
+        { key: 'q-danmaku-carnival', label: '🔥 弹幕狂欢' },
+        { key: 'exclude_warning', label: '🚫 排除避坑', isExclude: true }
+    ];
+
+    function injectQualityFilterRow(container) {
+        if (!container || !container.isConnected) return;
+        if (!isEvaluationBadge) {
+            const oldRow = container.querySelector('.bili-cleaner-quality-filter-row');
+            if (oldRow) oldRow.remove();
+            return;
+        }
+
+        let filterRow = container.querySelector(':scope > .bili-cleaner-quality-filter-row');
+        if (!filterRow) {
+            filterRow = document.createElement('div');
+            filterRow.className = 'search-condition-row bili-cleaner-quality-filter-row';
+            container.appendChild(filterRow);
+        }
+
+        // 仅在初次构建或内部按钮数不一致时生成结构
+        if (!filterRow.dataset.rendered) {
+            filterRow.dataset.rendered = 'true';
+            filterRow.innerHTML = `
+                <div class="bili-cleaner-filter-label">🏷️ 视频品质:</div>
+                <div class="bili-cleaner-filter-pills-box"></div>
+            `;
+            const box = filterRow.querySelector('.bili-cleaner-filter-pills-box');
+            QUALITY_FILTER_OPTIONS.forEach(opt => {
+                const btn = document.createElement('div');
+                btn.className = 'bili-cleaner-filter-pill-btn';
+                if (opt.isAll) btn.classList.add('pill-all');
+                if (opt.isExclude) btn.classList.add('pill-exclude');
+                btn.dataset.key = opt.key;
+                btn.textContent = opt.label;
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    toggleQualityFilter(opt.key);
+                });
+                box.appendChild(btn);
+            });
+        }
+
+        updateQualityFilterButtons(filterRow);
+    }
+
+    // 切换品质筛选状态（多选逻辑）
+    function toggleQualityFilter(key) {
+        if (key === 'all') {
+            activeQualityFilters.clear();
+        } else if (key === 'exclude_warning') {
+            if (activeQualityFilters.has('exclude_warning')) {
+                activeQualityFilters.delete('exclude_warning');
+            } else {
+                activeQualityFilters.add('exclude_warning');
+            }
+        } else {
+            // 普通品质分类多选切换
+            if (activeQualityFilters.has(key)) {
+                activeQualityFilters.delete(key);
+            } else {
+                activeQualityFilters.add(key);
+            }
+        }
+
+        // 持久化存储用户选中的筛选项
+        try {
+            localStorage.setItem('bili_cleaner_active_quality_filters', JSON.stringify([...activeQualityFilters]));
+        } catch (e) {}
+
+        // 刷新所有筛选按钮的高亮态
+        document.querySelectorAll('.bili-cleaner-quality-filter-row').forEach(updateQualityFilterButtons);
+
+        // 重新安检过滤已有卡片
+        document.querySelectorAll('[data-purified-query]').forEach(card => {
+            delete card.dataset.purifiedQuery;
+        });
+        filterDOMElements();
+
+        // 若开启瀑布流，检测当前屏幕如果卡片变少不足以撑满一屏，主动尝试静默增补拉取
+        if (isWaterfall && typeof checkWaterfallFillScreen === 'function') {
+            checkWaterfallFillScreen();
+        }
+    }
+
+    // 更新药丸按钮 active 高亮样式
+    function updateQualityFilterButtons(filterRow) {
+        if (!filterRow) return;
+        const btns = filterRow.querySelectorAll('.bili-cleaner-filter-pill-btn');
+        const isAllSelected = activeQualityFilters.size === 0 || (activeQualityFilters.size === 1 && activeQualityFilters.has('exclude_warning'));
+
+        btns.forEach(btn => {
+            const key = btn.dataset.key;
+            if (key === 'all') {
+                btn.classList.toggle('active', isAllSelected);
+            } else if (key === 'exclude_warning') {
+                btn.classList.toggle('active', activeQualityFilters.has('exclude_warning'));
+            } else {
+                btn.classList.toggle('active', activeQualityFilters.has(key));
+            }
+        });
+    }
+
+    // 检测当前屏幕卡片是否充盈，不足时触发瀑布流增补
+    function checkWaterfallFillScreen() {
+        if (!isWaterfall || isWaterfallPaused || isPaging || isAllLoaded) return;
+        const mainContainer = getMainListContainer(document);
+        if (!mainContainer) return;
+
+        const visibleCards = Array.from(mainContainer.children).filter(c => c.style.display !== 'none' && !c.classList.contains('flex_center'));
+        // 可视卡片少于 10 张时，触发一次下一页静默抓取
+        if (visibleCards.length < 10 && typeof loadNextPage === 'function') {
+            loadNextPage();
+        }
     }
 
     // ==========================================
@@ -1567,15 +1805,8 @@
         return { play, like: 0, favorites: 0, danmaku, duration, review: 0 };
     }
 
-    // 在视频封面 .v-img.bili-video-card__cover 内挂载/更新评价勋章列
-    function renderBadgeColumn(coverEl, stat) {
-        if (!coverEl) return;
-        if (!isEvaluationBadge) {
-            const existing = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
-            if (existing) existing.remove();
-            return;
-        }
-
+    // 纯视频品质象限判定函数（返回命中象限对象）
+    function getQualityQuadrant(stat) {
         const play = stat?.play || 0;
         const like = stat?.like || 0;
         const favorites = stat?.favorites || 0;
@@ -1592,19 +1823,16 @@
         const isDanmakuHigh = (danmakuDensity >= 15 && danmaku >= 300) || (danmaku >= 3000 && danmakuDensity >= 8);
         const isReviewDebated = (review >= 300 && reviewRatio >= 0.0035) || (review >= 1500 && reviewRatio >= 0.002);
 
-        // 纯视频品质与热议风暴综合定性判定
-        let quadrant = null;
-
         // 【第一层：冷门置信度保护】播放量不足 3000 时，不作随意定性（极少数纯度极高者破格授予冷门宝藏）
         if (play < 3000) {
             if (play >= 1000 && (like >= 150 || favorites >= 80) && (likeRatio >= 0.08 || favRatio >= 0.045)) {
-                quadrant = {
+                return {
                     className: 'q-hidden-gem',
                     tag: '💎 冷门宝藏',
                     desc: '小众高纯度佳品，播放虽少但互动扎实'
                 };
             } else {
-                quadrant = {
+                return {
                     className: 'q-low-sample',
                     tag: '🌱 样本较少',
                     desc: '数据样本量较少（播放量 < 3000），暂不作定性评级'
@@ -1612,75 +1840,98 @@
             }
         } else if (play >= 20000 && like > 0 && likeRatio < 0.012 && favRatio < 0.005 && (durationMinutes <= 15 || durationMinutes === 0)) {
             // 【风控防线：低质劣作避坑】大样本且极低转化（限制时长 <= 15分钟，排除歌单/长录像误判）
-            quadrant = {
+            return {
                 className: 'q-warning',
                 tag: '⚠️ 谨慎观看',
                 desc: '高播放低评价，含金量较低谨慎点击'
             };
         } else if (play >= 20000 && likeRatio >= 0.07 && favRatio >= 0.035 && like >= 1500 && favorites >= 800) {
             // 【T0 顶峰神作】：大样本 + 双率断层爆棚 + 绝对量达标
-            quadrant = {
+            return {
                 className: 'q-hall-of-fame',
                 tag: '🏆 殿堂神作',
                 desc: '殿堂级神作，三连爆满无需犹豫'
             };
         } else if (play < 20000 && like >= 200 && favorites >= 80 && (likeRatio >= 0.08 || favRatio >= 0.045)) {
             // 【T2 璞玉遗珠】：中小样本下的极高纯度宝藏
-            quadrant = {
+            return {
                 className: 'q-hidden-gem',
                 tag: '💎 冷门宝藏',
                 desc: '小众冷门宝藏，播放虽少但纯度极高'
             };
         } else if ((play >= 5000 && favRatio >= 0.04 && favorites >= 250) || (favorites >= 2000 && favRatio >= 0.025)) {
             // 【T1 一流干货】：样本充足且收藏转化极高
-            quadrant = {
+            return {
                 className: 'q-hardcore',
                 tag: '💡 硬核干货',
                 desc: '顶级实用干货，建议立即收藏备用'
             };
         } else if ((play >= 5000 && likeRatio >= 0.07 && like >= 400) || (like >= 5000 && likeRatio >= 0.045)) {
             // 【T1 一流口碑】：样本充足且点赞好评清一色
-            quadrant = {
+            return {
                 className: 'q-high-reputation',
                 tag: '⭐ 高口碑佳作',
                 desc: '观众清一色好评，极高品质无踩雷'
             };
         } else if (play >= 10000 && likeRatio >= 0.045 && favRatio >= 0.022 && like >= 600 && favorites >= 300) {
             // 【T1.5 综合标杆】：点赞、收藏、播放全方位均衡达标，六边形无短板综合水准
-            quadrant = {
+            return {
                 className: 'q-balanced-masterpiece',
                 tag: '🏅 综合标杆',
                 desc: '赞藏双优全面扎实，六边形无短板综合标杆'
             };
         } else if (isDanmakuHigh && isReviewDebated) {
             // 【风暴级交锋】：弹幕密集与评论论战齐飞（全网大事件/巨大争议/世纪对线现场）
-            quadrant = {
+            return {
                 className: 'q-opinion-storm',
                 tag: '💥 舆论风暴',
                 desc: '弹幕刷屏与评论论战齐飞，全网热议/巨大争议风暴现场'
             };
         } else if (isReviewDebated) {
             // 【评论深度交锋】：评论区长篇小作文对线（多方观点激烈碰撞/争议焦点）
-            quadrant = {
+            return {
                 className: 'q-heated-debate',
                 tag: '💬 激辩热议',
                 desc: '评论区高密度交锋对线，观点碰撞引发深度热议'
             };
         } else if (isDanmakuHigh) {
             // 【弹幕即时高能】：弹幕极度密集（满屏互动、乐子欢呼或现场吵架名场面）
-            quadrant = {
+            return {
                 className: 'q-danmaku-carnival',
                 tag: '🔥 弹幕狂欢',
                 desc: '弹幕密集刷屏，高能互动、乐子或热议焦点'
             };
         } else {
             // 【T3 基准良作】：各项指标均衡扎实
-            quadrant = {
+            return {
                 className: 'q-routine',
                 tag: '🍀 稳健良作',
                 desc: '各项数据均衡扎实，品质稳健可靠'
             };
         }
+    }
+
+    // 在视频封面 .v-img.bili-video-card__cover 内挂载/更新评价勋章列
+    function renderBadgeColumn(coverEl, stat) {
+        if (!coverEl) return;
+        if (!isEvaluationBadge) {
+            const existing = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
+            if (existing) existing.remove();
+            return;
+        }
+
+        const quadrant = getQualityQuadrant(stat);
+        const play = stat?.play || 0;
+        const like = stat?.like || 0;
+        const favorites = stat?.favorites || 0;
+        const danmaku = stat?.danmaku || 0;
+        const review = stat?.review || 0;
+        const durationMinutes = parseDurationMinutes(stat?.duration);
+
+        const likeRatio = play > 0 ? (like / play) : 0;
+        const favRatio = play > 0 ? (favorites / play) : 0;
+        const reviewRatio = play > 0 ? (review / play) : 0;
+        const danmakuDensity = durationMinutes > 0 ? (danmaku / durationMinutes) : 0;
 
         // 精选高光减负策略：未开启“全部显示”时，稳健良作 (q-routine) 与 样本较少 (q-low-sample) 默认留白不显示
         if (!isEvalFullMode && (!quadrant || quadrant.className === 'q-routine' || quadrant.className === 'q-low-sample')) {
