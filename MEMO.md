@@ -343,6 +343,50 @@
   - 切换模式时自动重置/触发首屏重整逻辑，从瀑布流切出时清理动态卡片并点击原生第 1 页按钮。
 - **沙箱环境网络钩子隔离兼容**：引入 `targetWin = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window`，确保在非 `none` 的 GM 授权模式下，页面上下文与扩展沙箱上下文的 `XMLHttpRequest`、`fetch` 和 `history` 路由监听 100% 同步生效。
 
+---
+
+## 十九、 视频详情页品质展示扩展与 DOM 精细化隔离备忘
+
+### 1. 设计目标与背景
+为了在未来将【视频品质】评级系统（殿堂神作、硬核干货、综合标杆等）无缝拓展至 **B 站视频详情播放页（`*://www.bilibili.com/video/*`）**，同时确保搜索页（`search.bilibili.com`）与详情页逻辑 100% 独立解耦、零样式冲突、零相互污染。
+
+### 2. 页面路由级严格隔离（Page Context Router）
+在脚本执行入口明确划分运行环境守卫：
+```javascript
+const IS_SEARCH_PAGE = location.hostname === 'search.bilibili.com';
+const IS_VIDEO_DETAIL_PAGE = location.hostname.endsWith('bilibili.com') && location.pathname.startsWith('/video/');
+```
+- **详情页严禁执行的搜索页逻辑清单**：
+  1. ❌ **严禁执行无缝瀑布流（`isWaterfall`）**：不得接管页面滚动与网络翻页；
+  2. ❌ **严禁挂载顶部筛选面板（`.more-conditions`）**：搜索页药丸栏仅限搜索页；
+  3. ❌ **严禁执行关键词语法过滤与卡片隐藏/虚化**：详情页的主播放器、推荐流不按搜索词淘汰；
+  4. ❌ **严禁全局 MutationObserver 无差别扫描**：避免全局监听影响播放器性能。
+
+### 3. 搜索页现有 DOM 选择器的作用域收拢（Scope Containment）
+- **现状**：目前直接使用 `document.querySelectorAll('.bili-video-card, div[class*="col_"]')` 全页面查询；
+- **优化改造**：为搜索页逻辑添加容器作用域限定，收敛在主搜索区域内部，杜绝波及非搜索 DOM：
+  ```javascript
+  const searchRoot = document.querySelector('.search-page, .search-page-wrapper, .search-layout') || document.body;
+  searchRoot.querySelectorAll(...)
+  ```
+
+### 4. 详情页极速原生数据源与精准挂载方案
+与搜索页需要拦截 `wbi/search/all/v2` 不同，视频详情页拥有更强、更稳定的原生数据：
+- **原生极速数据源**：
+  直接同步读取 B 站官方注水数据对象，毫秒级就绪且 100% 全量精准：
+  ```javascript
+  const stat = window.__INITIAL_STATE__?.videoData?.stat;
+  // 包含: stat.view(播放), stat.like(点赞), stat.favorite(收藏), stat.danmaku(弹幕), stat.reply(评论) 等
+  ```
+- **主视频品质勋章挂载点（二选一或组合）**：
+  1. **标题右侧 / 下方**：挂载于 `h1.video-title` 旁或 `#viewbox_report .video-data` 前后；
+  2. **点赞工具栏左侧**：挂载于 `.video-toolbar-left` 或 `.video-toolbar-v1` 中；
+  3. 享受与搜索卡片相同的赞播比、藏播比及详细 Tooltip 交互。
+
+- **右侧推荐流小卡片品质挂载（可选）**：
+  仅限定查询右侧推荐容器：`.recommend-list-v1 .video-page-card-small, .rec-list .video-page-card-small`，精准为推荐卡片封面注入小勋章，不影响主播放器与评论区。
+
+
 
 
 
