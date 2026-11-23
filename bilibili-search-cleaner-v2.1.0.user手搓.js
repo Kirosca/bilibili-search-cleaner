@@ -474,12 +474,6 @@
             font-weight: 600;
             box-shadow: 0 2px 8px rgba(0, 174, 236, 0.35);
         }
-        .bili-cleaner-filter-pill-btn.pill-all.active {
-            background: #18191c;
-            border-color: #18191c;
-            color: #ffffff !important;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-        }
         .bili-cleaner-filter-pill-btn.pill-exclude {
             border-color: rgba(239, 68, 68, 0.4);
             color: #ef4444;
