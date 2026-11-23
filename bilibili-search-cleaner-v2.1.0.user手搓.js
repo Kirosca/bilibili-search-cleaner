@@ -334,6 +334,13 @@
             border: 1px solid rgba(255, 235, 180, 0.7) !important;
             box-shadow: 0 0 10px rgba(255, 170, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
         }
+        /* 1.5. ⚡ 爆款短片：电光青碧渐变（高能快节奏短片，互动爆棚） */
+        .bili-cleaner-badge-pill.q-viral-short {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.95), rgba(16, 185, 129, 0.95)) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(165, 243, 252, 0.7) !important;
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+        }
         /* 2. 💡 硬核干货：琥珀密金 */
         .bili-cleaner-badge-pill.q-hardcore {
             background: linear-gradient(135deg, rgba(245, 158, 11, 0.92), rgba(217, 119, 6, 0.92)) !important;
@@ -1109,27 +1116,27 @@
         {
             key: 'q-hall-of-fame',
             label: '🏆 殿堂神作',
-            criteria: '播放 ≥ 2万 且 赞播比 ≥ 7%，藏播比 ≥ 3.5%，赞 ≥ 1500，藏 ≥ 800\n【特点】双率断层爆棚，三连拉满的顶峰神作'
+            criteria: '时长 ≥ 90秒，且播放 ≥ 2万，赞播比*权重 ≥ 7%，藏播比*权重 ≥ 3.5%，赞 ≥ 1500，藏 ≥ 800\n【特点】长篇深度精作，双率断层爆棚，三连拉满的顶峰神作'
         },
         {
             key: 'q-hardcore',
             label: '💡 硬核干货',
-            criteria: '(播放 ≥ 5000 且 藏播比 ≥ 4%，藏 ≥ 250) 或 (藏 ≥ 2000 且 藏播比 ≥ 2.5%)\n【特点】收藏转化极高，顶级实用干货与知识合集'
+            criteria: '时长 ≥ 90秒，且 ((播放 ≥ 5000 且 藏播比*权重 ≥ 4%，藏 ≥ 250) 或 (藏 ≥ 2000 且 藏播比*权重 ≥ 2.5%))\n【特点】收藏转化极高，深度实用干货与知识合集'
         },
         {
             key: 'q-high-reputation',
             label: '⭐ 高口碑佳作',
-            criteria: '(播放 ≥ 5000 且 赞播比 ≥ 7%，赞 ≥ 400) 或 (赞 ≥ 5000 且 赞播比 ≥ 4.5%)\n【特点】观众清一色好评点赞，高认可度优质佳作'
+            criteria: '(播放 ≥ 5000 且 赞播比*权重 ≥ 7%，赞 ≥ 400) 或 (赞 ≥ 5000 且 赞播比*权重 ≥ 4.5%)\n【特点】观众清一色好评点赞，高认可度优质佳作（时长加权）'
         },
         {
             key: 'q-balanced-masterpiece',
             label: '🏅 综合标杆',
-            criteria: '播放 ≥ 1万 且 赞播比 ≥ 4.5%，藏播比 ≥ 2.2%，赞 ≥ 600，藏 ≥ 300\n【特点】赞藏双优全面扎实，六边形无短板水准'
+            criteria: '播放 ≥ 1万 且 赞播比*权重 ≥ 4.5%，藏播比*权重 ≥ 2.2%，赞 ≥ 600，藏 ≥ 300\n【特点】赞藏双优全面扎实，六边形无短板水准（时长加权）'
         },
         {
             key: 'q-hidden-gem',
             label: '💎 冷门宝藏',
-            criteria: '播放 < 2万，赞 ≥ 200，藏 ≥ 80，且 (赞播比 ≥ 8% 或 藏播比 ≥ 4.5%)\n【特点】中小样本下的极高纯度遗珠，小众高分佳作'
+            criteria: '播放 < 2万，赞 ≥ 200，藏 ≥ 80，且 (赞播比*权重 ≥ 8% 或 藏播比*权重 ≥ 4.5%)\n【特点】中小样本下的极高纯度遗珠，小众高分佳作（时长加权）'
         },
         {
             key: 'q-routine',
@@ -1152,6 +1159,11 @@
             criteria: '弹幕密度 ≥ 15条/分 且 弹幕 ≥ 300，或 弹幕总量 ≥ 3000 且密度 ≥ 8条/分\n【特点】弹幕高频如潮，高能互动、笑点或名场面聚集'
         },
         {
+            key: 'q-viral-short',
+            label: '⚡ 爆款短片',
+            criteria: '时长 < 90秒，且 (播放 ≥ 2万 且 赞 ≥ 1500，赞播比 ≥ 6% 或 藏播比 ≥ 3%) 或 (播放 ≥ 1万 且 赞播比 ≥ 8%)\n【特点】高能快节奏短片，完播互动极高，爆款短视频精选'
+        },
+        {
             key: 'exclude_warning',
             label: '🚫 排除避坑',
             isExclude: true,
@@ -1169,7 +1181,8 @@
         'q-routine',
         'q-opinion-storm',
         'q-heated-debate',
-        'q-danmaku-carnival'
+        'q-danmaku-carnival',
+        'q-viral-short'
     ];
     let lastQualityAnchorKey = null;
 
@@ -1975,6 +1988,12 @@
         const reviewLikeRatio = like > 0 ? (review / like) : (review > 0 ? 1 : 0);
         const danmakuDensity = durationMinutes > 0 ? (danmaku / durationMinutes) : 0;
 
+        // 方案 3：时长加权归一化（数学模型修正）
+        // 5分钟为标准基准时长（durFactor = 1.0）；长视频完播难度大、观众付出时间成本极高，给予加权提升；短视频互动完播轻快无压力，给予系数惩罚（下限0.4，上限2.0）
+        const durFactor = durationMinutes > 0 ? Math.min(2.0, Math.max(0.4, Math.sqrt(durationMinutes / 5.0))) : 1.0;
+        const normLikeRatio = likeRatio * durFactor;
+        const normFavRatio = favRatio * durFactor;
+
         // 弹幕与评论热度特征分析
         // 争议/论战特征校验：真实网络对线与争议事件的核心特征是“观众不愿点赞，集中在评论区写小作文互撕”，评赞比异常高（>= 10%）
         // 若点赞极高而评论仅占很小比例（如 4.5万赞 vs 2659评，评赞比仅 5.9%），表明观众一边倒热情好评，属于高能互动而非争议对线
@@ -1986,7 +2005,7 @@
 
         // 【第一层：冷门置信度保护】播放量不足 3000 时，不作随意定性（极少数纯度极高者破格授予冷门宝藏）
         if (play < 3000) {
-            if (play >= 1000 && (like >= 150 || favorites >= 80) && (likeRatio >= 0.08 || favRatio >= 0.045)) {
+            if (play >= 1000 && (like >= 150 || favorites >= 80) && (normLikeRatio >= 0.08 || normFavRatio >= 0.045)) {
                 return {
                     className: 'q-hidden-gem',
                     tag: '💎 冷门宝藏',
@@ -2006,36 +2025,46 @@
                 tag: '⚠️ 谨慎观看',
                 desc: '高播放低评价，含金量较低谨慎点击'
             };
-        } else if (play >= 20000 && likeRatio >= 0.07 && favRatio >= 0.035 && like >= 1500 && favorites >= 800) {
-            // 【T0 顶峰神作】：大样本 + 双率断层爆棚 + 绝对量达标
+        } else if (durationMinutes >= 1.5 && play >= 20000 && normLikeRatio >= 0.07 && normFavRatio >= 0.035 && like >= 1500 && favorites >= 800) {
+            // 【T0 顶峰神作】：大样本 + 最低时长门槛 >= 90秒 + 双率时长归一化达标 + 绝对量达标
             return {
                 className: 'q-hall-of-fame',
                 tag: '🏆 殿堂神作',
                 desc: '殿堂级神作，三连爆满无需犹豫'
             };
-        } else if (play < 20000 && like >= 200 && favorites >= 80 && (likeRatio >= 0.08 || favRatio >= 0.045)) {
-            // 【T2 璞玉遗珠】：中小样本下的极高纯度宝藏
+        } else if (durationMinutes > 0 && durationMinutes < 1.5 && (
+            (play >= 20000 && like >= 1500 && (likeRatio >= 0.06 || favRatio >= 0.03)) ||
+            (play >= 10000 && like >= 1000 && likeRatio >= 0.08)
+        )) {
+            // 【专设独立分类：⚡ 爆款短片】时长 < 90秒，快节奏高完播互动爆款
+            return {
+                className: 'q-viral-short',
+                tag: '⚡ 爆款短片',
+                desc: '高能快节奏短片，互动爆棚完播极高'
+            };
+        } else if (play < 20000 && like >= 200 && favorites >= 80 && (normLikeRatio >= 0.08 || normFavRatio >= 0.045)) {
+            // 【T2 璞玉遗珠】：中小样本下的极高纯度宝藏（时长加权）
             return {
                 className: 'q-hidden-gem',
                 tag: '💎 冷门宝藏',
                 desc: '小众冷门宝藏，播放虽少但纯度极高'
             };
-        } else if ((play >= 5000 && favRatio >= 0.04 && favorites >= 250) || (favorites >= 2000 && favRatio >= 0.025)) {
-            // 【T1 一流干货】：样本充足且收藏转化极高
+        } else if (durationMinutes >= 1.5 && ((play >= 5000 && normFavRatio >= 0.04 && favorites >= 250) || (favorites >= 2000 && normFavRatio >= 0.025))) {
+            // 【T1 一流干货】：样本充足、时长门槛 >= 90秒且收藏转化极高（加权）
             return {
                 className: 'q-hardcore',
                 tag: '💡 硬核干货',
                 desc: '顶级实用干货，建议立即收藏备用'
             };
-        } else if ((play >= 5000 && likeRatio >= 0.07 && like >= 400) || (like >= 5000 && likeRatio >= 0.045)) {
-            // 【T1 一流口碑】：样本充足且点赞好评清一色
+        } else if ((play >= 5000 && normLikeRatio >= 0.07 && like >= 400) || (like >= 5000 && normLikeRatio >= 0.045)) {
+            // 【T1 一流口碑】：样本充足且点赞好评清一色（时长加权）
             return {
                 className: 'q-high-reputation',
                 tag: '⭐ 高口碑佳作',
                 desc: '观众清一色好评，极高品质无踩雷'
             };
-        } else if (play >= 10000 && likeRatio >= 0.045 && favRatio >= 0.022 && like >= 600 && favorites >= 300) {
-            // 【T1.5 综合标杆】：点赞、收藏、播放全方位均衡达标，六边形无短板综合水准
+        } else if (play >= 10000 && normLikeRatio >= 0.045 && normFavRatio >= 0.022 && like >= 600 && favorites >= 300) {
+            // 【T1.5 综合标杆】：点赞、收藏、播放全方位均衡达标，六边形无短板综合水准（时长加权）
             return {
                 className: 'q-balanced-masterpiece',
                 tag: '🏅 综合标杆',
@@ -2095,6 +2124,7 @@
         const danmaku = stat?.danmaku || 0;
         const review = stat?.review || 0;
         const durationMinutes = parseDurationMinutes(stat?.duration);
+        const durFactor = durationMinutes > 0 ? Math.min(2.0, Math.max(0.4, Math.sqrt(durationMinutes / 5.0))) : 1.0;
 
         const likeRatio = play > 0 ? (like / play) : 0;
         const favRatio = play > 0 ? (favorites / play) : 0;
@@ -2140,7 +2170,8 @@
             tipLines.push(`📝 评论数: ${formatStat(review)} (评播比 ${(reviewRatio * 100).toFixed(2)}%)`);
         }
         if (stat?.duration) {
-            tipLines.push(`⏱️ 视频时长: ${formatDuration(stat.duration)}`);
+            const factorText = (durationMinutes > 0 && Math.abs(durFactor - 1.0) >= 0.05) ? ` (时长权重 ${durFactor.toFixed(2)}x)` : '';
+            tipLines.push(`⏱️ 视频时长: ${formatDuration(stat.duration)}${factorText}`);
         }
 
         const tip = tipLines.join('\n');
