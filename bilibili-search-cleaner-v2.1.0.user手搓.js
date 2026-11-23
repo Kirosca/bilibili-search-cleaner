@@ -928,8 +928,8 @@
 
                 // 第五道安检关卡：品质药丸多选筛选过滤
                 let isQualityFail = false;
-                if (activeQualityFilters.size > 0 && quadrant) {
-                    const qClass = quadrant.className;
+                if (activeQualityFilters.size > 0) {
+                    const qClass = quadrant?.className;
                     
                     // 1. 独立防踩雷规则：若开启【🚫 排除避坑】，遇到 q-warning 直接淘汰
                     if (activeQualityFilters.has('exclude_warning') && qClass === 'q-warning') {
@@ -941,9 +941,10 @@
                         Array.from(activeQualityFilters).filter(k => k !== 'exclude_warning')
                     );
 
-                    // 只有当用户勾选了具体的品质标签（非全量）时，才实施正向归属白名单检查
+                    // 若用户勾选了具体的品质标签（非全量），实施严格正向白名单检查
+                    // 只有命中目标品质的卡片才能保留；无品质评级（如课堂/课程、直播卡片或非目标品质）严格淘汰隐藏
                     if (!isQualityFail && selectedQualityCategories.size > 0) {
-                        if (!selectedQualityCategories.has(qClass)) {
+                        if (!qClass || !selectedQualityCategories.has(qClass)) {
                             isQualityFail = true;
                         }
                     }
