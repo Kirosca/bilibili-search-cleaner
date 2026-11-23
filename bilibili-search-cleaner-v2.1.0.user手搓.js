@@ -358,6 +358,34 @@
             border: 1px solid rgba(167, 243, 208, 0.5) !important;
             box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4) !important;
         }
+        /* 维度1. ⏳ 深度长片：深邃夜空靛青（沉浸长篇体验） */
+        .bili-cleaner-badge-pill.q-deep-long {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.92), rgba(30, 64, 175, 0.95)) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(191, 219, 254, 0.6) !important;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4) !important;
+        }
+        /* 维度3. 🚀 飙升新星：璀璨极光玫红（爆发力强劲） */
+        .bili-cleaner-badge-pill.q-skyrocketing {
+            background: linear-gradient(135deg, rgba(244, 63, 94, 0.92), rgba(225, 29, 72, 0.95)) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(254, 205, 211, 0.6) !important;
+            box-shadow: 0 2px 8px rgba(244, 63, 94, 0.4) !important;
+        }
+        /* 维度4. 📚 珍藏专精：皇家典藏墨紫（极高收藏转化） */
+        .bili-cleaner-badge-pill.q-treasure-specialty {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.92), rgba(109, 40, 217, 0.95)) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(221, 214, 254, 0.6) !important;
+            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4) !important;
+        }
+        /* 历久沉淀维度. 🏛️ 历久弥新：岁月沉香古铜棕金（数年时间检验的长青经典） */
+        .bili-cleaner-badge-pill.q-timeless-classic {
+            background: linear-gradient(135deg, rgba(180, 83, 9, 0.95), rgba(120, 53, 15, 0.95)) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(253, 230, 138, 0.65) !important;
+            box-shadow: 0 2px 8px rgba(180, 83, 9, 0.45) !important;
+        }
         /* 7. ⚠️ 封面党/低质警告：警示赤红 */
         .bili-cleaner-badge-pill.q-warning {
             background: linear-gradient(135deg, rgba(220, 38, 38, 0.92), rgba(153, 27, 27, 0.92)) !important;
@@ -563,7 +591,8 @@
                     favorites: Number(v.favorites) || 0,
                     danmaku: Number(v.danmaku !== undefined ? v.danmaku : v.video_review) || 0,
                     duration: v.duration,
-                    review: Number(v.review) || 0
+                    review: Number(v.review) || 0,
+                    pubdate: Number(v.pubdate) || 0
                 };
                 if (v.bvid) videoStatMap.set(String(v.bvid).toLowerCase(), stat);
                 if (v.aid) videoStatMap.set(String(v.aid), stat);
@@ -1566,6 +1595,9 @@
         const favorites = stat?.favorites || 0;
         const danmaku = stat?.danmaku || 0;
         const durationMinutes = parseDurationMinutes(stat?.duration);
+        const pubdate = Number(stat?.pubdate) || 0;
+        const nowSec = Math.floor(Date.now() / 1000);
+        const daysOld = pubdate > 0 ? ((nowSec - pubdate) / 86400) : 999;
 
         const likeRatio = play > 0 ? (like / play) : 0;
         const favRatio = play > 0 ? (favorites / play) : 0;
@@ -1631,6 +1663,34 @@
                 className: 'q-danmaku-carnival',
                 tag: '🔥 弹幕狂欢',
                 desc: '满屏弹幕狂欢，绝佳下饭/乐子神作'
+            };
+        } else if (durationMinutes >= 30 && play >= 10000 && like >= 500 && (likeRatio >= 0.03 || favRatio >= 0.02)) {
+            // 维度1. ⏳ 深度长片（半小时以上的大部头深度内容，数据扎实沉浸）
+            quadrant = {
+                className: 'q-deep-long',
+                tag: '⏳ 深度长片',
+                desc: '时长充裕内容详实，适合沉浸式深度细品'
+            };
+        } else if (daysOld <= 7 && play >= 30000 && like >= 1200 && likeRatio >= 0.04) {
+            // 维度3. 🚀 飙升新星（7天内新发布的现象级高爆发内容）
+            quadrant = {
+                className: 'q-skyrocketing',
+                tag: '🚀 飙升新星',
+                desc: '近期新发布的爆发力爆款，全网热度急速攀升'
+            };
+        } else if (favorites >= 500 && favorites >= like * 0.8 && favRatio >= 0.035) {
+            // 维度4. 📚 珍藏专精（极高收藏转化，教程/工具书/配方表硬核典藏）
+            quadrant = {
+                className: 'q-treasure-specialty',
+                tag: '📚 珍藏专精',
+                desc: '超高收藏转化率，极具参考价值的硬核典藏'
+            };
+        } else if (daysOld >= 1095 && play >= 50000 && like >= 2000 && favorites >= 1000 && (likeRatio >= 0.035 || favRatio >= 0.02)) {
+            // 历久沉淀维度. 🏛️ 历久弥新（发布满3年以上，依然高播放高赞藏的时间检验神作）
+            quadrant = {
+                className: 'q-timeless-classic',
+                tag: '🏛️ 历久弥新',
+                desc: '历经数年岁月淘洗，经久不衰的长青经典神片'
             };
         } else if (durationMinutes > 0 && durationMinutes <= 1.5 && (likeRatio >= 0.035 || play >= 20000)) {
             // 6. ⚡ 短视频（快节奏短篇内容 / 资讯速看）
@@ -1936,7 +1996,8 @@
                     favorites: Number(item.favorites) || 0,
                     danmaku: Number(item.danmaku !== undefined ? item.danmaku : item.video_review) || 0,
                     duration: item.duration,
-                    review: Number(item.review) || 0
+                    review: Number(item.review) || 0,
+                    pubdate: Number(item.pubdate) || 0
                 };
                 videoStatMap.set(item.bvid.toLowerCase(), stat);
                 if (item.aid) videoStatMap.set(String(item.aid), stat);
