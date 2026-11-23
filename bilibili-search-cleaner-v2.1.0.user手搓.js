@@ -914,15 +914,24 @@
                 // 第五道安检关卡：品质药丸多选筛选过滤
                 if (!shouldHide && activeQualityFilters.size > 0) {
                     const qClass = quadrant?.className || 'q-routine';
-                    // 特殊筛选规则：'exclude_warning' 代表一键排除谨慎观看/避坑卡片
+                    
+                    // 1. 独立防踩雷规则：若开启【🚫 排除避坑】，遇到 q-warning 直接隐藏
                     if (activeQualityFilters.has('exclude_warning') && qClass === 'q-warning') {
                         shouldHide = true;
-                    } else if (!activeQualityFilters.has('exclude_warning')) {
-                        // 常规多选模式：卡片品质 class 必须命中选中集合中的任意一个
-                        if (!activeQualityFilters.has(qClass)) {
+                    }
+
+                    // 2. 正向多选品质分类过滤：排除掉 'exclude_warning' 后的选用品质集合
+                    const selectedQualityCategories = new Set(
+                        Array.from(activeQualityFilters).filter(k => k !== 'exclude_warning')
+                    );
+
+                    // 只有当用户勾选了具体的品质标签（非全量）时，才实施正向归属白名单检查
+                    if (!shouldHide && selectedQualityCategories.size > 0) {
+                        if (!selectedQualityCategories.has(qClass)) {
                             shouldHide = true;
                         }
                     }
+
                     if (shouldHide) {
                         if (isDimmed) {
                             card.style.removeProperty('display');
