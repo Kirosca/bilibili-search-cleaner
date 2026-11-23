@@ -48,6 +48,24 @@
     let evalBadgeMenuId = null;
     let evalModeMenuId = null;
 
+    // 瀑布流核心状态变量（前置提升声明，彻底杜绝暂时性死区 TDZ 风险）
+    let isWaterfallPaused = false;
+    let isPaging = false;
+    let currentPagingPromise = null;
+    let pagingAbortController = null;
+    let pagingSessionSeq = 0;
+    let isAllLoaded = false;
+    let currentRequestedPage = 1;
+    let currentViewportPage = 1;
+    let maxWaterfallPage = 34;
+    let waterfallObserver = null;
+    let currentObservedPager = null;
+    let isInternalPaging = false;
+    const seenBvidMap = new Set();
+    let totalRequestedVideos = 0;
+    let cachedWbiKeys = null;
+    let cachedCardTemplate = null;
+
     // 注册与更新油猴菜单命令
     function registerMenu() {
         if (typeof GM_registerMenuCommand !== 'function') return;
@@ -1017,14 +1035,10 @@
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
 
-    // 8. 快捷键支持：在搜索结果页按 '/' 快速聚焦并全选搜索框
-    // 获取当前页面中的搜索输入框元素
+    // 8. 快捷键支持：在搜索结果页按 '/' 快速聚焦搜索框
+    // 限定精准聚焦于官方搜索输入框（input.search-input-el），避免泛化选择器误命中其他输入控件
     function getSearchInput() {
-        return document.querySelector('input.search-input-el') ||
-               document.querySelector('input.search-input') ||
-               document.querySelector('.search-input-wrap input') ||
-               document.querySelector('.search-bar input') ||
-               document.querySelector('input[type="text"]');
+        return document.querySelector('input.search-input-el');
     }
 
     document.addEventListener('keydown', function(e) {
@@ -1108,22 +1122,7 @@
     // ==========================================
     // 10. 无缝瀑布流独立模块（Wbi API 驱动）
     // ==========================================
-    let isWaterfallPaused = false;
-    let isPaging = false;
-    let currentPagingPromise = null;
-    let pagingAbortController = null;
-    let pagingSessionSeq = 0;
-    let isAllLoaded = false;
-    let currentRequestedPage = 1;
-    let currentViewportPage = 1;
-    let maxWaterfallPage = 34;
-    let waterfallObserver = null;
-    let currentObservedPager = null;
-    let isInternalPaging = false;
-    const seenBvidMap = new Set();
-    let totalRequestedVideos = 0;
-    let cachedWbiKeys = null;
-    let cachedCardTemplate = null;
+    // （瀑布流核心状态变量已统一前置提升至脚本顶部第 51-67 行声明，杜绝 TDZ 死区隐患）
 
     // 内联轻量 MD5 实现（自研自包含，无外部依赖）
     function computeMd5(string) {
@@ -1227,7 +1226,9 @@
                 cachedWbiKeys = { img_key, sub_key };
                 return cachedWbiKeys;
             }
-            const navRes = await targetWindow.fetch('https://api.bilibili.com/x/web-interface/nav');
+            const navRes = await targetWindow.fetch('https://api.bilibili.com/x/web-interface/nav', {
+                credentials: 'include'
+            });
             const navData = await navRes.json();
             if (navData?.data?.wbi_img) {
                 const img_url = navData.data.wbi_img.img_url;
@@ -1695,9 +1696,14 @@
         if (!mainContainer) return;
 
         const visibleCards = Array.from(mainContainer.children).filter(c => c.style.display !== 'none' && !c.classList.contains('flex_center'));
-        // 可视卡片少于 10 张时，触发一次下一页静默抓取
-        if (visibleCards.length < 10 && typeof loadNextPage === 'function') {
-            loadNextPage();
+        // 可视卡片少于 10 张时，加入 100ms~200ms 随机微延迟平抑高频尖峰并触发下一页静默抓取
+        if (visibleCards.length < 10) {
+            const delay = Math.floor(Math.random() * 101) + 100;
+            setTimeout(() => {
+                if (!isPaging && !currentPagingPromise && !isAllLoaded && !isWaterfallPaused) {
+                    triggerLoadNextPage();
+                }
+            }, delay);
         }
     }
 
@@ -2009,6 +2015,10 @@
         currentPagingPromise = (async () => {
             let success = false;
             try {
+                // 100ms~200ms 随机微延迟平抑高频尖峰，规避 B 站风控封禁
+                await new Promise(r => setTimeout(r, Math.floor(Math.random() * 101) + 100));
+                if (controller.signal.aborted || sessionSeq !== pagingSessionSeq) return;
+
                 const keys = await getWbiKeys();
                 if (controller.signal.aborted || sessionSeq !== pagingSessionSeq) return;
                 if (!keys) {
@@ -2047,7 +2057,7 @@
 
                 const signedQs = signWbi(queryObj, keys.img_key, keys.sub_key);
                 const res = await targetWindow.fetch(`${apiBase}?${signedQs}`, {
-                    headers: { 'Referer': 'https://search.bilibili.com/' },
+                    credentials: 'include',
                     signal: controller.signal
                 });
                 const data = await res.json();
@@ -2124,14 +2134,15 @@
             return;
         }
 
-        // 核心优化：若添加视频后依然符合已有的「加载下一页」视口判定，则不移除 active 类，保持连贯加载
+        // 核心优化：若添加视频后依然符合已有的「加载下一页」视口判定，则不移除 active 类，保持连贯加载（随机 100ms~200ms 间隔平抑尖峰）
         if (!isWaterfallPaused && isPagingConditionMet()) {
             updateLoader(true);
+            const delay = Math.floor(Math.random() * 101) + 100;
             setTimeout(() => {
                 if (!isPaging && !currentPagingPromise && !isAllLoaded && !isWaterfallPaused && isPagingConditionMet()) {
                     triggerLoadNextPage();
                 }
-            }, 60);
+            }, delay);
         } else {
             // 已推移至预加载缓冲带之外，平滑收起加载状态条
             updateLoader(false);
@@ -2234,6 +2245,10 @@
 
         if (signChanged || isNewSearch) {
             abortRunningPaging();
+            // 新搜索场景：清理内存字典，防止 Map 长期累积膨胀
+            videoTagMap.clear();
+            videoStatMap.clear();
+
             // 新搜索场景：强制回到第 1 页并解除已全部加载完毕的状态
             currentRequestedPage = 1;
             currentViewportPage = 1;
