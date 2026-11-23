@@ -1126,6 +1126,7 @@
         { key: 'q-high-reputation', label: '⭐ 高口碑佳作' },
         { key: 'q-balanced-masterpiece', label: '🏅 综合标杆' },
         { key: 'q-hidden-gem', label: '💎 冷门宝藏' },
+        { key: 'q-routine', label: '🍀 稳健良作' },
         { key: 'q-opinion-storm', label: '💥 舆论风暴' },
         { key: 'q-heated-debate', label: '💬 激辩热议' },
         { key: 'q-danmaku-carnival', label: '🔥 弹幕狂欢' },
