@@ -315,15 +315,15 @@
             letter-spacing: 0.2px !important;
         }
 
-        /* --- 8 大象限胶囊配色体系 --- */
-        /* 1. 🏆 殿堂全能神作：耀目流金 */
+        /* --- 纯品质金字塔胶囊配色体系 --- */
+        /* 1. 🏆 殿堂神作：耀目流金 */
         .bili-cleaner-badge-pill.q-hall-of-fame {
             background: linear-gradient(135deg, rgba(255, 170, 0, 0.95), rgba(255, 102, 0, 0.95)) !important;
             color: #ffffff !important;
             border: 1px solid rgba(255, 235, 180, 0.7) !important;
             box-shadow: 0 0 10px rgba(255, 170, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
         }
-        /* 2. 💡 硬核宝藏干货：琥珀密金 */
+        /* 2. 💡 硬核干货：琥珀密金 */
         .bili-cleaner-badge-pill.q-hardcore {
             background: linear-gradient(135deg, rgba(245, 158, 11, 0.92), rgba(217, 119, 6, 0.92)) !important;
             color: #ffffff !important;
@@ -337,70 +337,56 @@
             border: 1px solid rgba(180, 230, 255, 0.5) !important;
             box-shadow: 0 2px 8px rgba(0, 174, 236, 0.4) !important;
         }
-        /* 4. 🔥 弹幕狂欢下饭：烈焰霓橙 */
-        .bili-cleaner-badge-pill.q-danmaku-carnival {
-            background: linear-gradient(135deg, rgba(255, 68, 102, 0.92), rgba(255, 120, 40, 0.92)) !important;
-            color: #ffffff !important;
-            border: 1px solid rgba(255, 200, 210, 0.5) !important;
-            box-shadow: 0 2px 8px rgba(255, 68, 102, 0.4) !important;
-        }
-        /* 5. 💎 冷门潜力遗珠：神秘晶紫 */
+        /* 4. 💎 冷门宝藏：神秘晶紫 */
         .bili-cleaner-badge-pill.q-hidden-gem {
             background: linear-gradient(135deg, rgba(147, 51, 234, 0.92), rgba(99, 102, 241, 0.92)) !important;
             color: #ffffff !important;
             border: 1px solid rgba(220, 180, 255, 0.5) !important;
             box-shadow: 0 2px 8px rgba(147, 51, 234, 0.4) !important;
         }
-        /* 6. ⚡ 高转快餐短频：薄荷鲜绿 */
-        .bili-cleaner-badge-pill.q-fast-short {
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.92), rgba(6, 148, 162, 0.92)) !important;
-            color: #ffffff !important;
-            border: 1px solid rgba(167, 243, 208, 0.5) !important;
-            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4) !important;
+        /* 4.5 🏅 综合标杆：铂金玄霜银渐变（六边形战士，赞藏互动态度全面均衡无短板） */
+        .bili-cleaner-badge-pill.q-balanced-masterpiece {
+            background: linear-gradient(135deg, rgba(71, 85, 105, 0.95), rgba(30, 41, 59, 0.98)) !important;
+            color: #f8fafc !important;
+            border: 1px solid rgba(226, 232, 240, 0.75) !important;
+            box-shadow: 0 0 10px rgba(148, 163, 184, 0.35), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
         }
-        /* 维度1. ⏳ 深度长片：深邃夜空靛青（沉浸长篇体验） */
-        .bili-cleaner-badge-pill.q-deep-long {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.92), rgba(30, 64, 175, 0.95)) !important;
+        /* 5. 💥 舆论风暴：霓虹紫粉渐变（弹幕密集与评论论战齐飞，全网热议/巨大争议） */
+        .bili-cleaner-badge-pill.q-opinion-storm {
+            background: linear-gradient(135deg, rgba(236, 72, 153, 0.95), rgba(168, 85, 247, 0.95)) !important;
             color: #ffffff !important;
-            border: 1px solid rgba(191, 219, 254, 0.6) !important;
-            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4) !important;
+            border: 1px solid rgba(251, 207, 232, 0.7) !important;
+            box-shadow: 0 0 10px rgba(236, 72, 153, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
         }
-        /* 维度3. 🚀 飙升新星：璀璨极光玫红（爆发力强劲） */
-        .bili-cleaner-badge-pill.q-skyrocketing {
-            background: linear-gradient(135deg, rgba(244, 63, 94, 0.92), rgba(225, 29, 72, 0.95)) !important;
+        /* 6. 💬 激辩热议：深海电光靛蓝渐变（理性论辩/深度观点交锋，与冷门宝藏的晶紫彻底区分） */
+        .bili-cleaner-badge-pill.q-heated-debate {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.95), rgba(79, 70, 229, 0.95)) !important;
             color: #ffffff !important;
-            border: 1px solid rgba(254, 205, 211, 0.6) !important;
-            box-shadow: 0 2px 8px rgba(244, 63, 94, 0.4) !important;
+            border: 1px solid rgba(191, 219, 254, 0.7) !important;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.45) !important;
         }
-        /* 维度4. 📚 珍藏专精：皇家典藏墨紫（极高收藏转化） */
-        .bili-cleaner-badge-pill.q-treasure-specialty {
-            background: linear-gradient(135deg, rgba(139, 92, 246, 0.92), rgba(109, 40, 217, 0.95)) !important;
+        /* 7. 🔥 弹幕狂欢：烈焰霓橙（高互动/高争论/名场面热度） */
+        .bili-cleaner-badge-pill.q-danmaku-carnival {
+            background: linear-gradient(135deg, rgba(255, 68, 102, 0.92), rgba(255, 120, 40, 0.92)) !important;
             color: #ffffff !important;
-            border: 1px solid rgba(221, 214, 254, 0.6) !important;
-            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4) !important;
+            border: 1px solid rgba(255, 200, 210, 0.5) !important;
+            box-shadow: 0 2px 8px rgba(255, 68, 102, 0.4) !important;
         }
-        /* 历久沉淀维度. 🏛️ 历久弥新：岁月沉香古铜棕金（数年时间检验的长青经典） */
-        .bili-cleaner-badge-pill.q-timeless-classic {
-            background: linear-gradient(135deg, rgba(180, 83, 9, 0.95), rgba(120, 53, 15, 0.95)) !important;
-            color: #ffffff !important;
-            border: 1px solid rgba(253, 230, 138, 0.65) !important;
-            box-shadow: 0 2px 8px rgba(180, 83, 9, 0.45) !important;
-        }
-        /* 7. ⚠️ 封面党/低质警告：警示赤红 */
+        /* 8. ⚠️ 谨慎观看（低质避坑预警）：警示赤红 */
         .bili-cleaner-badge-pill.q-warning {
             background: linear-gradient(135deg, rgba(220, 38, 38, 0.92), rgba(153, 27, 27, 0.92)) !important;
             color: #ffffff !important;
             border: 1px solid rgba(254, 202, 202, 0.5) !important;
             box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4) !important;
         }
-        /* 8. 🍀 稳健良作：深林墨玉绿渐变（典雅沉稳，有分量感） */
+        /* 6. 🍀 稳健良作：深林墨玉绿渐变（典雅沉稳，有分量感） */
         .bili-cleaner-badge-pill.q-routine {
             background: linear-gradient(135deg, rgba(16, 110, 75, 0.88), rgba(10, 70, 50, 0.92)) !important;
             color: #ffffff !important;
             border: 1px solid rgba(74, 222, 128, 0.35) !important;
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
         }
-        /* 9. 🌱 样本较少（冷门置信度保护）：低调雾霾蓝灰 */
+        /* 7. 🌱 样本较少（冷门置信度保护）：低调雾霾蓝灰 */
         .bili-cleaner-badge-pill.q-low-sample {
             background: rgba(30, 41, 59, 0.82) !important;
             color: rgba(148, 163, 184, 0.95) !important;
@@ -1594,21 +1580,23 @@
         const like = stat?.like || 0;
         const favorites = stat?.favorites || 0;
         const danmaku = stat?.danmaku || 0;
+        const review = stat?.review || 0;
         const durationMinutes = parseDurationMinutes(stat?.duration);
-        const pubdate = Number(stat?.pubdate) || 0;
-        const nowSec = Math.floor(Date.now() / 1000);
-        const daysOld = pubdate > 0 ? ((nowSec - pubdate) / 86400) : 999;
 
         const likeRatio = play > 0 ? (like / play) : 0;
         const favRatio = play > 0 ? (favorites / play) : 0;
+        const reviewRatio = play > 0 ? (review / play) : 0;
         const danmakuDensity = durationMinutes > 0 ? (danmaku / durationMinutes) : 0;
 
-        // 8 大象限综合定性判定（含冷门置信度保护机制，彻底隔绝小样本高方差误判）
+        // 弹幕与评论热度特征分析
+        const isDanmakuHigh = (danmakuDensity >= 15 && danmaku >= 300) || (danmaku >= 3000 && danmakuDensity >= 8);
+        const isReviewDebated = (review >= 300 && reviewRatio >= 0.0035) || (review >= 1500 && reviewRatio >= 0.002);
+
+        // 纯视频品质与热议风暴综合定性判定
         let quadrant = null;
 
-        // 【冷门置信度第一防线】：播放量不足 3000 或未获取到有效播放量时，实施样本保护
+        // 【第一层：冷门置信度保护】播放量不足 3000 时，不作随意定性（极少数纯度极高者破格授予冷门宝藏）
         if (play < 3000) {
-            // 极少数虽播放较小，但绝对点赞与收藏已扎实破百的高密度小众精品（真·冷门宝藏）
             if (play >= 1000 && (like >= 150 || favorites >= 80) && (likeRatio >= 0.08 || favRatio >= 0.045)) {
                 quadrant = {
                     className: 'q-hidden-gem',
@@ -1623,84 +1611,70 @@
                 };
             }
         } else if (play >= 20000 && like > 0 && likeRatio < 0.012 && favRatio < 0.005 && (durationMinutes <= 15 || durationMinutes === 0)) {
-            // 7. ⚠️ 封面党 / 低质警告（需样本充足且转化极低，限制时长 <= 15分钟，排除歌单/助眠/长录像挂机播放误伤）
+            // 【风控防线：低质劣作避坑】大样本且极低转化（限制时长 <= 15分钟，排除歌单/长录像误判）
             quadrant = {
                 className: 'q-warning',
                 tag: '⚠️ 谨慎观看',
                 desc: '高播放低评价，含金量较低谨慎点击'
             };
         } else if (play >= 20000 && likeRatio >= 0.07 && favRatio >= 0.035 && like >= 1500 && favorites >= 800) {
-            // 1. 🏆 殿堂全能神作（大样本 + 双率爆棚 + 绝对量达标）
+            // 【T0 顶峰神作】：大样本 + 双率断层爆棚 + 绝对量达标
             quadrant = {
                 className: 'q-hall-of-fame',
                 tag: '🏆 殿堂神作',
                 desc: '殿堂级神作，三连爆满无需犹豫'
             };
         } else if (play < 20000 && like >= 200 && favorites >= 80 && (likeRatio >= 0.08 || favRatio >= 0.045)) {
-            // 5. 💎 冷门潜力遗珠（中小样本 + 绝对赞藏过百）
+            // 【T2 璞玉遗珠】：中小样本下的极高纯度宝藏
             quadrant = {
                 className: 'q-hidden-gem',
                 tag: '💎 冷门宝藏',
                 desc: '小众冷门宝藏，播放虽少但纯度极高'
             };
         } else if ((play >= 5000 && favRatio >= 0.04 && favorites >= 250) || (favorites >= 2000 && favRatio >= 0.025)) {
-            // 2. 💡 硬核宝藏干货（样本充足且绝对收藏充足）
+            // 【T1 一流干货】：样本充足且收藏转化极高
             quadrant = {
                 className: 'q-hardcore',
                 tag: '💡 硬核干货',
                 desc: '顶级实用干货，建议立即收藏备用'
             };
         } else if ((play >= 5000 && likeRatio >= 0.07 && like >= 400) || (like >= 5000 && likeRatio >= 0.045)) {
-            // 3. ⭐ 高口碑佳作（样本充足且绝对点赞充足）
+            // 【T1 一流口碑】：样本充足且点赞好评清一色
             quadrant = {
                 className: 'q-high-reputation',
                 tag: '⭐ 高口碑佳作',
                 desc: '观众清一色好评，极高品质无踩雷'
             };
-        } else if ((danmakuDensity >= 15 && danmaku >= 300) || (danmaku >= 3000 && danmakuDensity >= 8)) {
-            // 4. 🔥 弹幕狂欢下饭（弹幕绝对量与密度双达标）
+        } else if (play >= 10000 && likeRatio >= 0.045 && favRatio >= 0.022 && like >= 600 && favorites >= 300) {
+            // 【T1.5 综合标杆】：点赞、收藏、播放全方位均衡达标，六边形无短板综合水准
+            quadrant = {
+                className: 'q-balanced-masterpiece',
+                tag: '🏅 综合标杆',
+                desc: '赞藏双优全面扎实，六边形无短板综合标杆'
+            };
+        } else if (isDanmakuHigh && isReviewDebated) {
+            // 【风暴级交锋】：弹幕密集与评论论战齐飞（全网大事件/巨大争议/世纪对线现场）
+            quadrant = {
+                className: 'q-opinion-storm',
+                tag: '💥 舆论风暴',
+                desc: '弹幕刷屏与评论论战齐飞，全网热议/巨大争议风暴现场'
+            };
+        } else if (isReviewDebated) {
+            // 【评论深度交锋】：评论区长篇小作文对线（多方观点激烈碰撞/争议焦点）
+            quadrant = {
+                className: 'q-heated-debate',
+                tag: '💬 激辩热议',
+                desc: '评论区高密度交锋对线，观点碰撞引发深度热议'
+            };
+        } else if (isDanmakuHigh) {
+            // 【弹幕即时高能】：弹幕极度密集（满屏互动、乐子欢呼或现场吵架名场面）
             quadrant = {
                 className: 'q-danmaku-carnival',
                 tag: '🔥 弹幕狂欢',
-                desc: '满屏弹幕狂欢，绝佳下饭/乐子神作'
-            };
-        } else if (durationMinutes >= 30 && play >= 10000 && like >= 500 && (likeRatio >= 0.03 || favRatio >= 0.02)) {
-            // 维度1. ⏳ 深度长片（半小时以上的大部头深度内容，数据扎实沉浸）
-            quadrant = {
-                className: 'q-deep-long',
-                tag: '⏳ 深度长片',
-                desc: '时长充裕内容详实，适合沉浸式深度细品'
-            };
-        } else if (daysOld <= 7 && play >= 30000 && like >= 1200 && likeRatio >= 0.04) {
-            // 维度3. 🚀 飙升新星（7天内新发布的现象级高爆发内容）
-            quadrant = {
-                className: 'q-skyrocketing',
-                tag: '🚀 飙升新星',
-                desc: '近期新发布的爆发力爆款，全网热度急速攀升'
-            };
-        } else if (favorites >= 500 && favorites >= like * 0.8 && favRatio >= 0.035) {
-            // 维度4. 📚 珍藏专精（极高收藏转化，教程/工具书/配方表硬核典藏）
-            quadrant = {
-                className: 'q-treasure-specialty',
-                tag: '📚 珍藏专精',
-                desc: '超高收藏转化率，极具参考价值的硬核典藏'
-            };
-        } else if (daysOld >= 1095 && play >= 50000 && like >= 2000 && favorites >= 1000 && (likeRatio >= 0.035 || favRatio >= 0.02)) {
-            // 历久沉淀维度. 🏛️ 历久弥新（发布满3年以上，依然高播放高赞藏的时间检验神作）
-            quadrant = {
-                className: 'q-timeless-classic',
-                tag: '🏛️ 历久弥新',
-                desc: '历经数年岁月淘洗，经久不衰的长青经典神片'
-            };
-        } else if (durationMinutes > 0 && durationMinutes <= 1.5 && (likeRatio >= 0.035 || play >= 20000)) {
-            // 6. ⚡ 短视频（快节奏短篇内容 / 资讯速看）
-            quadrant = {
-                className: 'q-fast-short',
-                tag: '⚡ 短视频',
-                desc: '快节奏短篇内容，随手刷刷一目了然'
+                desc: '弹幕密集刷屏，高能互动、乐子或热议焦点'
             };
         } else {
-            // 8. 🍀 稳健良作（综合均衡）
+            // 【T3 基准良作】：各项指标均衡扎实
             quadrant = {
                 className: 'q-routine',
                 tag: '🍀 稳健良作',
@@ -1708,8 +1682,8 @@
             };
         }
 
-        // 精选高光减负策略：未开启“全部显示”时，稳健良作 (q-routine)、短视频 (q-fast-short) 与 样本较少 (q-low-sample) 默认留白不显示
-        if (!isEvalFullMode && (!quadrant || quadrant.className === 'q-routine' || quadrant.className === 'q-low-sample' || quadrant.className === 'q-fast-short')) {
+        // 精选高光减负策略：未开启“全部显示”时，稳健良作 (q-routine) 与 样本较少 (q-low-sample) 默认留白不显示
+        if (!isEvalFullMode && (!quadrant || quadrant.className === 'q-routine' || quadrant.className === 'q-low-sample')) {
             const existing = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
             if (existing) existing.remove();
             return;
@@ -1742,6 +1716,9 @@
         if (danmaku > 0) {
             const densityText = durationMinutes > 0 ? ` (${danmakuDensity.toFixed(1)}条/分)` : '';
             tipLines.push(`💬 弹幕数: ${formatStat(danmaku)}${densityText}`);
+        }
+        if (review > 0) {
+            tipLines.push(`📝 评论数: ${formatStat(review)} (评播比 ${(reviewRatio * 100).toFixed(2)}%)`);
         }
         if (stat?.duration) {
             tipLines.push(`⏱️ 视频时长: ${formatDuration(stat.duration)}`);
