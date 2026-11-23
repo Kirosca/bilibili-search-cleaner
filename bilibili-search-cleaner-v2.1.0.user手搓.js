@@ -362,7 +362,7 @@
             border: 1px solid rgba(226, 232, 240, 0.75) !important;
             box-shadow: 0 0 10px rgba(148, 163, 184, 0.35), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
         }
-        /* 5. 💥 舆论风暴：霓虹紫粉渐变（弹幕密集与评论论战齐飞，全网热议/巨大争议） */
+        /* 5. 💥 话题焦点：霓虹紫粉渐变（弹幕密集与评论热烈齐飞，全网热议/深度探讨） */
         .bili-cleaner-badge-pill.q-opinion-storm {
             background: linear-gradient(135deg, rgba(236, 72, 153, 0.95), rgba(168, 85, 247, 0.95)) !important;
             color: #ffffff !important;
@@ -1069,7 +1069,7 @@
         { key: 'q-balanced-masterpiece', label: '🏅 综合标杆' },
         { key: 'q-hidden-gem', label: '💎 冷门宝藏' },
         { key: 'q-routine', label: '🍀 稳健良作' },
-        { key: 'q-opinion-storm', label: '💥 舆论风暴' },
+        { key: 'q-opinion-storm', label: '💥 话题焦点' },
         { key: 'q-heated-debate', label: '💬 激辩热议' },
         { key: 'q-danmaku-carnival', label: '🔥 弹幕狂欢' },
         { key: 'exclude_warning', label: '🚫 排除避坑', isExclude: true }
@@ -1828,11 +1828,17 @@
         const likeRatio = play > 0 ? (like / play) : 0;
         const favRatio = play > 0 ? (favorites / play) : 0;
         const reviewRatio = play > 0 ? (review / play) : 0;
+        const reviewLikeRatio = like > 0 ? (review / like) : (review > 0 ? 1 : 0);
         const danmakuDensity = durationMinutes > 0 ? (danmaku / durationMinutes) : 0;
 
         // 弹幕与评论热度特征分析
+        // 争议/论战特征校验：真实网络对线与争议事件的核心特征是“观众不愿点赞，集中在评论区写小作文互撕”，评赞比异常高（>= 10%）
+        // 若点赞极高而评论仅占很小比例（如 4.5万赞 vs 2659评，评赞比仅 5.9%），表明观众一边倒热情好评，属于高能互动而非争议对线
         const isDanmakuHigh = (danmakuDensity >= 15 && danmaku >= 300) || (danmaku >= 3000 && danmakuDensity >= 8);
-        const isReviewDebated = (review >= 300 && reviewRatio >= 0.0035) || (review >= 1500 && reviewRatio >= 0.002);
+        const isReviewDebated = (reviewLikeRatio >= 0.10) && (
+            (review >= 300 && reviewRatio >= 0.0035) || 
+            (review >= 1500 && reviewRatio >= 0.002)
+        );
 
         // 【第一层：冷门置信度保护】播放量不足 3000 时，不作随意定性（极少数纯度极高者破格授予冷门宝藏）
         if (play < 3000) {
@@ -1892,11 +1898,11 @@
                 desc: '赞藏双优全面扎实，六边形无短板综合标杆'
             };
         } else if (isDanmakuHigh && isReviewDebated) {
-            // 【风暴级交锋】：弹幕密集与评论论战齐飞（全网大事件/巨大争议/世纪对线现场）
+            // 【焦点级热议】：弹幕密集与评论热烈齐飞（全网大事件/深度探讨/全平台话题焦点）
             return {
                 className: 'q-opinion-storm',
-                tag: '💥 舆论风暴',
-                desc: '弹幕刷屏与评论论战齐飞，全网热议/巨大争议风暴现场'
+                tag: '💥 话题焦点',
+                desc: '弹幕刷屏与评论热议齐飞，全网热议/深度探讨话题焦点'
             };
         } else if (isReviewDebated) {
             // 【评论深度交锋】：评论区长篇小作文对线（多方观点激烈碰撞/争议焦点）
