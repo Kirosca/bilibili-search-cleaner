@@ -26,15 +26,14 @@
     }
 
     // ==========================================
-    // 菜单管理与持久化配置（虚化显示 & 筛选常驻 & 无缝瀑布流 & 评价体系 & 语法过滤）
+    // 菜单管理与持久化配置（虚化显示 & 筛选常驻 & 无缝瀑布流 & 评价体系）
     // ==========================================
     let isDimmed = localStorage.getItem('bili_cleaner_dimmed') === 'true';
     let isFilterSticky = localStorage.getItem('bili_cleaner_sticky_filter') === 'true';
     let isWaterfall = localStorage.getItem('bili_cleaner_waterfall') === 'true';
     let isEvaluationBadge = localStorage.getItem('bili_cleaner_eval_badge') === 'true';
     let isEvalFullMode = localStorage.getItem('bili_cleaner_eval_full_mode') === 'true';
-    // 语法过滤开关：控制是否启用精准关键词匹配、-排除词、#Tag与@UP主语法（默认开启 true）
-    let isSyntaxFilter = localStorage.getItem('bili_cleaner_syntax_filter') !== 'false';
+    const isSyntaxFilter = true;
     // 选中的品质标签筛选集合（多选，空集合代表全部/不限）
     let activeQualityFilters = new Set();
     try {
@@ -48,7 +47,6 @@
     let waterfallMenuId = null;
     let evalBadgeMenuId = null;
     let evalModeMenuId = null;
-    let syntaxFilterMenuId = null;
 
     // 注册与更新油猴菜单命令
     function registerMenu() {
@@ -61,9 +59,6 @@
             }
             if (dimmedMenuId !== null) {
                 try { GM_unregisterMenuCommand(dimmedMenuId); } catch (e) {}
-            }
-            if (syntaxFilterMenuId !== null) {
-                try { GM_unregisterMenuCommand(syntaxFilterMenuId); } catch (e) {}
             }
             if (waterfallMenuId !== null) {
                 try { GM_unregisterMenuCommand(waterfallMenuId); } catch (e) {}
@@ -82,9 +77,6 @@
 
         const dimmedLabel = `🌫️ 虚化显示模糊内容: ${isDimmed ? '✅ 已开启' : '❌ 已关闭'}`;
         dimmedMenuId = GM_registerMenuCommand(dimmedLabel, toggleDimmed);
-
-        const syntaxFilterLabel = `🔍 筛选语法过滤: ${isSyntaxFilter ? '✅ 已开启' : '❌ 已关闭'}`;
-        syntaxFilterMenuId = GM_registerMenuCommand(syntaxFilterLabel, toggleSyntaxFilter);
 
         const waterfallLabel = `🌊 无缝瀑布流: ${isWaterfall ? '✅ 已开启' : '❌ 已关闭'}`;
         waterfallMenuId = GM_registerMenuCommand(waterfallLabel, toggleWaterfall);
@@ -142,35 +134,11 @@
         localStorage.setItem('bili_cleaner_dimmed', String(isDimmed));
         registerMenu();
 
-        // 联动更新页面筛选栏上的药丸按钮高亮
-        document.querySelectorAll('.bili-cleaner-dimmed-filter-row').forEach(updateDimmedFilterButtons);
-
         // 清空所有卡片的安检缓存标记，并立即触发重新判定
         document.querySelectorAll('[data-purified-query]').forEach(card => {
             delete card.dataset.purifiedQuery;
         });
         filterDOMElements();
-    }
-
-    // 切换筛选语法过滤状态并持久化配置（控制是否启用关键词匹配、-排除词、#Tag与@UP主过滤）
-    function toggleSyntaxFilter() {
-        isSyntaxFilter = !isSyntaxFilter;
-        localStorage.setItem('bili_cleaner_syntax_filter', String(isSyntaxFilter));
-        registerMenu();
-
-        // 联动更新页面筛选栏上的药丸按钮高亮
-        document.querySelectorAll('.bili-cleaner-syntax-filter-row').forEach(updateSyntaxFilterButtons);
-
-        // 清空所有卡片的安检缓存标记，并立即触发重新判定
-        document.querySelectorAll('[data-purified-query]').forEach(card => {
-            delete card.dataset.purifiedQuery;
-        });
-        filterDOMElements();
-
-        // 若开启瀑布流，检测当前屏幕如果卡片变少不足以撑满一屏，主动尝试静默增补拉取
-        if (isWaterfall && typeof checkWaterfallFillScreen === 'function') {
-            checkWaterfallFillScreen();
-        }
     }
 
     // 切换搜索筛选常驻状态并更新样式
@@ -449,9 +417,7 @@
             display: none !important;
         }
 
-        /* 4.5. 搜索结果顶部筛选增强行 (虚化控制 & 语法控制 & 品质药丸多选，嵌入 .more-conditions) */
-        .bili-cleaner-dimmed-filter-row,
-        .bili-cleaner-syntax-filter-row,
+        /* 4.5. 搜索结果顶部品质药丸多选筛选栏 (嵌入 .more-conditions) */
         .bili-cleaner-quality-filter-row {
             display: flex;
             align-items: flex-start;
@@ -1090,121 +1056,12 @@
                 }
                 enforceConditions(el);
             }
-            injectDimmedFilterRow(el);
-            injectSyntaxFilterRow(el);
+            // 清理可能遗留的旧版过滤模式与筛选语法行
+            const oldExtraRows = el.querySelectorAll('.bili-cleaner-dimmed-filter-row, .bili-cleaner-syntax-filter-row');
+            oldExtraRows.forEach(r => r.remove());
+
             injectQualityFilterRow(el);
         });
-    }
-
-    // 挂载/更新【虚化显示模糊内容】快捷筛选行（位于【筛选语法】正上方一行）
-    function injectDimmedFilterRow(container) {
-        if (!container || !container.isConnected) return;
-
-        let dimmedRow = container.querySelector(':scope > .bili-cleaner-dimmed-filter-row');
-        if (!dimmedRow) {
-            dimmedRow = document.createElement('div');
-            dimmedRow.className = 'search-condition-row bili-cleaner-dimmed-filter-row';
-            
-            // 确保插在筛选语法行或品质筛选行正上方
-            const nextRow = container.querySelector(':scope > .bili-cleaner-syntax-filter-row, :scope > .bili-cleaner-quality-filter-row');
-            if (nextRow) {
-                container.insertBefore(dimmedRow, nextRow);
-            } else {
-                container.appendChild(dimmedRow);
-            }
-        }
-
-        if (!dimmedRow.dataset.rendered) {
-            dimmedRow.dataset.rendered = 'true';
-            dimmedRow.innerHTML = `
-                <div class="bili-cleaner-filter-label">🌫️ 过滤模式:</div>
-                <div class="bili-cleaner-filter-pills-box">
-                    <div class="bili-cleaner-filter-pill-btn pill-dim-hide" data-mode="hide">🚫 物理彻底隐藏</div>
-                    <div class="bili-cleaner-filter-pill-btn pill-dim-fade" data-mode="fade">🌫️ 虚化暗化占位</div>
-                </div>
-            `;
-            const hideBtn = dimmedRow.querySelector('[data-mode="hide"]');
-            const fadeBtn = dimmedRow.querySelector('[data-mode="fade"]');
-
-            hideBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (isDimmed) toggleDimmed();
-            });
-            fadeBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (!isDimmed) toggleDimmed();
-            });
-        }
-
-        updateDimmedFilterButtons(dimmedRow);
-    }
-
-    // 挂载/更新【筛选语法】快捷行（位于【过滤模式】下方、【视频品质】上方）
-    function injectSyntaxFilterRow(container) {
-        if (!container || !container.isConnected) return;
-
-        let syntaxRow = container.querySelector(':scope > .bili-cleaner-syntax-filter-row');
-        if (!syntaxRow) {
-            syntaxRow = document.createElement('div');
-            syntaxRow.className = 'search-condition-row bili-cleaner-syntax-filter-row';
-            
-            // 确保插在品质筛选行正上方，若品质行未渲染则追加在过滤模式下方
-            const qualityRow = container.querySelector(':scope > .bili-cleaner-quality-filter-row');
-            const dimmedRow = container.querySelector(':scope > .bili-cleaner-dimmed-filter-row');
-            if (qualityRow) {
-                container.insertBefore(syntaxRow, qualityRow);
-            } else if (dimmedRow && dimmedRow.nextSibling) {
-                container.insertBefore(syntaxRow, dimmedRow.nextSibling);
-            } else {
-                container.appendChild(syntaxRow);
-            }
-        }
-
-        if (!syntaxRow.dataset.rendered) {
-            syntaxRow.dataset.rendered = 'true';
-            syntaxRow.innerHTML = `
-                <div class="bili-cleaner-filter-label">🔍 筛选语法:</div>
-                <div class="bili-cleaner-filter-pills-box">
-                    <div class="bili-cleaner-filter-pill-btn pill-syntax-on" data-syntax="on">✅ 开启精准过滤 (关键词/-排除/#Tag/@UP)</div>
-                    <div class="bili-cleaner-filter-pill-btn pill-syntax-off" data-syntax="off">❌ 关闭语法过滤 (保留原样)</div>
-                </div>
-            `;
-            const onBtn = syntaxRow.querySelector('[data-syntax="on"]');
-            const offBtn = syntaxRow.querySelector('[data-syntax="off"]');
-
-            onBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (!isSyntaxFilter) toggleSyntaxFilter();
-            });
-            offBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (isSyntaxFilter) toggleSyntaxFilter();
-            });
-        }
-
-        updateSyntaxFilterButtons(syntaxRow);
-    }
-
-    // 更新语法行按钮状态高亮
-    function updateSyntaxFilterButtons(syntaxRow) {
-        if (!syntaxRow) return;
-        const onBtn = syntaxRow.querySelector('[data-syntax="on"]');
-        const offBtn = syntaxRow.querySelector('[data-syntax="off"]');
-        if (onBtn && offBtn) {
-            onBtn.classList.toggle('active', isSyntaxFilter);
-            offBtn.classList.toggle('active', !isSyntaxFilter);
-        }
-    }
-
-    // 更新虚化行按钮状态高亮
-    function updateDimmedFilterButtons(dimmedRow) {
-        if (!dimmedRow) return;
-        const hideBtn = dimmedRow.querySelector('[data-mode="hide"]');
-        const fadeBtn = dimmedRow.querySelector('[data-mode="fade"]');
-        if (hideBtn && fadeBtn) {
-            hideBtn.classList.toggle('active', !isDimmed);
-            fadeBtn.classList.toggle('active', isDimmed);
-        }
     }
 
     // 挂载/更新品质药丸筛选行（位置 A：嵌入 .more-conditions）
