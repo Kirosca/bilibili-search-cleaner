@@ -1231,7 +1231,7 @@
         function G(x, y, z) { return (x & z) | (y & (~z)); }
         // MD5 逻辑函数 H
         function H(x, y, z) { return (x ^ y ^ z); }
-        // MD5 逻辑函数 I
+        // MD5 逻辑函数 I 
         function I(x, y, z) { return (y ^ (x | (~z))); }
         // MD5 四轮转换迭代函数 FF, GG, HH, II
         function FF(a,b,c,d,x,s,ac) { return addU(rotL(addU(addU(a, F(b,c,d)), addU(x, ac)), s), b); }
