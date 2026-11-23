@@ -133,6 +133,9 @@
         localStorage.setItem('bili_cleaner_dimmed', String(isDimmed));
         registerMenu();
 
+        // 联动更新页面筛选栏上的药丸按钮高亮
+        document.querySelectorAll('.bili-cleaner-dimmed-filter-row').forEach(updateDimmedFilterButtons);
+
         // 清空所有卡片的安检缓存标记，并立即触发重新判定
         document.querySelectorAll('[data-purified-query]').forEach(card => {
             delete card.dataset.purifiedQuery;
@@ -416,13 +419,14 @@
             display: none !important;
         }
 
-        /* 4.5. 搜索结果顶部品质药丸多选筛选栏 (嵌入 .more-conditions) */
+        /* 4.5. 搜索结果顶部筛选增强行 (虚化控制 & 品质药丸多选，嵌入 .more-conditions) */
+        .bili-cleaner-dimmed-filter-row,
         .bili-cleaner-quality-filter-row {
             display: flex;
             align-items: flex-start;
             flex-wrap: wrap;
-            padding: 8px 0;
-            margin-top: 6px;
+            padding: 7px 0;
+            margin-top: 5px;
             border-top: 1px dashed rgba(148, 153, 160, 0.25);
             font-size: 13px;
             user-select: none;
@@ -1055,8 +1059,63 @@
                 }
                 enforceConditions(el);
             }
+            injectDimmedFilterRow(el);
             injectQualityFilterRow(el);
         });
+    }
+
+    // 挂载/更新【虚化显示模糊内容】快捷筛选行（位于【视频品质】正上方一行）
+    function injectDimmedFilterRow(container) {
+        if (!container || !container.isConnected) return;
+
+        let dimmedRow = container.querySelector(':scope > .bili-cleaner-dimmed-filter-row');
+        if (!dimmedRow) {
+            dimmedRow = document.createElement('div');
+            dimmedRow.className = 'search-condition-row bili-cleaner-dimmed-filter-row';
+            
+            // 确保插在品质筛选行正上方
+            const qualityRow = container.querySelector(':scope > .bili-cleaner-quality-filter-row');
+            if (qualityRow) {
+                container.insertBefore(dimmedRow, qualityRow);
+            } else {
+                container.appendChild(dimmedRow);
+            }
+        }
+
+        if (!dimmedRow.dataset.rendered) {
+            dimmedRow.dataset.rendered = 'true';
+            dimmedRow.innerHTML = `
+                <div class="bili-cleaner-filter-label">🌫️ 过滤模式:</div>
+                <div class="bili-cleaner-filter-pills-box">
+                    <div class="bili-cleaner-filter-pill-btn pill-dim-hide" data-mode="hide">🚫 物理彻底隐藏</div>
+                    <div class="bili-cleaner-filter-pill-btn pill-dim-fade" data-mode="fade">🌫️ 虚化暗化占位</div>
+                </div>
+            `;
+            const hideBtn = dimmedRow.querySelector('[data-mode="hide"]');
+            const fadeBtn = dimmedRow.querySelector('[data-mode="fade"]');
+
+            hideBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (isDimmed) toggleDimmed();
+            });
+            fadeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (!isDimmed) toggleDimmed();
+            });
+        }
+
+        updateDimmedFilterButtons(dimmedRow);
+    }
+
+    // 更新虚化行按钮状态高亮
+    function updateDimmedFilterButtons(dimmedRow) {
+        if (!dimmedRow) return;
+        const hideBtn = dimmedRow.querySelector('[data-mode="hide"]');
+        const fadeBtn = dimmedRow.querySelector('[data-mode="fade"]');
+        if (hideBtn && fadeBtn) {
+            hideBtn.classList.toggle('active', !isDimmed);
+            fadeBtn.classList.toggle('active', isDimmed);
+        }
     }
 
     // 挂载/更新品质药丸筛选行（位置 A：嵌入 .more-conditions）
