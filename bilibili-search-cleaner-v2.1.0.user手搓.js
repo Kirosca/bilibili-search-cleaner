@@ -72,10 +72,10 @@
         const waterfallLabel = `🌊 无缝瀑布流: ${isWaterfall ? '✅ 已开启' : '❌ 已关闭'}`;
         waterfallMenuId = GM_registerMenuCommand(waterfallLabel, toggleWaterfall);
 
-        const evalBadgeLabel = `🏷️ 视频评价体系: ${isEvaluationBadge ? '✅ 已开启' : '❌ 已关闭'}`;
+        const evalBadgeLabel = `🏷️ 视频品质标签: ${isEvaluationBadge ? '✅ 已开启' : '❌ 已关闭'}`;
         evalBadgeMenuId = GM_registerMenuCommand(evalBadgeLabel, toggleEvaluationBadge);
 
-        // 二级级联子菜单：仅在评价体系开启时展示显示范围切换
+        // 二级级联子菜单：仅在品质标签开启时展示显示范围切换
         if (isEvaluationBadge) {
             const evalModeLabel = `  └─ 标签范围: ${isEvalFullMode ? '📑 全部完整显示' : '✨ 仅精选高光'}`;
             evalModeMenuId = GM_registerMenuCommand(evalModeLabel, toggleEvalMode);
@@ -1590,8 +1590,8 @@
                     desc: '数据样本量较少（播放量 < 3000），暂不作定性评级'
                 };
             }
-        } else if (play >= 20000 && like > 0 && likeRatio < 0.012 && favRatio < 0.005) {
-            // 7. ⚠️ 封面党 / 低质警告（需样本充足且转化极低）
+        } else if (play >= 20000 && like > 0 && likeRatio < 0.012 && favRatio < 0.005 && (durationMinutes <= 15 || durationMinutes === 0)) {
+            // 7. ⚠️ 封面党 / 低质警告（需样本充足且转化极低，限制时长 <= 15分钟，排除歌单/助眠/长录像挂机播放误伤）
             quadrant = {
                 className: 'q-warning',
                 tag: '⚠️ 谨慎观看',
@@ -1633,11 +1633,11 @@
                 desc: '满屏弹幕狂欢，绝佳下饭/乐子神作'
             };
         } else if (durationMinutes > 0 && durationMinutes <= 1.5 && (likeRatio >= 0.035 || play >= 20000)) {
-            // 6. ⚡ 高转快餐短频
+            // 6. ⚡ 短视频（快节奏短篇内容 / 资讯速看）
             quadrant = {
                 className: 'q-fast-short',
-                tag: '⚡ 轻松下饭',
-                desc: '快节奏短视频，随手一刷轻松解压'
+                tag: '⚡ 短视频',
+                desc: '快节奏短篇内容，随手刷刷一目了然'
             };
         } else {
             // 8. 🍀 稳健良作（综合均衡）
@@ -1648,8 +1648,8 @@
             };
         }
 
-        // 精选高光减负策略：未开启“全部显示”时，稳健良作 (q-routine) 与 样本较少 (q-low-sample) 默认留白不显示
-        if (!isEvalFullMode && (!quadrant || quadrant.className === 'q-routine' || quadrant.className === 'q-low-sample')) {
+        // 精选高光减负策略：未开启“全部显示”时，稳健良作 (q-routine)、短视频 (q-fast-short) 与 样本较少 (q-low-sample) 默认留白不显示
+        if (!isEvalFullMode && (!quadrant || quadrant.className === 'q-routine' || quadrant.className === 'q-low-sample' || quadrant.className === 'q-fast-short')) {
             const existing = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
             if (existing) existing.remove();
             return;
