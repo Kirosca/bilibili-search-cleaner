@@ -376,7 +376,7 @@
             border: 1px solid rgba(191, 219, 254, 0.7) !important;
             box-shadow: 0 2px 8px rgba(37, 99, 235, 0.45) !important;
         }
-        /* 7. 🔥 弹幕狂欢：烈焰霓橙（高互动/高争论/名场面热度） */
+        /* 7. 🔥 弹幕刷屏：烈焰霓橙（高互动/高争论/名场面热度） */
         .bili-cleaner-badge-pill.q-danmaku-carnival {
             background: linear-gradient(135deg, rgba(255, 68, 102, 0.92), rgba(255, 120, 40, 0.92)) !important;
             color: #ffffff !important;
@@ -457,6 +457,8 @@
             font-size: 12px;
             font-weight: 500;
             cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
             border: 1px solid rgba(148, 153, 160, 0.35);
             background: rgba(255, 255, 255, 0.8);
             color: #61666d;
@@ -1071,9 +1073,23 @@
         { key: 'q-routine', label: '🍀 稳健良作' },
         { key: 'q-opinion-storm', label: '💥 话题焦点' },
         { key: 'q-heated-debate', label: '💬 激辩热议' },
-        { key: 'q-danmaku-carnival', label: '🔥 弹幕狂欢' },
+        { key: 'q-danmaku-carnival', label: '🔥 弹幕刷屏' },
         { key: 'exclude_warning', label: '🚫 排除避坑', isExclude: true }
     ];
+
+    // 参与范围选择与单选排他的基础品质分类键（有序）
+    const QUALITY_CATEGORY_KEYS = [
+        'q-hall-of-fame',
+        'q-hardcore',
+        'q-high-reputation',
+        'q-balanced-masterpiece',
+        'q-hidden-gem',
+        'q-routine',
+        'q-opinion-storm',
+        'q-heated-debate',
+        'q-danmaku-carnival'
+    ];
+    let lastQualityAnchorKey = null;
 
     function injectQualityFilterRow(container) {
         if (!container || !container.isConnected) return;
@@ -1094,7 +1110,7 @@
         if (!filterRow.dataset.rendered) {
             filterRow.dataset.rendered = 'true';
             filterRow.innerHTML = `
-                <div class="bili-cleaner-filter-label">🏷️ 视频品质:</div>
+                <div class="bili-cleaner-filter-label" title="点击单选，支持按住 Ctrl 多选、按住 Shift 范围连选">🏷️ 视频品质:</div>
                 <div class="bili-cleaner-filter-pills-box"></div>
             `;
             const box = filterRow.querySelector('.bili-cleaner-filter-pills-box');
@@ -1105,9 +1121,12 @@
                 if (opt.isExclude) btn.classList.add('pill-exclude');
                 btn.dataset.key = opt.key;
                 btn.textContent = opt.label;
+                if (!opt.isAll && !opt.isExclude) {
+                    btn.title = '点击单选 | 按住 Ctrl 点击多选 | 按住 Shift 点击范围连选';
+                }
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    toggleQualityFilter(opt.key);
+                    toggleQualityFilter(opt.key, e);
                 });
                 box.appendChild(btn);
             });
@@ -1116,22 +1135,57 @@
         updateQualityFilterButtons(filterRow);
     }
 
-    // 切换品质筛选状态（多选逻辑）
-    function toggleQualityFilter(key) {
+    // 切换品质筛选状态（类文件夹式交互：默认单选，Ctrl多选，Shift范围连选）
+    function toggleQualityFilter(key, event) {
+        const isCtrl = !!(event && (event.ctrlKey || event.metaKey));
+        const isShift = !!(event && event.shiftKey);
+
         if (key === 'all') {
-            activeQualityFilters.clear();
+            // 点击【全部】：重置所有品质分类（保留独立的排除避坑选项）
+            QUALITY_CATEGORY_KEYS.forEach(k => activeQualityFilters.delete(k));
+            lastQualityAnchorKey = null;
         } else if (key === 'exclude_warning') {
+            // 【🚫 排除避坑】：独立修饰项开关，不影响分类单选/多选状态
             if (activeQualityFilters.has('exclude_warning')) {
                 activeQualityFilters.delete('exclude_warning');
             } else {
                 activeQualityFilters.add('exclude_warning');
             }
-        } else {
-            // 普通品质分类多选切换
-            if (activeQualityFilters.has(key)) {
-                activeQualityFilters.delete(key);
+        } else if (QUALITY_CATEGORY_KEYS.includes(key)) {
+            if (isShift) {
+                // 【Shift 范围连选】：选中从上一个锚点 (lastQualityAnchorKey) 到当前项闭区间内所有分类
+                let anchorKey = lastQualityAnchorKey;
+                if (!anchorKey || !QUALITY_CATEGORY_KEYS.includes(anchorKey)) {
+                    // 若无前置锚点，取当前已选中的首项，若完全无选中则以第一项为锚点
+                    const firstSelected = QUALITY_CATEGORY_KEYS.find(k => activeQualityFilters.has(k));
+                    anchorKey = firstSelected || QUALITY_CATEGORY_KEYS[0];
+                }
+                const startIdx = QUALITY_CATEGORY_KEYS.indexOf(anchorKey);
+                const targetIdx = QUALITY_CATEGORY_KEYS.indexOf(key);
+                const minIdx = Math.min(startIdx, targetIdx);
+                const maxIdx = Math.max(startIdx, targetIdx);
+
+                if (!isCtrl) {
+                    // 非 Ctrl+Shift 时，范围连选替换现有品质分类选择
+                    QUALITY_CATEGORY_KEYS.forEach(k => activeQualityFilters.delete(k));
+                }
+                for (let i = minIdx; i <= maxIdx; i++) {
+                    activeQualityFilters.add(QUALITY_CATEGORY_KEYS[i]);
+                }
+                if (!lastQualityAnchorKey) lastQualityAnchorKey = anchorKey;
+            } else if (isCtrl) {
+                // 【Ctrl 独立多选】：反转当前项选中状态
+                if (activeQualityFilters.has(key)) {
+                    activeQualityFilters.delete(key);
+                } else {
+                    activeQualityFilters.add(key);
+                }
+                lastQualityAnchorKey = key;
             } else {
+                // 【默认单选效果】：清空其余品质项，仅选中当前项
+                QUALITY_CATEGORY_KEYS.forEach(k => activeQualityFilters.delete(k));
                 activeQualityFilters.add(key);
+                lastQualityAnchorKey = key;
             }
         }
 
@@ -1915,7 +1969,7 @@
             // 【弹幕即时高能】：弹幕极度密集（满屏互动、乐子欢呼或现场吵架名场面）
             return {
                 className: 'q-danmaku-carnival',
-                tag: '🔥 弹幕狂欢',
+                tag: '🔥 弹幕刷屏',
                 desc: '弹幕密集刷屏，高能互动、乐子或热议焦点'
             };
         } else {
