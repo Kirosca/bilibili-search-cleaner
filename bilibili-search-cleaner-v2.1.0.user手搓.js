@@ -266,9 +266,11 @@
         }
 
         /* 0.1 长列表离屏渲染优化：跳过视口外离屏卡片的绘制与重排，节约内存与 CPU */
+        /* padding-bottom: 1px 为 contain:paint 提供次像素安全缓冲区，防止 110%/120% 缩放下底部边框被裁剪 */
         .video-list-item, div[class*="col_"] {
             content-visibility: auto;
             contain-intrinsic-size: auto 300px;
+            padding-bottom: 1px !important;
         }
 
         /* 1. 未匹配卡片常态暗化：深度半透明 + 灰度去色 + 占位保留 */
