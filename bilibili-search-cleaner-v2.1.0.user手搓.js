@@ -336,6 +336,8 @@
             display: none !important;
         }
         .bili-cleaner-badge-pill {
+            position: relative !important;
+            overflow: hidden !important;
             display: inline-flex !important;
             align-items: center !important;
             gap: 4px !important;
@@ -354,9 +356,46 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28) !important;
             transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease !important;
         }
+
+        /* 扫光流光层（Shimmer / Light Sweep）：倾斜高亮羽化光刃 */
+        .bili-cleaner-badge-pill::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            bottom: -50%;
+            left: 0;
+            width: 100%;
+            height: 200%;
+            background: linear-gradient(
+                90deg,
+                rgba(255, 255, 255, 0) 0%,
+                rgba(255, 255, 255, 0.2) 25%,
+                rgba(255, 255, 255, 0.9) 50%,
+                rgba(255, 255, 255, 0.2) 75%,
+                rgba(255, 255, 255, 0) 100%
+            );
+            transform: translateX(-150%) rotate(25deg);
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        @keyframes badge-shimmer-sweep {
+            0% {
+                transform: translateX(-150%) rotate(25deg);
+            }
+            100% {
+                transform: translateX(180%) rotate(25deg);
+            }
+        }
+
+        /* 悬停状态：仅鼠标直接悬停在品质标签本身时触发，尺寸保持原状不放大 */
         .bili-cleaner-badge-pill:hover {
-            transform: scale(1.08) !important;
+            transform: none !important;
             z-index: 2 !important;
+        }
+
+        .bili-cleaner-badge-pill:hover::after {
+            animation: badge-shimmer-sweep 1.85s cubic-bezier(0.25, 1, 0.5, 1) forwards;
         }
         .bili-cleaner-badge-tag {
             font-weight: 700 !important;
