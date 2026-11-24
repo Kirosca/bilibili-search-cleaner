@@ -98,7 +98,7 @@
 
         // 二级级联子菜单：仅在品质标签开启时展示显示范围切换
         if (isEvaluationBadge) {
-            const evalModeLabel = `  └─ 标签范围: ${isEvalFullMode ? '📑 全部展示' : '✨ 仅精选'}`;
+            const evalModeLabel = `  └─ 标签可见范围: ${isEvalFullMode ? '📑 全部展示' : '✨ 仅精选'}`;
             evalModeMenuId = GM_registerMenuCommand(evalModeLabel, toggleEvalMode);
         }
     }
