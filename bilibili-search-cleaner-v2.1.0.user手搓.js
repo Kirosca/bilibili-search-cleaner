@@ -96,7 +96,7 @@
 
         // 二级级联子菜单：仅在品质标签开启时展示显示范围切换
         if (isEvaluationBadge) {
-            const evalModeLabel = `  └─ 标签范围: ${isEvalFullMode ? '📑 全部完整显示' : '✨ 仅精选高光'}`;
+            const evalModeLabel = `  └─ 标签范围: ${isEvalFullMode ? '📑 全部展示' : '✨ 仅精选'}`;
             evalModeMenuId = GM_registerMenuCommand(evalModeLabel, toggleEvalMode);
         }
     }
@@ -129,7 +129,7 @@
         }
     }
 
-    // 切换评价体系显示范围（仅精选高光 vs 全部完整显示）
+    // 切换评价体系显示范围（仅精选 vs 全部展示）
     function toggleEvalMode() {
         isEvalFullMode = !isEvalFullMode;
         localStorage.setItem('bili_cleaner_eval_full_mode', String(isEvalFullMode));
