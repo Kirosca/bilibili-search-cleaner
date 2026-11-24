@@ -467,9 +467,9 @@
             user-select: none;
             -webkit-user-select: none;
             border: 1px solid rgba(148, 153, 160, 0.35);
-            background: rgba(255, 255, 255, 0.8);
-            color: #61666d;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            background: var(--bg1_float);
+            color: var(--v_text2);
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             line-height: 1.5;
         }
         .bili-cleaner-filter-pill-btn:hover {
@@ -550,10 +550,10 @@
             position: fixed;
             left: 24px;
             bottom: 24px;
-            background: rgba(255, 255, 255, 0.96);
+            background: var(--bg1_float);
             border: 1px solid rgba(0, 174, 236, 0.35);
             box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
-            color: #18191c;
+            color: var(--v_text1);
             padding: 7px 14px;
             border-radius: 20px;
             font-size: 13px;
