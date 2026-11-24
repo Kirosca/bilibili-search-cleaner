@@ -38,7 +38,7 @@
     let activeQualityFilters = new Set();
     try {
         const savedFilters = JSON.parse(localStorage.getItem('bili_cleaner_active_quality_filters') || '[]');
-        if (Array.isArray(savedFilters)) {
+        if (Array.isArray(savedFilters) && isEvaluationBadge) {
             savedFilters.forEach(k => {
                 if (k && k !== 'exclude_warning') activeQualityFilters.add(k);
             });
@@ -152,12 +152,30 @@
         applyEvaluationBadgeState();
 
         if (isEvaluationBadge) {
-            document.querySelectorAll('[data-purified-query]').forEach(card => {
+            bindStickyObserver();
+            document.querySelectorAll('.bili-video-card, .video-list-item, div[class*="col_"], .bili-live-card').forEach(el => {
+                const card = el.closest('[class*="col_"], .video-list-item, .bili-live-card') || el;
                 delete card.dataset.purifiedQuery;
             });
             filterDOMElements();
         } else {
+            // 关闭品质标签体系：清空分类筛选状态与持久化记忆、清除锚点
+            activeQualityFilters.clear();
+            try {
+                localStorage.removeItem('bili_cleaner_active_quality_filters');
+            } catch (e) {}
+            lastQualityAnchorKey = null;
+
+            // 彻底移除页面中已渲染的品质筛选行和评价勋章列
+            document.querySelectorAll('.bili-cleaner-quality-filter-row').forEach(el => el.remove());
             document.querySelectorAll('.bili-cleaner-badge-col').forEach(el => el.remove());
+
+            // 清空卡片安检标记并重新安检，恢复因品质筛选而被隐藏的所有卡片
+            document.querySelectorAll('.bili-video-card, .video-list-item, div[class*="col_"], .bili-live-card').forEach(el => {
+                const card = el.closest('[class*="col_"], .video-list-item, .bili-live-card') || el;
+                delete card.dataset.purifiedQuery;
+            });
+            filterDOMElements();
         }
     }
 
@@ -957,9 +975,9 @@
                     card.dataset.purifiedQuery = currentQueryKey;
                 }
 
-                // 第五道安检关卡：品质药丸多选筛选过滤
+                // 第五道安检关卡：品质药丸多选筛选过滤（仅在开启【视频品质标签】时生效）
                 let isQualityFail = false;
-                if (activeQualityFilters.size > 0) {
+                if (isEvaluationBadge && activeQualityFilters.size > 0) {
                     const qClass = quadrant?.className;
                     // 正向多选品质白名单检查：只有命中目标品质的卡片才能保留；无品质评级或非目标品质严格淘汰隐藏
                     if (!qClass || !activeQualityFilters.has(qClass)) {
