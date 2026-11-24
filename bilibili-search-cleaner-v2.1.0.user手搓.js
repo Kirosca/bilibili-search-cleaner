@@ -42,6 +42,7 @@
             savedFilters.forEach(k => activeQualityFilters.add(k));
         }
     } catch (e) {}
+    let toggleAllMenuId = null;
     let filterStickyMenuId = null;
     let dimmedMenuId = null;
     let waterfallMenuId = null;
@@ -54,6 +55,9 @@
 
         // 注销上一轮菜单，防止重复追加
         if (typeof GM_unregisterMenuCommand === 'function') {
+            if (toggleAllMenuId !== null) {
+                try { GM_unregisterMenuCommand(toggleAllMenuId); } catch (e) {}
+            }
             if (filterStickyMenuId !== null) {
                 try { GM_unregisterMenuCommand(filterStickyMenuId); } catch (e) {}
             }
@@ -72,6 +76,12 @@
             }
         }
 
+        const isAllEnabled = isFilterSticky && isDimmed && isWaterfall && isEvaluationBadge;
+        const isAllDisabled = !isFilterSticky && !isDimmed && !isWaterfall && !isEvaluationBadge;
+        const toggleAllStatus = isAllEnabled ? '✅ 已开启' : (isAllDisabled ? '❌ 已关闭' : '🌓 部分开启');
+        const toggleAllLabel = `⚡ 一键全开/全关: ${toggleAllStatus}`;
+        toggleAllMenuId = GM_registerMenuCommand(toggleAllLabel, toggleAllFeatures);
+
         const filterStickyLabel = `⚓ 搜索筛选常驻: ${isFilterSticky ? '✅ 已开启' : '❌ 已关闭'}`;
         filterStickyMenuId = GM_registerMenuCommand(filterStickyLabel, toggleFilterSticky);
 
@@ -88,6 +98,34 @@
         if (isEvaluationBadge) {
             const evalModeLabel = `  └─ 标签范围: ${isEvalFullMode ? '📑 全部完整显示' : '✨ 仅精选高光'}`;
             evalModeMenuId = GM_registerMenuCommand(evalModeLabel, toggleEvalMode);
+        }
+    }
+
+    // 一键全开 / 全关所有功能（严格按顺序依次调用现有菜单方法，最后开关【无缝瀑布流】）
+    function toggleAllFeatures() {
+        const isAllEnabled = isFilterSticky && isDimmed && isWaterfall && isEvaluationBadge;
+        const targetState = !isAllEnabled;
+
+        // 1. 搜索筛选常驻
+        if (isFilterSticky !== targetState) {
+            toggleFilterSticky();
+        }
+
+        // 2. 虚化显示模糊内容
+        if (isDimmed !== targetState) {
+            toggleDimmed();
+        }
+
+        // 3. 视频品质标签
+        if (isEvaluationBadge !== targetState) {
+            toggleEvaluationBadge();
+        }
+
+        // 4. 最后开关【无缝瀑布流】（以安全处理可能的页面重载或路由复位）
+        if (isWaterfall !== targetState) {
+            toggleWaterfall();
+        } else {
+            registerMenu();
         }
     }
 
