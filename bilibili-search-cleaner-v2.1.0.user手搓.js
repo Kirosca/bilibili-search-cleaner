@@ -357,56 +357,8 @@
             transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease !important;
         }
 
-        /* 1. 卡片/封面级联悬停层（::before）：移入卡片时流光滑至左上角定格常亮不动 */
-        .bili-cleaner-badge-pill::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            bottom: -50%;
-            left: 0;
-            width: 100%;
-            height: 200%;
-            background: linear-gradient(
-                90deg,
-                rgba(255, 255, 255, 0) 0%,
-                rgba(255, 255, 255, 0.18) 35%,
-                rgba(255, 255, 255, 0.85) 55%,
-                rgba(255, 255, 255, 0.25) 70%,
-                rgba(255, 255, 255, 0) 100%
-            );
-            transform: translateX(-150%) rotate(25deg);
-            opacity: 0;
-            pointer-events: none;
-            z-index: 4;
-            transition: opacity 0.3s ease;
-        }
-
-        @keyframes badge-corner-arrive {
-            0% {
-                transform: translateX(-150%) rotate(25deg);
-                opacity: 0;
-            }
-            20% {
-                opacity: 1;
-            }
-            100% {
-                transform: translateX(-55%) rotate(25deg);
-                opacity: 1;
-            }
-        }
-
-        /* 鼠标悬停在卡片或封面时，流光滑入左上角并定格不动 */
-        .bili-video-card:hover .bili-cleaner-badge-pill::before,
-        .video-list-item:hover .bili-cleaner-badge-pill::before {
-            animation: badge-corner-arrive 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-        }
-
-        /* 当鼠标直接移入胶囊本身时，淡出定格层，让位于完整的全胶囊扫光（保留动画状态，避免移出时重置重播） */
-        .bili-cleaner-badge-pill:hover::before {
-            opacity: 0 !important;
-        }
-
-        /* 2. 标签专属流光层（::after）：直接移入标签胶囊时执行完整全局扫光 */
+        /* ================= 统一高光流光层（Shimmer Sweep） ================= */
+        /* 单一图层统一管理：移入卡片流光进入25%定格，移入徽标完成全胶囊扫光并回位25%定格 */
         .bili-cleaner-badge-pill::after {
             content: '';
             position: absolute;
@@ -424,17 +376,57 @@
                 rgba(255, 255, 255, 0) 100%
             );
             transform: translateX(-150%) rotate(25deg);
+            opacity: 0;
             pointer-events: none;
             z-index: 5;
+            transition: opacity 0.3s ease;
         }
 
-        @keyframes badge-shimmer-sweep {
+        /* 阶段一关键帧：从场外滑入到 25% 左侧定格点（与阶段二保持严格匀速） */
+        @keyframes badge-shimmer-arrive-quarter {
             0% {
                 transform: translateX(-150%) rotate(25deg);
+                opacity: 0;
+            }
+            25% {
+                opacity: 1;
             }
             100% {
-                transform: translateX(180%) rotate(25deg);
+                transform: translateX(-55%) rotate(25deg);
+                opacity: 1;
             }
+        }
+
+        /* 阶段二关键帧：从 25% 定格点起步，以完全一致的线速度扫完整胶囊后回环再停在 25% 定格点 */
+        @keyframes badge-shimmer-complete-and-settle {
+            0% {
+                transform: translateX(-55%) rotate(25deg);
+                opacity: 1;
+                animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+            }
+            70% {
+                transform: translateX(180%) rotate(25deg);
+                opacity: 1;
+                animation-timing-function: step-start;
+            }
+            71% {
+                transform: translateX(-150%) rotate(25deg);
+                opacity: 0;
+                animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+            }
+            80% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateX(-55%) rotate(25deg);
+                opacity: 1;
+            }
+        }
+
+        /* 1. 鼠标悬停在视频卡片/封面时：流光滑入至 25% 停住（速度对齐为 178%/s） */
+        .bili-video-card:hover .bili-cleaner-badge-pill::after,
+        .video-list-item:hover .bili-cleaner-badge-pill::after {
+            animation: badge-shimmer-arrive-quarter 0.55s cubic-bezier(0.25, 1, 0.5, 1) forwards;
         }
 
         /* 悬停状态：仅鼠标直接悬停在品质标签本身时触发，尺寸保持原状不放大 */
@@ -443,8 +435,11 @@
             z-index: 2 !important;
         }
 
-        .bili-cleaner-badge-pill:hover::after {
-            animation: badge-shimmer-sweep 1.85s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        /* 2. 鼠标悬停在品质胶囊本身时：从 25% 起步扫完全部效果，然后再次在 25% 停住（速度对齐为 178%/s） */
+        .bili-cleaner-badge-pill:hover::after,
+        .bili-video-card .bili-cleaner-badge-pill:hover::after,
+        .video-list-item .bili-cleaner-badge-pill:hover::after {
+            animation: badge-shimmer-complete-and-settle 1.85s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
         }
         .bili-cleaner-badge-tag {
             font-weight: 700 !important;
