@@ -357,7 +357,56 @@
             transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease !important;
         }
 
-        /* 扫光流光层（Shimmer / Light Sweep）：倾斜高亮羽化光刃 */
+        /* 1. 卡片/封面级联悬停层（::before）：移入卡片时流光滑至左上角定格常亮不动 */
+        .bili-cleaner-badge-pill::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            bottom: -50%;
+            left: 0;
+            width: 100%;
+            height: 200%;
+            background: linear-gradient(
+                90deg,
+                rgba(255, 255, 255, 0) 0%,
+                rgba(255, 255, 255, 0.18) 35%,
+                rgba(255, 255, 255, 0.85) 55%,
+                rgba(255, 255, 255, 0.25) 70%,
+                rgba(255, 255, 255, 0) 100%
+            );
+            transform: translateX(-150%) rotate(25deg);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 4;
+            transition: opacity 0.3s ease;
+        }
+
+        @keyframes badge-corner-arrive {
+            0% {
+                transform: translateX(-150%) rotate(25deg);
+                opacity: 0;
+            }
+            20% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateX(-55%) rotate(25deg);
+                opacity: 1;
+            }
+        }
+
+        /* 鼠标悬停在卡片或封面时，流光滑入左上角并定格不动 */
+        .bili-video-card:hover .bili-cleaner-badge-pill::before,
+        .video-list-item:hover .bili-cleaner-badge-pill::before {
+            animation: badge-corner-arrive 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+
+        /* 当鼠标直接移入胶囊本身时，淡出定格层，让位于完整的全胶囊扫光（保留动画状态，避免移出时重置重播） */
+        .bili-cleaner-badge-pill:hover::before {
+            opacity: 0 !important;
+        }
+
+        /* 2. 标签专属流光层（::after）：直接移入标签胶囊时执行完整全局扫光 */
         .bili-cleaner-badge-pill::after {
             content: '';
             position: absolute;
@@ -878,13 +927,15 @@
                     }
                 }
  
-                // 数据就绪后唤醒重新安检：清除时序过早判定的缓存并重新执行过滤
-                setTimeout(() => {
-                    document.querySelectorAll('[data-purified-query]').forEach(card => {
-                        delete card.dataset.purifiedQuery;
-                    });
-                    filterDOMElements();
-                }, 50);
+                // 数据就绪后唤醒重新安检：仅在首屏搜索响应返回时清除早期未就绪缓存；瀑布流增量翻页时无需重置已有卡片
+                if (!isPaging) {
+                    setTimeout(() => {
+                        document.querySelectorAll('[data-purified-query]').forEach(card => {
+                            delete card.dataset.purifiedQuery;
+                        });
+                        filterDOMElements();
+                    }, 50);
+                }
 
                 // 官方搜索响应握手：当检测到 B 站发起官方搜索（非瀑布流内部翻页请求）并返回数据时，
                 // 延时等待 Vue 将新搜索首屏结果与新分页器渲染挂载到 DOM 树，再唤醒瀑布流状态同步
@@ -3010,9 +3061,6 @@
             badgeCol = document.createElement('div');
             badgeCol.className = 'bili-cleaner-badge-col';
             coverEl.appendChild(badgeCol);
-        } else if (coverEl.lastElementChild !== badgeCol) {
-            // 确保始终处于封面类的最后一个子元素
-            coverEl.appendChild(badgeCol);
         }
 
         // 构造悬停提示文本 (Tooltip)
@@ -3042,6 +3090,13 @@
         }
 
         const tip = tipLines.join('\n');
+
+        // 幂等性守卫：若勋章已存在且评级未变，仅更新 title 提示，严禁销毁重建 DOM 节点（避免重置正在播放的 CSS 动画）
+        const pill = badgeCol.querySelector('.bili-cleaner-badge-pill');
+        if (pill && pill.classList.contains(quadrant.className)) {
+            if (pill.title !== tip) pill.title = tip;
+            return;
+        }
 
         badgeCol.innerHTML = `
             <div class="bili-cleaner-badge-pill ${quadrant.className}" title="${tip}">
