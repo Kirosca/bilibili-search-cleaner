@@ -1,0 +1,302 @@
+div[class*="col_"]:has(.bili-video-card__info--ad, svg.bili-video-card__info--ad-creative, a[href*="cm.bilibili.com"]),
+.video-list-item:has(.bili-video-card__info--ad, svg.bili-video-card__info--ad-creative, a[href*="cm.bilibili.com"]) {
+    display: none !important;
+}
+
+/* 0.1 长列表离屏渲染优化：跳过视口外离屏卡片的绘制与重排，节约内存与 CPU */
+/* padding-bottom: 1px 为 contain:paint 提供次像素安全缓冲区，防止 110%/120% 缩放下底部边框被裁剪 */
+.video-list-item, div[class*="col_"] {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 300px;
+    padding-bottom: 1px !important;
+}
+
+/* 1. 未匹配卡片常态暗化：深度半透明 + 灰度去色 + 占位保留 */
+.bili-cleaner-dimmed {
+    opacity: 0.16 !important;
+    filter: grayscale(85%) contrast(85%) !important;
+    transition: opacity 0.25s ease, filter 0.25s ease, transform 0.25s ease !important;
+}
+
+/* 1.1 视频卡片封面评价勋章（左上角常驻胶囊标签，直接常驻展示） */
+.bili-cleaner-badge-col {
+    position: absolute !important;
+    top: 6px !important;
+    left: 6px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    z-index: 10 !important;
+    pointer-events: auto !important;
+    max-width: calc(100% - 12px) !important;
+}
+
+/* 评价体系菜单未开启时彻底物理隐藏 */
+html:not(.bili-eval-badge-enabled) .bili-cleaner-badge-col {
+    display: none !important;
+}
+.bili-cleaner-badge-pill {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    padding: 2.5px 7px !important;
+    border-radius: 10px !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    line-height: 1.2 !important;
+    user-select: none !important;
+    box-sizing: border-box !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    cursor: pointer !important;
+    max-width: 100% !important;
+    white-space: nowrap !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28) !important;
+}
+
+.bili-cleaner-badge-tag {
+    font-weight: 700 !important;
+    flex-shrink: 0 !important;
+    letter-spacing: 0.2px !important;
+}
+
+/* --- 纯品质金字塔胶囊配色体系 --- */
+/* 1. 🏆 殿堂神作：耀目流金 */
+.bili-cleaner-badge-pill.q-hall-of-fame {
+    background: linear-gradient(135deg, rgba(255, 170, 0, 0.95), rgba(255, 102, 0, 0.95)) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 235, 180, 0.7) !important;
+    box-shadow: 0 0 10px rgba(255, 170, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+/* 1.5. ⚡ 爆款短片：电光青碧渐变（高能快节奏短片，互动爆棚） */
+.bili-cleaner-badge-pill.q-viral-short {
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.95), rgba(16, 185, 129, 0.95)) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(165, 243, 252, 0.7) !important;
+    box-shadow: 0 0 10px rgba(6, 182, 212, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+/* 2. 💡 硬核干货：琥珀密金 */
+.bili-cleaner-badge-pill.q-hardcore {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.92), rgba(217, 119, 6, 0.92)) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 215, 0, 0.5) !important;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4) !important;
+}
+/* 3. ⭐ 高口碑佳作：清亮透蓝 */
+.bili-cleaner-badge-pill.q-high-reputation {
+    background: linear-gradient(135deg, rgba(0, 174, 236, 0.92), rgba(0, 120, 215, 0.92)) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(180, 230, 255, 0.5) !important;
+    box-shadow: 0 2px 8px rgba(0, 174, 236, 0.4) !important;
+}
+/* 4. 💎 冷门宝藏：神秘晶紫 */
+.bili-cleaner-badge-pill.q-hidden-gem {
+    background: linear-gradient(135deg, rgba(147, 51, 234, 0.92), rgba(99, 102, 241, 0.92)) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(220, 180, 255, 0.5) !important;
+    box-shadow: 0 2px 8px rgba(147, 51, 234, 0.4) !important;
+}
+/* 4.5 🏅 综合标杆：铂金玄霜银渐变（六边形战士，赞藏互动态度全面均衡无短板） */
+.bili-cleaner-badge-pill.q-balanced-masterpiece {
+    background: linear-gradient(135deg, rgba(71, 85, 105, 0.95), rgba(30, 41, 59, 0.98)) !important;
+    color: #f8fafc !important;
+    border: 1px solid rgba(226, 232, 240, 0.75) !important;
+    box-shadow: 0 0 10px rgba(148, 163, 184, 0.35), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+/* 5. 💥 话题焦点：霓虹紫粉渐变（弹幕密集与评论热烈齐飞，全网热议/深度探讨） */
+.bili-cleaner-badge-pill.q-opinion-storm {
+    background: linear-gradient(135deg, rgba(236, 72, 153, 0.95), rgba(168, 85, 247, 0.95)) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(251, 207, 232, 0.7) !important;
+    box-shadow: 0 0 10px rgba(236, 72, 153, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+/* 6. 💬 激辩热议：深海电光靛蓝渐变（理性论辩/深度观点交锋，与冷门宝藏的晶紫彻底区分） */
+.bili-cleaner-badge-pill.q-heated-debate {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.95), rgba(79, 70, 229, 0.95)) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(191, 219, 254, 0.7) !important;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.45) !important;
+}
+/* 7. 🔥 弹幕密集：烈焰霓橙（高互动/名场面/弹幕密集） */
+.bili-cleaner-badge-pill.q-danmaku-carnival {
+    background: linear-gradient(135deg, rgba(255, 68, 102, 0.92), rgba(255, 120, 40, 0.92)) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 200, 210, 0.5) !important;
+    box-shadow: 0 2px 8px rgba(255, 68, 102, 0.4) !important;
+}
+/* 8. ⚠️ 谨慎观看（低质避坑预警）：警示赤红 */
+.bili-cleaner-badge-pill.q-warning {
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.92), rgba(153, 27, 27, 0.92)) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(254, 202, 202, 0.5) !important;
+    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4) !important;
+}
+/* 6. 🍀 稳健良作：深林墨玉绿渐变（典雅沉稳，有分量感） */
+.bili-cleaner-badge-pill.q-routine {
+    background: linear-gradient(135deg, rgba(16, 110, 75, 0.88), rgba(10, 70, 50, 0.92)) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(74, 222, 128, 0.35) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+}
+/* 7. 🌱 样本较少（冷门置信度保护）：低调雾霾蓝灰 */
+.bili-cleaner-badge-pill.q-low-sample {
+    background: rgba(30, 41, 59, 0.82) !important;
+    color: rgba(148, 163, 184, 0.95) !important;
+    border: 1px solid rgba(148, 163, 184, 0.25) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* 3. 暗化卡片悬停临时查验 */
+.bili-cleaner-dimmed:hover {
+    opacity: 0.95 !important;
+    filter: none !important;
+    transform: translateY(-2px);
+    z-index: 10;
+}
+
+/* 4. 搜索筛选功能常驻相关样式 */
+html.bili-filter-sticky-enabled :has(> div.search-channel-item.mt_sm.ml_sm),
+html.bili-filter-sticky-enabled button.vui_button.vui_button--active-shrink.i_button_more {
+    display: none !important;
+}
+
+/* 4.5. 搜索结果顶部品质药丸多选筛选栏 (嵌入 .more-conditions) */
+.bili-cleaner-quality-filter-row {
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding: 7px 0;
+    margin-top: 5px;
+    border-top: 1px dashed rgba(148, 153, 160, 0.25);
+    font-size: 13px;
+    user-select: none;
+    gap: 6px 8px;
+}
+.bili-cleaner-filter-label {
+    color: #61666d;
+    font-weight: 500;
+    line-height: 26px;
+    margin-right: 6px;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.bili-cleaner-filter-pills-box {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 8px;
+    flex: 1;
+}
+.bili-cleaner-filter-pill-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 14px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    border: 1px solid rgba(148, 153, 160, 0.35);
+    background: var(--bg1_float);
+    color: var(--v_text2);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    line-height: 1.5;
+}
+.bili-cleaner-filter-pill-btn:hover {
+    border-color: #00aeec;
+    color: #00aeec;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 174, 236, 0.15);
+}
+.bili-cleaner-filter-pill-btn.active {
+    background: #00aeec;
+    border-color: #00aeec;
+    color: #ffffff !important;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0, 174, 236, 0.35);
+}
+
+/* 5. 瀑布流相关样式 */
+html.bili-waterfall-enabled .vui_pagenation,
+html.bili-waterfall-enabled .vui_pagenation--btns {
+    visibility: hidden !important;
+    position: absolute !important;
+    pointer-events: none !important;
+    opacity: 0 !important;
+}
+.bili-waterfall-loader {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 100% !important;
+    box-sizing: border-box;
+    margin: 24px auto !important;
+    color: #00aeec;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 0 !important;
+    position: static !important;
+}
+.bili-waterfall-loader.active {
+    display: flex !important;
+}
+.bili-waterfall-loader.ended {
+    color: #9499a0;
+    font-size: 12px;
+    font-weight: normal;
+    padding: 0 !important;
+    user-select: none;
+}
+.bili-waterfall-loader.ended .bili-waterfall-spinner {
+    display: none !important;
+}
+.bili-waterfall-spinner {
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(0, 174, 236, 0.2);
+    border-top-color: #00aeec;
+    border-radius: 50%;
+    animation: bili-wf-spin 0.8s linear infinite;
+    margin-right: 8px;
+}
+@keyframes bili-wf-spin {
+    to { transform: rotate(360deg); }
+}
+#bili-waterfall-badge {
+    position: fixed;
+    left: 24px;
+    bottom: 24px;
+    background: var(--bg1_float);
+    border: 1px solid rgba(0, 174, 236, 0.35);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+    color: var(--v_text1);
+    padding: 7px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    z-index: 99999;
+    backdrop-filter: blur(8px);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+#bili-waterfall-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 174, 236, 0.25);
+    border-color: #00aeec;
+}
+#bili-waterfall-badge.paused {
+    background: rgba(245, 246, 247, 0.96);
+    border-color: rgba(148, 153, 160, 0.35);
+    color: #61666d;
+}
+#bili-waterfall-badge.paused svg {
+    filter: grayscale(0.6) opacity(0.7);
+}
