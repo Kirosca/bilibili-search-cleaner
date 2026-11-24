@@ -39,7 +39,9 @@
     try {
         const savedFilters = JSON.parse(localStorage.getItem('bili_cleaner_active_quality_filters') || '[]');
         if (Array.isArray(savedFilters)) {
-            savedFilters.forEach(k => activeQualityFilters.add(k));
+            savedFilters.forEach(k => {
+                if (k && k !== 'exclude_warning') activeQualityFilters.add(k);
+            });
         }
     } catch (e) {}
     let toggleAllMenuId = null;
@@ -519,20 +521,6 @@
             font-weight: 600;
             box-shadow: 0 2px 8px rgba(0, 174, 236, 0.35);
         }
-        .bili-cleaner-filter-pill-btn.pill-exclude {
-            border-color: rgba(239, 68, 68, 0.4);
-            color: #ef4444;
-        }
-        .bili-cleaner-filter-pill-btn.pill-exclude:hover {
-            border-color: #ef4444;
-            background: rgba(239, 68, 68, 0.08);
-        }
-        .bili-cleaner-filter-pill-btn.pill-exclude.active {
-            background: #ef4444 !important;
-            border-color: #ef4444 !important;
-            color: #ffffff !important;
-            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.35);
-        }
 
         /* 5. 瀑布流相关样式 */
         html.bili-waterfall-enabled .vui_pagenation,
@@ -973,23 +961,9 @@
                 let isQualityFail = false;
                 if (activeQualityFilters.size > 0) {
                     const qClass = quadrant?.className;
-                    
-                    // 1. 独立防踩雷规则：若开启【🚫 排除避坑】，遇到 q-warning 直接淘汰
-                    if (activeQualityFilters.has('exclude_warning') && qClass === 'q-warning') {
+                    // 正向多选品质白名单检查：只有命中目标品质的卡片才能保留；无品质评级或非目标品质严格淘汰隐藏
+                    if (!qClass || !activeQualityFilters.has(qClass)) {
                         isQualityFail = true;
-                    }
-
-                    // 2. 正向多选品质分类过滤：排除掉 'exclude_warning' 后的选用品质集合
-                    const selectedQualityCategories = new Set(
-                        Array.from(activeQualityFilters).filter(k => k !== 'exclude_warning')
-                    );
-
-                    // 若用户勾选了具体的品质标签（非全量），实施严格正向白名单检查
-                    // 只有命中目标品质的卡片才能保留；无品质评级（如课堂/课程、直播卡片或非目标品质）严格淘汰隐藏
-                    if (!isQualityFail && selectedQualityCategories.size > 0) {
-                        if (!qClass || !selectedQualityCategories.has(qClass)) {
-                            isQualityFail = true;
-                        }
                     }
                 }
 
@@ -999,7 +973,7 @@
                 card.classList.remove('bili-cleaner-dimmed');
 
                 // 核心渲染与可见性决策：
-                // 1. 若品质筛选不匹配（或属于排除避坑），彻底物理隐藏（只留下筛选的内容）
+                // 1. 若品质筛选不匹配，彻底物理隐藏（只留下筛选的内容）
                 if (isQualityFail) {
                     innerCard.classList.remove('bili-cleaner-dimmed');
                     card.style.setProperty('display', 'none', 'important');
@@ -2584,12 +2558,6 @@
             key: 'q-viral-short',
             label: '⚡ 爆款短片',
             criteria: '时长 < 90秒，且 (播放 ≥ 2万 且 赞 ≥ 1500，赞播比 ≥ 6% 或 藏播比 ≥ 3%) 或 (播放 ≥ 1万 且 赞播比 ≥ 8%)\n【特点】高能快节奏短片，完播互动极高，爆款短视频精选'
-        },
-        {
-            key: 'exclude_warning',
-            label: '🚫 排除避坑',
-            isExclude: true,
-            criteria: '拦截排除：播放 ≥ 2万 且 赞播比 < 1.2% 且 藏播比 < 0.5% (时长≤15分)\n【特点】独立防踩雷开关，全局剔除标题党与低质高播劣作'
         }
     ];
 
@@ -2635,15 +2603,12 @@
                 const btn = document.createElement('div');
                 btn.className = 'bili-cleaner-filter-pill-btn';
                 if (opt.isAll) btn.classList.add('pill-all');
-                if (opt.isExclude) btn.classList.add('pill-exclude');
                 btn.dataset.key = opt.key;
                 btn.textContent = opt.label;
                 if (opt.criteria) {
                     const actionTip = opt.isAll 
                         ? '点击重置为全部' 
-                        : (opt.isExclude 
-                            ? '点击切换独立防踩雷开关' 
-                            : '点击单选 | 按住 Ctrl 点击多选 | 按住 Shift 点击范围连选');
+                        : '点击单选 | 按住 Ctrl 点击多选 | 按住 Shift 点击范围连选';
                     btn.title = `【${opt.label}】筛选标准：\n${opt.criteria}\n────────────────────\n💡 ${actionTip}`;
                 }
                 btn.addEventListener('click', (e) => {
@@ -2663,16 +2628,9 @@
         const isShift = !!(event && event.shiftKey);
 
         if (key === 'all') {
-            // 点击【全部】：重置所有品质分类（保留独立的排除避坑选项）
-            QUALITY_CATEGORY_KEYS.forEach(k => activeQualityFilters.delete(k));
+            // 点击【全部】：重置所有品质分类筛选
+            activeQualityFilters.clear();
             lastQualityAnchorKey = null;
-        } else if (key === 'exclude_warning') {
-            // 【🚫 排除避坑】：独立修饰项开关，不影响分类单选/多选状态
-            if (activeQualityFilters.has('exclude_warning')) {
-                activeQualityFilters.delete('exclude_warning');
-            } else {
-                activeQualityFilters.add('exclude_warning');
-            }
         } else if (QUALITY_CATEGORY_KEYS.includes(key)) {
             if (isShift) {
                 // 【Shift 范围连选】：选中从上一个锚点 (lastQualityAnchorKey) 到当前项闭区间内所有分类
@@ -2735,14 +2693,12 @@
     function updateQualityFilterButtons(filterRow) {
         if (!filterRow) return;
         const btns = filterRow.querySelectorAll('.bili-cleaner-filter-pill-btn');
-        const isAllSelected = activeQualityFilters.size === 0 || (activeQualityFilters.size === 1 && activeQualityFilters.has('exclude_warning'));
+        const isAllSelected = activeQualityFilters.size === 0;
 
         btns.forEach(btn => {
             const key = btn.dataset.key;
             if (key === 'all') {
                 btn.classList.toggle('active', isAllSelected);
-            } else if (key === 'exclude_warning') {
-                btn.classList.toggle('active', activeQualityFilters.has('exclude_warning'));
             } else {
                 btn.classList.toggle('active', activeQualityFilters.has(key));
             }
