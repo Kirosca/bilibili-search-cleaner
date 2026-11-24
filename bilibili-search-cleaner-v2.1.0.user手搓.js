@@ -352,17 +352,6 @@
             max-width: 100% !important;
             white-space: nowrap !important;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28) !important;
-            transition: filter 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease !important;
-            will-change: filter, box-shadow !important;
-        }
-
-        /* 移入视频卡片/封面或直接悬停胶囊时触发提亮与光晕联动 */
-        .bili-video-card:hover .bili-cleaner-badge-pill,
-        .video-list-item:hover .bili-cleaner-badge-pill,
-        .bili-cleaner-badge-pill:hover {
-            filter: brightness(1.2) !important;
-            transform: none !important;
-            z-index: 2 !important;
         }
 
         .bili-cleaner-badge-tag {
