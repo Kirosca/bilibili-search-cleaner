@@ -6,7 +6,7 @@ export default defineConfig({
     monkey({
       entry: 'src/main.js',
       userscript: {
-        name: 'Bilibili 去掉搜索无关视频',
+        name: 'Bilibili 去掉搜索无关视频（vite）',
         namespace: 'http://tampermonkey.net/',
         version: '3.0.0',
         description:

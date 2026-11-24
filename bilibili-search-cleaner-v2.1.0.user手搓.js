@@ -1592,14 +1592,14 @@
     }
 
     // 渲染网络/接口异常提示，并提供一键重试交互
-    function showErrorLoader() {
+    function showErrorLoader(customMsg = '⚠️ 加载失败，点击重试') {
         const loader = getOrCreateLoader();
         if (!loader) return;
         loader.classList.add('active');
         loader.classList.remove('ended');
         const txtEl = loader.querySelector('.bili-waterfall-loader-text');
         if (txtEl) {
-            txtEl.innerHTML = `<span class="bili-waterfall-retry-btn" style="cursor: pointer; color: #ff6699; font-weight: 500;">⚠️ 加载失败，点击重试</span>`;
+            txtEl.innerHTML = `<span class="bili-waterfall-retry-btn" style="cursor: pointer; color: #ff6699; font-weight: 500;">${customMsg}</span>`;
         }
         const spinner = loader.querySelector('.bili-waterfall-spinner');
         if (spinner) {
@@ -1724,8 +1724,8 @@
 
         const visibleCards = Array.from(mainContainer.children).filter(c => c.style.display !== 'none' && !c.classList.contains('flex_center'));
         // 可视卡片少于 10 张时，触发一次下一页静默抓取
-        if (visibleCards.length < 10 && typeof loadNextPage === 'function') {
-            loadNextPage();
+        if (visibleCards.length < 10) {
+            triggerLoadNextPage();
         }
     }
 
@@ -2036,6 +2036,7 @@
 
         currentPagingPromise = (async () => {
             let success = false;
+            let riskMsg = null;
             try {
                 const keys = await getWbiKeys();
                 if (controller.signal.aborted || sessionSeq !== pagingSessionSeq) return;
@@ -2081,6 +2082,12 @@
                 const data = await res.json();
                 if (controller.signal.aborted || sessionSeq !== pagingSessionSeq) return;
 
+                // 识别风控熔断码（-412 / -403），避免误判为自然到底
+                if (data?.code === -412 || data?.code === -403) {
+                    riskMsg = `⚠️ 触发风控 (${data.code})，请稍候点击重试`;
+                    return;
+                }
+
                 let videoItems = [];
                 if (data?.data?.result) {
                     if (Array.isArray(data.data.result)) {
@@ -2120,7 +2127,7 @@
                 }
                 currentPagingPromise = null;
                 if (!controller.signal.aborted && sessionSeq === pagingSessionSeq) {
-                    finishPaging(success);
+                    finishPaging(success, riskMsg);
                 }
             }
         })();
@@ -2139,7 +2146,7 @@
     }
 
     // 结束单次分页拉取事务，重置加载状态并按需触发视口连续预加载或异常重试引导
-    function finishPaging(success = true) {
+    function finishPaging(success = true, riskMsg = null) {
         updateBadge();
 
         if (isAllLoaded) {
@@ -2148,7 +2155,7 @@
         }
 
         if (!success) {
-            showErrorLoader();
+            showErrorLoader(riskMsg || undefined);
             return;
         }
 
