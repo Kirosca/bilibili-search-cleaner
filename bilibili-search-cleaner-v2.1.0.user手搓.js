@@ -2800,8 +2800,8 @@
                 const stat = counts[key];
                 const countEl = btn.querySelector('.bili-cleaner-pill-count');
                 if (stat && countEl) {
-                    countEl.textContent = `(${stat.clear}/${stat.total})`;
-                    btn.classList.toggle('is-empty', key !== 'all' && stat.total === 0);
+                    countEl.textContent = isDimmed ? `(${stat.clear}/${stat.total})` : `(${stat.clear})`;
+                    btn.classList.toggle('is-empty', key !== 'all' && (isDimmed ? stat.total === 0 : stat.clear === 0));
                 }
             });
         });
