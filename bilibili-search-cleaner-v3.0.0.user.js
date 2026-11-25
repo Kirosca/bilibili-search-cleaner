@@ -2,7 +2,7 @@
 // @name         Bilibili 去掉搜索无关视频
 // @namespace    http://tampermonkey.net/
 // @version      3.0.0
-// @description  B站搜索神器：12 维视频品质标签筛选（神作/干货/宝藏/避坑）+ 聚光灯虚化 + -排除词/@UP/#Tag 语法过滤 + 无缝瀑布流与筛选常驻（支持简繁归一）。
+// @description  去掉搜索无关视频/12维视频品质分类/自动翻页：1.支持用【标题、-标题排除、#标签和@UP主】筛选视频 2.视频品质（神作/干货/宝藏/避坑等） 3.无缝瀑布流与筛选常驻（支持简繁）。
 // @author       Kirosca
 // @match        *://search.bilibili.com/*
 // @icon         https://www.bilibili.com/favicon.ico
