@@ -200,10 +200,6 @@
         applyDimmedState();
         registerMenu();
 
-        document.querySelectorAll('.bili-cleaner-dimmed-toggle-btn').forEach(btn => {
-            btn.classList.toggle('active', isDimmed);
-        });
-
         if (isEvaluationBadge && typeof updateQualityFilterCounts === 'function') {
             updateQualityFilterCounts();
         }
@@ -568,14 +564,6 @@
         }
         .bili-cleaner-filter-pill-btn.active .bili-cleaner-pill-count {
             opacity: 0.92;
-        }
-        .bili-cleaner-dimmed-toggle-btn {
-            margin-left: auto;
-            flex-shrink: 0;
-            border-style: dashed;
-        }
-        .bili-cleaner-dimmed-toggle-btn.active {
-            border-style: solid;
         }
 
         /* 5. 瀑布流相关样式 */
@@ -2671,15 +2659,7 @@
             filterRow.innerHTML = `
                 <div class="bili-cleaner-filter-label" title="点击单选，支持按住 Ctrl 多选、按住 Shift 范围连选">🏷️ 视频品质:</div>
                 <div class="bili-cleaner-filter-pills-box"></div>
-                <div class="bili-cleaner-filter-pill-btn bili-cleaner-dimmed-toggle-btn" title="开启后将不符合搜索词的视频半透明虚化展示（悬停可临时查验），关闭则直接物理隐藏">🌫️ 虚化模糊</div>
             `;
-            const dimmedBtn = filterRow.querySelector('.bili-cleaner-dimmed-toggle-btn');
-            if (dimmedBtn) {
-                dimmedBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    toggleDimmed();
-                });
-            }
             const box = filterRow.querySelector('.bili-cleaner-filter-pills-box');
             QUALITY_FILTER_OPTIONS.forEach(opt => {
                 const btn = document.createElement('div');
@@ -2779,10 +2759,6 @@
         const isAllSelected = activeQualityFilters.size === 0;
 
         btns.forEach(btn => {
-            if (btn.classList.contains('bili-cleaner-dimmed-toggle-btn')) {
-                btn.classList.toggle('active', isDimmed);
-                return;
-            }
             const key = btn.dataset.key;
             if (key === 'all') {
                 btn.classList.toggle('active', isAllSelected);
