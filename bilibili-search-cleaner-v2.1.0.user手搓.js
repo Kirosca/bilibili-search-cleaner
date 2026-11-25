@@ -371,10 +371,13 @@
         }
 
         /* 1. 未匹配卡片常态暗化（仅开启虚化时生效）：深度半透明 + 灰度去色 + 占位保留 */
+        html.bili-dimmed-enabled .bili-video-card,
+        html.bili-dimmed-enabled .bili-live-card {
+            transition: opacity 0.25s ease, filter 0.25s ease, transform 0.25s ease !important;
+        }
         html.bili-dimmed-enabled .bili-cleaner-dimmed {
             opacity: 0.16 !important;
             filter: grayscale(85%) contrast(85%) !important;
-            transition: opacity 0.25s ease, filter 0.25s ease, transform 0.25s ease !important;
         }
 
         /* 1.1 视频卡片封面评价勋章（左上角常驻胶囊标签，直接常驻展示） */
