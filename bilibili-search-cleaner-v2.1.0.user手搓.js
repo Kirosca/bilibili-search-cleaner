@@ -186,21 +186,30 @@
         }
     }
 
-    // 切换虚化显示模糊内容状态并持久化配置（控制未匹配卡片是半透明虚化还是彻底物理隐藏）
+    // 应用虚化显示模糊内容的 CSS 根类名
+    function applyDimmedState() {
+        if (document.documentElement) {
+            document.documentElement.classList.toggle('bili-dimmed-enabled', isDimmed);
+        }
+    }
+
+    // 切换虚化显示模糊内容状态并持久化配置（O(1) 根类名切换，1000+ 卡片零重算零卡顿）
     function toggleDimmed() {
         isDimmed = !isDimmed;
         localStorage.setItem('bili_cleaner_dimmed', String(isDimmed));
+        applyDimmedState();
         registerMenu();
 
         document.querySelectorAll('.bili-cleaner-dimmed-toggle-btn').forEach(btn => {
             btn.classList.toggle('active', isDimmed);
         });
 
-        // 清空所有卡片的安检缓存标记，并立即触发重新判定
-        document.querySelectorAll('[data-purified-query]').forEach(card => {
-            delete card.dataset.purifiedQuery;
-        });
-        filterDOMElements();
+        if (isEvaluationBadge && typeof updateQualityFilterCounts === 'function') {
+            updateQualityFilterCounts();
+        }
+        if (isWaterfall && typeof updateViewportPage === 'function') {
+            requestAnimationFrame(updateViewportPage);
+        }
     }
 
     // 切换搜索筛选常驻状态并更新样式
@@ -271,6 +280,7 @@
     }
 
     registerMenu();
+    applyDimmedState();
     applyFilterStickyState();
     applyEvaluationBadgeState();
  
@@ -335,8 +345,13 @@
             padding-bottom: 1px !important;
         }
 
-        /* 1. 未匹配卡片常态暗化：深度半透明 + 灰度去色 + 占位保留 */
-        .bili-cleaner-dimmed {
+        /* 关闭虚化时：直接物理隐藏未通过语法的卡片 */
+        html:not(.bili-dimmed-enabled) [data-syntax-pass="0"] {
+            display: none !important;
+        }
+
+        /* 1. 未匹配卡片常态暗化（仅开启虚化时生效）：深度半透明 + 灰度去色 + 占位保留 */
+        html.bili-dimmed-enabled .bili-cleaner-dimmed {
             opacity: 0.16 !important;
             filter: grayscale(85%) contrast(85%) !important;
             transition: opacity 0.25s ease, filter 0.25s ease, transform 0.25s ease !important;
@@ -471,7 +486,7 @@
         }
 
         /* 3. 暗化卡片悬停临时查验 */
-        .bili-cleaner-dimmed:hover {
+        html.bili-dimmed-enabled .bili-cleaner-dimmed:hover {
             opacity: 0.95 !important;
             filter: none !important;
             transform: translateY(-2px);
@@ -914,7 +929,7 @@
  
             const currentSearchQuery = window.location.search;
             const qualityFilterKey = Array.from(activeQualityFilters).sort().join(',');
-            const currentQueryKey = currentSearchQuery + '_' + (isDimmed ? 'dim1' : 'dim0') + '_' + (isSyntaxFilter ? 'syn1' : 'syn0') + '_' + qualityFilterKey;
+            const currentQueryKey = currentSearchQuery + '_' + (isSyntaxFilter ? 'syn1' : 'syn0') + '_' + qualityFilterKey;
             let elements = [];
             if (Array.isArray(target)) {
                 elements = target;
@@ -1002,12 +1017,12 @@
                 // 只有在 Tag 数据就绪且品质全量数据就绪时，才记录缓存标记，避免半成品数据时被提前锁死
                 const isTagReady = !tags.length || videoTagMap.size > 0 || !isSyntaxFilter;
                 const isStatReady = !isEvaluationBadge || hasFullStat;
+                if (card.dataset.externalHidden === undefined && card.style.display !== 'none') {
+                    card.dataset.externalHidden = getComputedStyle(card).display === 'none' ? '1' : '0';
+                }
                 card.dataset.isLive = isLiveCard ? '1' : '0';
                 card.dataset.syntaxPass = isSyntaxFail ? '0' : '1';
                 card.dataset.qualityClass = quadrant?.className || '';
-                if (card.style.display !== 'none') {
-                    card.dataset.externalHidden = getComputedStyle(card).display === 'none' ? '1' : '0';
-                }
                 if (isTagReady && isStatReady) {
                     card.dataset.purifiedQuery = currentQueryKey;
                 }
@@ -1028,26 +1043,13 @@
                 card.classList.remove('bili-cleaner-dimmed');
 
                 // 核心渲染与可见性决策：
-                // 1. 若品质筛选不匹配，彻底物理隐藏（只留下筛选的内容）
+                // 1. 若品质筛选不匹配，彻底物理隐藏；否则移除内联隐藏，由根类名 html.bili-dimmed-enabled + CSS 瞬时控制虚化或隐藏
                 if (isQualityFail) {
                     innerCard.classList.remove('bili-cleaner-dimmed');
                     card.style.setProperty('display', 'none', 'important');
                 } else {
-                    // 2. 品质筛选匹配（无论是否虚化，只要是这个品质的都留下）
                     card.style.removeProperty('display');
-
-                    // 3. 语法未通过判定：若处于虚化模式，保持虚化（但不解除虚化）；若处于隐藏模式，则物理隐藏
-                    if (isSyntaxFail) {
-                        if (isDimmed) {
-                            innerCard.classList.add('bili-cleaner-dimmed');
-                        } else {
-                            innerCard.classList.remove('bili-cleaner-dimmed');
-                            card.style.setProperty('display', 'none', 'important');
-                        }
-                    } else {
-                        // 语法亦完全通过：正常清晰显示
-                        innerCard.classList.remove('bili-cleaner-dimmed');
-                    }
+                    innerCard.classList.toggle('bili-cleaner-dimmed', isSyntaxFail);
                 }
             });
             if (isEvaluationBadge && typeof updateQualityFilterCounts === 'function') {
