@@ -2,7 +2,7 @@
 // @name         Bilibili 去掉搜索无关视频
 // @namespace    http://tampermonkey.net/
 // @version      3.0.0
-// @description  自动隐藏 Bilibili 搜索结果中不包含关键词的无关视频，支持 @UP主 定向筛选、-排除词 与 #Tag 专项筛选，内置 WBI 签名协议栈、无缝瀑布流与聚光灯高亮模式，彻底净化搜索体验。（支持简繁归一化）
+// @description  自动隐藏 Bilibili 搜索结果中不包含关键词的无关视频，支持 @UP主 定向筛选、-排除词 与 #Tag 专项筛选，内置 WBI 签名协议栈与无缝瀑布流，彻底净化搜索体验。（支持简繁归一化）
 // @author       Kirosca
 // @match        *://search.bilibili.com/*
 // @icon         https://www.bilibili.com/favicon.ico
@@ -26,16 +26,31 @@
     }
 
     // ==========================================
-    // 菜单管理与持久化配置（聚光灯模式 & 虚化显示 & 筛选常驻 & 无缝瀑布流）
+    // 菜单管理与持久化配置（虚化显示 & 筛选常驻 & 无缝瀑布流 & 评价体系）
     // ==========================================
-    let isSpotlight = localStorage.getItem('bili_cleaner_spotlight') === 'true';
     let isDimmed = localStorage.getItem('bili_cleaner_dimmed') === 'true';
-    let isFilterSticky = localStorage.getItem('bili_cleaner_sticky_filter') === 'true';
+    let isFilterSticky = localStorage.getItem('bili_cleaner_sticky_filter') !== 'false';
     let isWaterfall = localStorage.getItem('bili_cleaner_waterfall') === 'true';
+    let isEvaluationBadge = localStorage.getItem('bili_cleaner_eval_badge') !== 'false';
+    let isEvalFullMode = localStorage.getItem('bili_cleaner_eval_full_mode') === 'true';
+    let isSyntaxFilter = localStorage.getItem('bili_cleaner_syntax_filter') !== 'false';
+    // 选中的品质标签筛选集合（多选，空集合代表全部/不限）
+    let activeQualityFilters = new Set();
+    try {
+        const savedFilters = JSON.parse(localStorage.getItem('bili_cleaner_active_quality_filters') || '[]');
+        if (Array.isArray(savedFilters) && isEvaluationBadge) {
+            savedFilters.forEach(k => {
+                if (k && k !== 'exclude_warning') activeQualityFilters.add(k);
+            });
+        }
+    } catch (e) {}
+    let toggleAllMenuId = null;
+    let syntaxFilterMenuId = null;
     let filterStickyMenuId = null;
-    let spotlightMenuId = null;
     let dimmedMenuId = null;
     let waterfallMenuId = null;
+    let evalBadgeMenuId = null;
+    let evalModeMenuId = null;
 
     // 注册与更新油猴菜单命令
     function registerMenu() {
@@ -43,57 +58,182 @@
 
         // 注销上一轮菜单，防止重复追加
         if (typeof GM_unregisterMenuCommand === 'function') {
+            if (toggleAllMenuId !== null) {
+                try { GM_unregisterMenuCommand(toggleAllMenuId); } catch (e) {}
+            }
+            if (syntaxFilterMenuId !== null) {
+                try { GM_unregisterMenuCommand(syntaxFilterMenuId); } catch (e) {}
+            }
             if (filterStickyMenuId !== null) {
                 try { GM_unregisterMenuCommand(filterStickyMenuId); } catch (e) {}
             }
-            if (spotlightMenuId !== null) {
-                try { GM_unregisterMenuCommand(spotlightMenuId); } catch (e) {}
-            }
             if (dimmedMenuId !== null) {
                 try { GM_unregisterMenuCommand(dimmedMenuId); } catch (e) {}
+                dimmedMenuId = null;
             }
             if (waterfallMenuId !== null) {
                 try { GM_unregisterMenuCommand(waterfallMenuId); } catch (e) {}
             }
+            if (evalBadgeMenuId !== null) {
+                try { GM_unregisterMenuCommand(evalBadgeMenuId); } catch (e) {}
+            }
+            if (evalModeMenuId !== null) {
+                try { GM_unregisterMenuCommand(evalModeMenuId); } catch (e) {}
+                evalModeMenuId = null;
+            }
         }
+
+        const isAllEnabled = isSyntaxFilter && isFilterSticky && isDimmed && isWaterfall && isEvaluationBadge;
+        const isAllDisabled = !isSyntaxFilter && !isFilterSticky && !isDimmed && !isWaterfall && !isEvaluationBadge;
+        const toggleAllStatus = isAllEnabled ? '✅ 已开启' : (isAllDisabled ? '❌ 已关闭' : '🌓 部分开启');
+        const toggleAllLabel = `⚡ 一键全开/全关: ${toggleAllStatus}`;
+        toggleAllMenuId = GM_registerMenuCommand(toggleAllLabel, toggleAllFeatures);
 
         const filterStickyLabel = `⚓ 搜索筛选常驻: ${isFilterSticky ? '✅ 已开启' : '❌ 已关闭'}`;
         filterStickyMenuId = GM_registerMenuCommand(filterStickyLabel, toggleFilterSticky);
 
-        const spotlightLabel = `🔦 目标匹配标识: ${isSpotlight ? '✅ 已开启' : '❌ 已关闭'}`;
-        spotlightMenuId = GM_registerMenuCommand(spotlightLabel, toggleSpotlight);
-
-        const dimmedLabel = `🌫️ 虚化显示模糊内容: ${isDimmed ? '✅ 已开启' : '❌ 已关闭'}`;
-        dimmedMenuId = GM_registerMenuCommand(dimmedLabel, toggleDimmed);
-
         const waterfallLabel = `🌊 无缝瀑布流: ${isWaterfall ? '✅ 已开启' : '❌ 已关闭'}`;
         waterfallMenuId = GM_registerMenuCommand(waterfallLabel, toggleWaterfall);
+
+        const syntaxFilterLabel = `🗝️ 搜索语法过滤 (Alt+Q): ${isSyntaxFilter ? '✅ 已开启' : '❌ 已关闭'}`;
+        syntaxFilterMenuId = GM_registerMenuCommand(syntaxFilterLabel, toggleSyntaxFilter);
+
+        // 二级级联子菜单：仅在搜索语法过滤开启时展示虚化显示开关
+        if (isSyntaxFilter) {
+            const dimmedLabel = `  └─ 虚化显示模糊内容: ${isDimmed ? '✅ 已开启' : '❌ 已关闭'}`;
+            dimmedMenuId = GM_registerMenuCommand(dimmedLabel, toggleDimmed);
+        }
+
+        const evalBadgeLabel = `🏷️ 视频品质标签: ${isEvaluationBadge ? '✅ 已开启' : '❌ 已关闭'}`;
+        evalBadgeMenuId = GM_registerMenuCommand(evalBadgeLabel, toggleEvaluationBadge);
+
+        // 二级级联子菜单：仅在品质标签开启时展示显示范围切换
+        if (isEvaluationBadge) {
+            const evalModeLabel = `  └─ 标签可见范围: ${isEvalFullMode ? '📑 全部展示' : '✨ 仅精选'}`;
+            evalModeMenuId = GM_registerMenuCommand(evalModeLabel, toggleEvalMode);
+        }
     }
 
-    // 切换聚光灯高亮模式并持久化配置（控制匹配卡片是否显示高亮外观）
-    function toggleSpotlight() {
-        isSpotlight = !isSpotlight;
-        localStorage.setItem('bili_cleaner_spotlight', String(isSpotlight));
+    // 切换搜索语法过滤状态并持久化配置（默认开启；关闭后停止接口脱壳并保留广告剔除与品质筛选）
+    function toggleSyntaxFilter() {
+        isSyntaxFilter = !isSyntaxFilter;
+        localStorage.setItem('bili_cleaner_syntax_filter', String(isSyntaxFilter));
         registerMenu();
 
-        // 清空所有卡片的安检缓存标记，并立即触发重新判定
         document.querySelectorAll('[data-purified-query]').forEach(card => {
             delete card.dataset.purifiedQuery;
         });
         filterDOMElements();
     }
 
-    // 切换虚化显示模糊内容状态并持久化配置（控制未匹配卡片是半透明虚化还是彻底物理隐藏）
+    // 一键全开 / 全关所有功能（严格按顺序依次调用现有菜单方法，最后开关【无缝瀑布流】）
+    function toggleAllFeatures() {
+        const isAllEnabled = isSyntaxFilter && isFilterSticky && isDimmed && isWaterfall && isEvaluationBadge;
+        const targetState = !isAllEnabled;
+
+        // 0. 搜索语法过滤
+        if (isSyntaxFilter !== targetState) {
+            toggleSyntaxFilter();
+        }
+
+        // 1. 搜索筛选常驻
+        if (isFilterSticky !== targetState) {
+            toggleFilterSticky();
+        }
+
+        // 2. 虚化显示模糊内容
+        if (isDimmed !== targetState) {
+            toggleDimmed();
+        }
+
+        // 3. 视频品质标签
+        if (isEvaluationBadge !== targetState) {
+            toggleEvaluationBadge();
+        }
+
+        // 4. 最后开关【无缝瀑布流】（以安全处理可能的页面重载或路由复位）
+        if (isWaterfall !== targetState) {
+            toggleWaterfall();
+        } else {
+            registerMenu();
+        }
+    }
+
+    // 切换评价体系显示范围（仅精选 vs 全部展示）
+    function toggleEvalMode() {
+        isEvalFullMode = !isEvalFullMode;
+        localStorage.setItem('bili_cleaner_eval_full_mode', String(isEvalFullMode));
+        registerMenu();
+
+        // 重新安检渲染卡片评价
+        document.querySelectorAll('[data-purified-query]').forEach(card => {
+            delete card.dataset.purifiedQuery;
+        });
+        filterDOMElements();
+    }
+
+    // 切换视频评价体系显示状态并持久化配置（默认开启）
+    function toggleEvaluationBadge() {
+        isEvaluationBadge = !isEvaluationBadge;
+        localStorage.setItem('bili_cleaner_eval_badge', String(isEvaluationBadge));
+        registerMenu();
+        applyEvaluationBadgeState();
+
+        if (isEvaluationBadge) {
+            bindStickyObserver();
+            document.querySelectorAll('.bili-video-card, .video-list-item, div[class*="col_"], .bili-live-card').forEach(el => {
+                const card = el.closest('[class*="col_"], .video-list-item, .bili-live-card') || el;
+                delete card.dataset.purifiedQuery;
+            });
+            filterDOMElements();
+        } else {
+            // 关闭品质标签体系：清空分类筛选状态与持久化记忆、清除锚点
+            activeQualityFilters.clear();
+            try {
+                localStorage.removeItem('bili_cleaner_active_quality_filters');
+            } catch (e) {}
+            lastQualityAnchorKey = null;
+
+            // 彻底移除页面中已渲染的品质筛选行和评价勋章列
+            document.querySelectorAll('.bili-cleaner-quality-filter-row').forEach(el => el.remove());
+            document.querySelectorAll('.bili-cleaner-badge-col').forEach(el => el.remove());
+
+            // 清空卡片安检标记并重新安检，恢复因品质筛选而被隐藏的所有卡片
+            document.querySelectorAll('.bili-video-card, .video-list-item, div[class*="col_"], .bili-live-card').forEach(el => {
+                const card = el.closest('[class*="col_"], .video-list-item, .bili-live-card') || el;
+                delete card.dataset.purifiedQuery;
+            });
+            filterDOMElements();
+        }
+    }
+
+    // 应用视频评价体系的 CSS 根类名
+    function applyEvaluationBadgeState() {
+        if (document.documentElement) {
+            document.documentElement.classList.toggle('bili-eval-badge-enabled', isEvaluationBadge);
+        }
+    }
+
+    // 应用虚化显示模糊内容的 CSS 根类名
+    function applyDimmedState() {
+        if (document.documentElement) {
+            document.documentElement.classList.toggle('bili-dimmed-enabled', isDimmed);
+        }
+    }
+
+    // 切换虚化显示模糊内容状态并持久化配置（O(1) 根类名切换，1000+ 卡片零重算零卡顿）
     function toggleDimmed() {
         isDimmed = !isDimmed;
         localStorage.setItem('bili_cleaner_dimmed', String(isDimmed));
+        applyDimmedState();
         registerMenu();
 
-        // 清空所有卡片的安检缓存标记，并立即触发重新判定
-        document.querySelectorAll('[data-purified-query]').forEach(card => {
-            delete card.dataset.purifiedQuery;
-        });
-        filterDOMElements();
+        if (isEvaluationBadge && typeof updateQualityFilterCounts === 'function') {
+            updateQualityFilterCounts();
+        }
+        if (isWaterfall && typeof updateViewportPage === 'function') {
+            requestAnimationFrame(updateViewportPage);
+        }
     }
 
     // 切换搜索筛选常驻状态并更新样式
@@ -164,7 +304,9 @@
     }
 
     registerMenu();
+    applyDimmedState();
     applyFilterStickyState();
+    applyEvaluationBadgeState();
  
     // 0. 接入 OpenCC 单例转换器（由 @require 本地持久化驱动）
     let sConverter = null;
@@ -220,43 +362,158 @@
         }
 
         /* 0.1 长列表离屏渲染优化：跳过视口外离屏卡片的绘制与重排，节约内存与 CPU */
+        /* padding-bottom: 1px 为 contain:paint 提供次像素安全缓冲区，防止 110%/120% 缩放下底部边框被裁剪 */
         .video-list-item, div[class*="col_"] {
             content-visibility: auto;
             contain-intrinsic-size: auto 300px;
+            padding-bottom: 1px !important;
         }
 
-        /* 1. 目标匹配卡片：全彩饱和 + 悬浮外发光 + 右上角徽章 */
-        .bili-cleaner-highlighted {
-            opacity: 1 !important;
-            filter: none !important;
-            position: relative;
-            transition: box-shadow 0.25s ease, transform 0.25s ease !important;
-        }
-        .bili-cleaner-highlighted::before {
-            content: "🎯 目标匹配";
-            position: absolute;
-            top: 6px;
-            right: 6px;
-            background: linear-gradient(135deg, #00aeec, #008ac5);
-            color: #fff;
-            font-size: 11px;
-            font-weight: bold;
-            padding: 2px 6px;
-            border-radius: 4px;
-            z-index: 10;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
-            pointer-events: none;
+        /* 关闭虚化时：直接物理隐藏未通过语法的卡片 */
+        html:not(.bili-dimmed-enabled) [data-syntax-pass="0"] {
+            display: none !important;
         }
 
-        /* 2. 未匹配卡片常态暗化：深度半透明 + 灰度去色 + 占位保留 */
-        .bili-cleaner-dimmed {
+        /* 1. 未匹配卡片常态暗化（仅开启虚化时生效）：深度半透明 + 灰度去色 + 占位保留 */
+        html.bili-dimmed-enabled .bili-video-card,
+        html.bili-dimmed-enabled .bili-live-card {
+            transition: opacity 0.25s ease, filter 0.25s ease, transform 0.25s ease !important;
+        }
+        html.bili-dimmed-enabled .bili-cleaner-dimmed {
             opacity: 0.16 !important;
             filter: grayscale(85%) contrast(85%) !important;
-            transition: opacity 0.25s ease, filter 0.25s ease, transform 0.25s ease !important;
+        }
+
+        /* 1.1 视频卡片封面评价勋章（左上角常驻胶囊标签，直接常驻展示） */
+        .bili-cleaner-badge-col {
+            position: absolute !important;
+            top: 6px !important;
+            left: 6px !important;
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            z-index: 10 !important;
+            pointer-events: auto !important;
+            max-width: calc(100% - 12px) !important;
+        }
+
+        /* 评价体系菜单未开启时彻底物理隐藏 */
+        html:not(.bili-eval-badge-enabled) .bili-cleaner-badge-col {
+            display: none !important;
+        }
+        .bili-cleaner-badge-pill {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 4px !important;
+            padding: 2.5px 7px !important;
+            border-radius: 10px !important;
+            font-size: 11px !important;
+            font-weight: 600 !important;
+            line-height: 1.2 !important;
+            user-select: none !important;
+            box-sizing: border-box !important;
+            backdrop-filter: blur(8px) !important;
+            -webkit-backdrop-filter: blur(8px) !important;
+            cursor: pointer !important;
+            max-width: 100% !important;
+            white-space: nowrap !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28) !important;
+        }
+
+        .bili-cleaner-badge-tag {
+            font-weight: 700 !important;
+            flex-shrink: 0 !important;
+            letter-spacing: 0.2px !important;
+        }
+
+        /* --- 纯品质金字塔胶囊配色体系 --- */
+        /* 1. 🏆 殿堂神作：耀目流金 */
+        .bili-cleaner-badge-pill.q-hall-of-fame {
+            background: linear-gradient(135deg, rgba(255, 170, 0, 0.95), rgba(255, 102, 0, 0.95)) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(255, 235, 180, 0.7) !important;
+            box-shadow: 0 0 10px rgba(255, 170, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+        }
+        /* 1.5. ⚡ 爆款短片：电光青碧渐变（高能快节奏短片，互动爆棚） */
+        .bili-cleaner-badge-pill.q-viral-short {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.95), rgba(16, 185, 129, 0.95)) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(165, 243, 252, 0.7) !important;
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+        }
+        /* 2. 💡 硬核干货：琥珀密金 */
+        .bili-cleaner-badge-pill.q-hardcore {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.92), rgba(217, 119, 6, 0.92)) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(255, 215, 0, 0.5) !important;
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4) !important;
+        }
+        /* 3. ⭐ 高口碑佳作：清亮透蓝 */
+        .bili-cleaner-badge-pill.q-high-reputation {
+            background: linear-gradient(135deg, rgba(0, 174, 236, 0.92), rgba(0, 120, 215, 0.92)) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(180, 230, 255, 0.5) !important;
+            box-shadow: 0 2px 8px rgba(0, 174, 236, 0.4) !important;
+        }
+        /* 4. 💎 冷门宝藏：神秘晶紫 */
+        .bili-cleaner-badge-pill.q-hidden-gem {
+            background: linear-gradient(135deg, rgba(147, 51, 234, 0.92), rgba(99, 102, 241, 0.92)) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(220, 180, 255, 0.5) !important;
+            box-shadow: 0 2px 8px rgba(147, 51, 234, 0.4) !important;
+        }
+        /* 4.5 🏅 综合标杆：铂金玄霜银渐变（六边形战士，赞藏互动态度全面均衡无短板） */
+        .bili-cleaner-badge-pill.q-balanced-masterpiece {
+            background: linear-gradient(135deg, rgba(71, 85, 105, 0.95), rgba(30, 41, 59, 0.98)) !important;
+            color: #f8fafc !important;
+            border: 1px solid rgba(226, 232, 240, 0.75) !important;
+            box-shadow: 0 0 10px rgba(148, 163, 184, 0.35), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+        }
+        /* 5. 💥 话题焦点：霓虹紫粉渐变（弹幕密集与评论热烈齐飞，全网热议/深度探讨） */
+        .bili-cleaner-badge-pill.q-opinion-storm {
+            background: linear-gradient(135deg, rgba(236, 72, 153, 0.95), rgba(168, 85, 247, 0.95)) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(251, 207, 232, 0.7) !important;
+            box-shadow: 0 0 10px rgba(236, 72, 153, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+        }
+        /* 6. 💬 激辩热议：深海电光靛蓝渐变（理性论辩/深度观点交锋，与冷门宝藏的晶紫彻底区分） */
+        .bili-cleaner-badge-pill.q-heated-debate {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.95), rgba(79, 70, 229, 0.95)) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(191, 219, 254, 0.7) !important;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.45) !important;
+        }
+        /* 7. 🔥 弹幕密集：烈焰霓橙（高互动/名场面/弹幕密集） */
+        .bili-cleaner-badge-pill.q-danmaku-carnival {
+            background: linear-gradient(135deg, rgba(255, 68, 102, 0.92), rgba(255, 120, 40, 0.92)) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(255, 200, 210, 0.5) !important;
+            box-shadow: 0 2px 8px rgba(255, 68, 102, 0.4) !important;
+        }
+        /* 8. ⚠️ 谨慎观看（低质避坑预警）：警示赤红 */
+        .bili-cleaner-badge-pill.q-warning {
+            background: linear-gradient(135deg, rgba(220, 38, 38, 0.92), rgba(153, 27, 27, 0.92)) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(254, 202, 202, 0.5) !important;
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4) !important;
+        }
+        /* 6. 🍀 稳健良作：深林墨玉绿渐变（典雅沉稳，有分量感） */
+        .bili-cleaner-badge-pill.q-routine {
+            background: linear-gradient(135deg, rgba(16, 110, 75, 0.88), rgba(10, 70, 50, 0.92)) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(74, 222, 128, 0.35) !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+        }
+        /* 7. 🌱 样本较少（冷门置信度保护）：低调雾霾蓝灰 */
+        .bili-cleaner-badge-pill.q-low-sample {
+            background: rgba(30, 41, 59, 0.82) !important;
+            color: rgba(148, 163, 184, 0.95) !important;
+            border: 1px solid rgba(148, 163, 184, 0.25) !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
         }
 
         /* 3. 暗化卡片悬停临时查验 */
-        .bili-cleaner-dimmed:hover {
+        html.bili-dimmed-enabled .bili-cleaner-dimmed:hover {
             opacity: 0.95 !important;
             filter: none !important;
             transform: translateY(-2px);
@@ -267,6 +524,77 @@
         html.bili-filter-sticky-enabled :has(> div.search-channel-item.mt_sm.ml_sm),
         html.bili-filter-sticky-enabled button.vui_button.vui_button--active-shrink.i_button_more {
             display: none !important;
+        }
+
+        /* 4.5. 搜索结果顶部品质药丸多选筛选栏 (嵌入 .more-conditions) */
+        .bili-cleaner-quality-filter-row {
+            display: flex;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            padding: 7px 0;
+            margin-top: 5px;
+            border-top: 1px dashed rgba(148, 153, 160, 0.25);
+            font-size: 13px;
+            user-select: none;
+            gap: 6px 8px;
+        }
+        .bili-cleaner-filter-label {
+            color: #61666d;
+            font-weight: 500;
+            line-height: 26px;
+            margin-right: 6px;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .bili-cleaner-filter-pills-box {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px 8px;
+            flex: 1;
+        }
+        .bili-cleaner-filter-pill-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 14px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            border: 1px solid rgba(148, 153, 160, 0.35);
+            background: var(--bg1_float);
+            color: var(--v_text2);
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            line-height: 1.5;
+        }
+        .bili-cleaner-filter-pill-btn:hover {
+            border-color: #00aeec;
+            color: #00aeec;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(0, 174, 236, 0.15);
+        }
+        .bili-cleaner-filter-pill-btn.active {
+            background: #00aeec;
+            border-color: #00aeec;
+            color: #ffffff !important;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(0, 174, 236, 0.35);
+        }
+        .bili-cleaner-filter-pill-btn.is-empty:not(.active) {
+            opacity: 0.55;
+        }
+        .bili-cleaner-pill-count {
+            font-size: 11px;
+            opacity: 0.78;
+            font-weight: 400;
+        }
+        .bili-cleaner-filter-pill-btn.active .bili-cleaner-pill-count {
+            opacity: 0.92;
         }
 
         /* 5. 瀑布流相关样式 */
@@ -315,14 +643,40 @@
         @keyframes bili-wf-spin {
             to { transform: rotate(360deg); }
         }
+        #bili-cleaner-toast {
+            position: fixed;
+            left: 24px;
+            bottom: 24px;
+            background: var(--bg1_float, rgba(255, 255, 255, 0.95));
+            border: 1px solid rgba(0, 174, 236, 0.45);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
+            color: var(--v_text1, #18191c);
+            padding: 8px 14px;
+            border-radius: 18px;
+            font-size: 13px;
+            font-weight: 600;
+            z-index: 100000;
+            backdrop-filter: blur(8px);
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+        #bili-cleaner-toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        html.bili-waterfall-enabled #bili-cleaner-toast {
+            bottom: 72px;
+        }
         #bili-waterfall-badge {
             position: fixed;
             left: 24px;
             bottom: 24px;
-            background: rgba(255, 255, 255, 0.96);
+            background: var(--bg1_float);
             border: 1px solid rgba(0, 174, 236, 0.35);
             box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
-            color: #18191c;
+            color: var(--v_text1);
             padding: 7px 14px;
             border-radius: 20px;
             font-size: 13px;
@@ -337,7 +691,7 @@
             gap: 6px;
         }
         #bili-waterfall-badge:hover {
-            transform: translateY(-2px);
+            transform: translateY(-1px);
             box-shadow: 0 6px 18px rgba(0, 174, 236, 0.25);
             border-color: #00aeec;
         }
@@ -345,6 +699,9 @@
             background: rgba(245, 246, 247, 0.96);
             border-color: rgba(148, 153, 160, 0.35);
             color: #61666d;
+        }
+        #bili-waterfall-badge.paused svg {
+            filter: grayscale(0.6) opacity(0.7);
         }
     `;
     (document.head || document.documentElement).appendChild(styleElement);
@@ -406,8 +763,9 @@
  
     // 5. 网络层拦截：存储 Tag 字典 + 接口层物理剔除广告
     const videoTagMap = new Map();
- 
-    // 物理剔除数据列表中的商业推广与广告卡片，并提取存储标签字典
+    const videoStatMap = new Map();
+
+    // 物理剔除数据列表中的商业推广与广告卡片，并提取存储标签字典及量化数据
     function cleanAdsOnly(list) {
         if (!Array.isArray(list)) return list;
 
@@ -426,6 +784,22 @@
             if (v.season_id) videoTagMap.set(String(v.season_id), rawTags);
             if (v.roomid) videoTagMap.set(String(v.roomid), rawTags);
 
+            // 存储量化统计数据（播放、点赞、收藏、弹幕等），供封面评价勋章计算（跳过直播间条目）
+            if ((v.bvid || v.aid || v.id) && v.type !== 'live_room' && !v.roomid) {
+                const stat = {
+                    play: Number(v.play) || 0,
+                    like: Number(v.like) || 0,
+                    favorites: Number(v.favorites) || 0,
+                    danmaku: Number(v.danmaku !== undefined ? v.danmaku : v.video_review) || 0,
+                    duration: v.duration,
+                    review: Number(v.review) || 0,
+                    pubdate: Number(v.pubdate) || 0
+                };
+                if (v.bvid) videoStatMap.set(String(v.bvid).toLowerCase(), stat);
+                if (v.aid) videoStatMap.set(String(v.aid), stat);
+                if (v.id) videoStatMap.set(String(v.id), stat);
+            }
+
             if (v.is_ad_loc || v.is_promoted || v.goto === 'ad' || v.type === 'ad') return false;
 
             return true;
@@ -437,6 +811,7 @@
 
     // 首屏 SSR 初始状态补偿读取（适配现代 Vite + Pinia 架构与旧版 __INITIAL_STATE__）
     function scanInitialState() {
+        let hasData = false;
         try {
             const pinia = targetWindow.__pinia;
             if (pinia) {
@@ -446,6 +821,7 @@
                     for (const cat of allRes) {
                         if (cat.data && Array.isArray(cat.data)) {
                             cleanAdsOnly(cat.data);
+                            hasData = true;
                         }
                     }
                 }
@@ -454,6 +830,7 @@
                 const typeRes = pinia.searchTypeResponse?.searchTypeResponse?.result;
                 if (Array.isArray(typeRes)) {
                     cleanAdsOnly(typeRes);
+                    hasData = true;
                 }
             }
 
@@ -461,19 +838,46 @@
             const state = targetWindow.__INITIAL_STATE__;
             if (state?.flow?.data && Array.isArray(state.flow.data)) {
                 cleanAdsOnly(state.flow.data);
+                hasData = true;
             } else if (state?.result && Array.isArray(state.result)) {
                 cleanAdsOnly(state.result);
+                hasData = true;
             }
         } catch (e) {}
+        return hasData;
     }
     scanInitialState();
+
+    // 首屏高频轮询提取 Pinia 状态：在首屏渲染后的几十毫秒内尽快拿到点赞/收藏全量数据
+    let initPollCount = 0;
+    const initPollTimer = setInterval(() => {
+        initPollCount++;
+        if (scanInitialState() || initPollCount >= 20) {
+            clearInterval(initPollTimer);
+            document.querySelectorAll('[data-purified-query]').forEach(card => {
+                delete card.dataset.purifiedQuery;
+            });
+            filterDOMElements();
+        }
+    }, 80);
+
     window.addEventListener('DOMContentLoaded', () => {
-        scanInitialState();
+        applyEvaluationBadgeState();
+        if (scanInitialState()) {
+            document.querySelectorAll('[data-purified-query]').forEach(card => {
+                delete card.dataset.purifiedQuery;
+            });
+        }
         filterDOMElements();
         bindStickyObserver();
     });
     window.addEventListener('load', () => {
-        scanInitialState();
+        applyEvaluationBadgeState();
+        if (scanInitialState()) {
+            document.querySelectorAll('[data-purified-query]').forEach(card => {
+                delete card.dataset.purifiedQuery;
+            });
+        }
         filterDOMElements();
         bindStickyObserver();
     });
@@ -489,7 +893,7 @@
  
         const isSearchReq = urlStr.includes('/wbi/search') || urlStr.includes('/search/type') || urlStr.includes('/search/all');
  
-        if (isSearchReq) {
+        if (isSearchReq && isSyntaxFilter) {
             const apiKeyword = getCleanApiKeyword();
             if (apiKeyword) {
                 urlStr = urlStr.replace(/([?&]keyword=)[^&]+/, `$1${encodeURIComponent(apiKeyword)}`);
@@ -520,13 +924,15 @@
                     }
                 }
  
-                // 数据就绪后唤醒重新安检：清除时序过早判定的缓存并重新执行过滤
-                setTimeout(() => {
-                    document.querySelectorAll('[data-purified-query]').forEach(card => {
-                        delete card.dataset.purifiedQuery;
-                    });
-                    filterDOMElements();
-                }, 50);
+                // 数据就绪后唤醒重新安检：仅在首屏搜索响应返回时清除早期未就绪缓存；瀑布流增量翻页时无需重置已有卡片
+                if (!isPaging) {
+                    setTimeout(() => {
+                        document.querySelectorAll('[data-purified-query]').forEach(card => {
+                            delete card.dataset.purifiedQuery;
+                        });
+                        filterDOMElements();
+                    }, 50);
+                }
 
                 // 官方搜索响应握手：当检测到 B 站发起官方搜索（非瀑布流内部翻页请求）并返回数据时，
                 // 延时等待 Vue 将新搜索首屏结果与新分页器渲染挂载到 DOM 树，再唤醒瀑布流状态同步
@@ -567,7 +973,8 @@
             }
  
             const currentSearchQuery = window.location.search;
-            const currentQueryKey = currentSearchQuery + '_' + (isSpotlight ? 'spot1' : 'spot0') + '_' + (isDimmed ? 'dim1' : 'dim0');
+            const qualityFilterKey = Array.from(activeQualityFilters).sort().join(',');
+            const currentQueryKey = currentSearchQuery + '_' + (isSyntaxFilter ? 'syn1' : 'syn0') + '_' + qualityFilterKey;
             let elements = [];
             if (Array.isArray(target)) {
                 elements = target;
@@ -582,8 +989,9 @@
             elements.forEach(el => {
                 const card = el.closest('[class*="col_"], .video-list-item, .bili-live-card') || el;
  
-                // 排除活动、游戏、付费课程等非视频横幅容器
+                // 排除活动、游戏、付费课程及商业推广/广告卡片
                 if (card.closest('.activity-game-list, .activity-card, .activity-game-list-item')) return;
+                if (card.querySelector('.bili-video-card__info--ad, svg.bili-video-card__info--ad-creative, a[href*="cm.bilibili.com"]')) return;
 
                 // 性能缓存：当前卡片在本次搜索词及当前模式下若已判定过，直接跳过，零重复计算
                 if (card.dataset.purifiedQuery === currentQueryKey) return;
@@ -593,11 +1001,6 @@
  
                 const titleEl = card.querySelector('h3.bili-video-card__info--tit, h3.bili-live-card__info--tit, a[title], .bili-video-card__info--tit, h3');
                 if (!titleEl) return;
- 
-                // 只有在不依赖 Tag 或 Tag 数据已就绪时，才记录缓存标记，避免未就绪时被提前锁死
-                if (!tags.length || videoTagMap.size > 0) {
-                    card.dataset.purifiedQuery = currentQueryKey;
-                }
  
                 // 提取标题并进行反转义与标点规范化
                 const rawTitle = titleEl.getAttribute('title') || titleEl.textContent || '';
@@ -617,49 +1020,86 @@
                 const rawAuthor = authorEl ? (authorEl.getAttribute('title') || authorEl.textContent || '') : '';
                 const author = cleanText(rawAuthor.replace(/[\s·•].*$/, ''));
  
-                let shouldHide = false;
- 
-                // 四道安检关卡
-                if (exclude.some(k => title.includes(k))) {
-                    shouldHide = true;
-                } else if (normal.length && !normal.every(k => title.includes(k))) {
-                    shouldHide = true;
-                } else if (tags.length && !tags.every(k => videoTags.includes(k))) {
-                    shouldHide = true;
-                } else if (ups.length && !ups.some(k => author.includes(k))) {
-                    shouldHide = true;
+                let isSyntaxFail = false;
+
+                // 四道安检关卡（仅在开启【筛选语法过滤】时执行）
+                if (isSyntaxFilter) {
+                    if (exclude.some(k => title.includes(k))) {
+                        isSyntaxFail = true;
+                    } else if (normal.length && !normal.every(k => title.includes(k))) {
+                        isSyntaxFail = true;
+                    } else if (tags.length && !tags.every(k => videoTags.includes(k))) {
+                        isSyntaxFail = true;
+                    } else if (ups.length && !ups.some(k => author.includes(k))) {
+                        isSyntaxFail = true;
+                    }
+                }
+
+                // 在类 v-img bili-video-card__cover 中追加评价勋章（方案 B：右侧竖向勋章），作为最后一个子元素
+                let quadrant = null;
+                let hasFullStat = false;
+                const isLiveCard = card.matches('.bili-live-card') ||
+                                   Boolean(matchLive) ||
+                                   Boolean(card.querySelector('.bili-video-card__info--living, .v-inline-live-player'));
+                const coverEl = card.querySelector('.v-img.bili-video-card__cover, .bili-video-card__cover');
+                if (coverEl && !isLiveCard) {
+                    let stat = id ? (videoStatMap.get(id.toLowerCase()) || videoStatMap.get(id)) : null;
+                    if (stat) {
+                        hasFullStat = true;
+                    } else {
+                        stat = extractStatFromCard(card);
+                    }
+                    quadrant = getQualityQuadrant(stat);
+                    renderBadgeColumn(coverEl, stat);
+                } else if (isLiveCard) {
+                    hasFullStat = true;
+                    if (coverEl) {
+                        const existingBadge = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
+                        if (existingBadge) existingBadge.remove();
+                    }
+                }
+
+                // 只有在 Tag 数据就绪且品质全量数据就绪时，才记录缓存标记，避免半成品数据时被提前锁死
+                const isTagReady = !tags.length || videoTagMap.size > 0 || !isSyntaxFilter;
+                const isStatReady = !isEvaluationBadge || hasFullStat;
+                if (card.dataset.externalHidden === undefined && card.style.display !== 'none') {
+                    card.dataset.externalHidden = getComputedStyle(card).display === 'none' ? '1' : '0';
+                }
+                card.dataset.isLive = isLiveCard ? '1' : '0';
+                card.dataset.syntaxPass = isSyntaxFail ? '0' : '1';
+                card.dataset.qualityClass = quadrant?.className || '';
+                if (isTagReady && isStatReady) {
+                    card.dataset.purifiedQuery = currentQueryKey;
+                }
+
+                // 第五道安检关卡：品质药丸多选筛选过滤（仅在开启【视频品质标签】时生效）
+                let isQualityFail = false;
+                if (isEvaluationBadge && activeQualityFilters.size > 0) {
+                    const qClass = quadrant?.className;
+                    // 正向多选品质白名单检查：只有命中目标品质的卡片才能保留；无品质评级或非目标品质严格淘汰隐藏
+                    if (!qClass || !activeQualityFilters.has(qClass)) {
+                        isQualityFail = true;
+                    }
                 }
 
                 const innerCard = card.querySelector('.bili-video-card, .bili-live-card') || card;
 
-                // 确保外层列容器不承载高亮或虚化类，维持原生栅格间隙纯净
-                card.classList.remove('bili-cleaner-highlighted', 'bili-cleaner-dimmed');
+                // 确保外层列容器不承载虚化类，维持原生栅格间隙纯净
+                card.classList.remove('bili-cleaner-dimmed');
 
-                if (!shouldHide) {
-                    // 目标匹配（命中全部规则）：
-                    card.style.removeProperty('display');
+                // 核心渲染与可见性决策：
+                // 1. 若品质筛选不匹配，彻底物理隐藏；否则移除内联隐藏，由根类名 html.bili-dimmed-enabled + CSS 瞬时控制虚化或隐藏
+                if (isQualityFail) {
                     innerCard.classList.remove('bili-cleaner-dimmed');
-                    if (isSpotlight) {
-                        // 开启【聚光灯高亮模式】：内层卡片展现高亮微框与徽标
-                        innerCard.classList.add('bili-cleaner-highlighted');
-                    } else {
-                        // 关闭【聚光灯高亮模式】：呈现官方原生普通外观，不高亮
-                        innerCard.classList.remove('bili-cleaner-highlighted');
-                    }
+                    card.style.setProperty('display', 'none', 'important');
                 } else {
-                    // 未匹配（不符合规则，需过滤）：
-                    innerCard.classList.remove('bili-cleaner-highlighted');
-                    if (isDimmed) {
-                        // 开启【虚化显示模糊内容】：保留卡片占位，实施半透明去色暗化
-                        card.style.removeProperty('display');
-                        innerCard.classList.add('bili-cleaner-dimmed');
-                    } else {
-                        // 关闭【虚化显示模糊内容】：彻底物理隐藏，从页面移除
-                        innerCard.classList.remove('bili-cleaner-dimmed');
-                        card.style.setProperty('display', 'none', 'important');
-                    }
+                    card.style.removeProperty('display');
+                    innerCard.classList.toggle('bili-cleaner-dimmed', isSyntaxFail);
                 }
             });
+            if (isEvaluationBadge && typeof updateQualityFilterCounts === 'function') {
+                updateQualityFilterCounts();
+            }
             if (isWaterfall && typeof updateViewportPage === 'function') {
                 updateViewportPage();
             }
@@ -692,7 +1132,25 @@
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
 
-    // 8. 快捷键支持：在搜索结果页按 '/' 快速聚焦并全选搜索框
+    // 8. 快捷键支持：'/' 快速聚焦搜索框；'Alt+Q' 切换搜索语法过滤并展示轻量 Toast
+    let toastTimer = null;
+    function showCleanerToast(msg) {
+        if (!document.body) return;
+        let toast = document.getElementById('bili-cleaner-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'bili-cleaner-toast';
+            document.body.appendChild(toast);
+        }
+        toast.textContent = msg;
+        void toast.offsetWidth;
+        toast.classList.add('show');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+            toast.classList.remove('show');
+        }, 1500);
+    }
+
     // 获取当前页面中的搜索输入框元素
     function getSearchInput() {
         return document.querySelector('input.search-input-el') ||
@@ -703,23 +1161,31 @@
     }
 
     document.addEventListener('keydown', function(e) {
+        const active = document.activeElement;
+        const isEditing = active && (
+            active.tagName === 'INPUT' ||
+            active.tagName === 'TEXTAREA' ||
+            active.isContentEditable
+        );
+
         // 当按键为 '/' 且未按下 Ctrl / Alt / Meta(Cmd) 组合键时触发
         if ((e.key === '/' || e.code === 'Slash') && !e.ctrlKey && !e.altKey && !e.metaKey) {
-            const active = document.activeElement;
-
-            // 若当前已聚焦于输入框、文本域或可编辑区域，不拦截正常字符输入
-            const isEditing = active && (
-                active.tagName === 'INPUT' ||
-                active.tagName === 'TEXTAREA' ||
-                active.isContentEditable
-            );
-
             if (!isEditing) {
                 const input = getSearchInput();
                 if (input) {
                     e.preventDefault(); // 阻止 '/' 字符输入到框内
                     input.focus();
                 }
+            }
+            return;
+        }
+
+        // 当按下 Alt + Q 时切换【搜索语法过滤】并在左下角弹出轻量 Toast 提示
+        if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && (e.code === 'KeyQ' || (e.key && e.key.toLowerCase() === 'q'))) {
+            if (!isEditing) {
+                e.preventDefault();
+                toggleSyntaxFilter();
+                showCleanerToast(`🗝️ 搜索语法过滤：${isSyntaxFilter ? '已开启' : '已关闭'}`);
             }
         }
     });
@@ -760,17 +1226,23 @@
 
     // 监听筛选条件面板 DOM 变动，确保面板始终处于展开状态
     function bindStickyObserver() {
-        if (!isFilterSticky) return;
         const targets = document.querySelectorAll('div.more-conditions');
         targets.forEach(el => {
-            if (!el.dataset.stickyObserved) {
-                el.dataset.stickyObserved = 'true';
-                stickyObserver.observe(el, {
-                    attributes: true,
-                    attributeFilter: ['class', 'style']
-                });
+            if (isFilterSticky) {
+                if (!el.dataset.stickyObserved) {
+                    el.dataset.stickyObserved = 'true';
+                    stickyObserver.observe(el, {
+                        attributes: true,
+                        attributeFilter: ['class', 'style']
+                    });
+                }
+                enforceConditions(el);
             }
-            enforceConditions(el);
+            // 清理可能遗留的旧版过滤模式与筛选语法行
+            const oldExtraRows = el.querySelectorAll('.bili-cleaner-dimmed-filter-row, .bili-cleaner-syntax-filter-row');
+            oldExtraRows.forEach(r => r.remove());
+
+            injectQualityFilterRow(el);
         });
     }
 
@@ -785,6 +1257,7 @@
     let isAllLoaded = false;
     let currentRequestedPage = 1;
     let currentViewportPage = 1;
+    let totalViewportPages = 1;
     let maxWaterfallPage = 34;
     let waterfallObserver = null;
     let currentObservedPager = null;
@@ -815,7 +1288,7 @@
         function G(x, y, z) { return (x & z) | (y & (~z)); }
         // MD5 逻辑函数 H
         function H(x, y, z) { return (x ^ y ^ z); }
-        // MD5 逻辑函数 I
+        // MD5 逻辑函数 I 
         function I(x, y, z) { return (y ^ (x | (~z))); }
         // MD5 四轮转换迭代函数 FF, GG, HH, II
         function FF(a,b,c,d,x,s,ac) { return addU(rotL(addU(addU(a, F(b,c,d)), addU(x, ac)), s), b); }
@@ -965,15 +1438,18 @@
         return badge;
     }
 
-    // 更新瀑布流悬浮微标的文本内容与激活状态（仅显示当前窗口所在页）
+    // 微软官方 Win11 Fluent Emoji (Water Wave 🌊) 矢量 SVG，确保跨设备/跨操作系统绝对一致显示
+    const ICON_WAVE_SVG = '<svg viewBox="0 0 32 32" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;"><path d="M18.7303 8.60911V6.06653H7.03174V26.9651H26.0109V20.3841C25.4929 20.8941 24.42 21.809 22.704 22.3834C21.7762 22.6939 20.6231 22.8701 19.3753 22.9286C19.1503 22.9499 18.9223 22.9607 18.6917 22.9607C14.7286 22.9607 11.5159 19.748 11.5159 15.7849C11.5159 11.8218 14.7286 8.60901 18.6917 8.60901C18.7046 8.60901 18.7175 8.60904 18.7303 8.60911Z" fill="#26C9FC"/><path d="M2.00391 15.154L2.00394 28.9922C2.00394 29.5445 2.45165 29.9922 3.00394 29.9922H28.9937C29.546 29.9922 29.9937 29.5445 29.9937 28.9922L29.9937 17.8442C27.5057 18.7649 25.9825 20.5075 24.1129 22.0289C22.3405 23.4712 20.1514 24.7191 17.0031 24.7191C12.7544 24.7191 7.80713 20.8973 7.80713 15.8858C7.80713 9.86697 12.9891 7.30096 15.8417 7.30096C16.99 7.30096 17.4804 7.54554 17.6761 7.66783L18.8867 9.31877H23.0691V8.3649C22.3965 6.46938 19.5251 2.67834 13.4203 2.67834C7.80713 2.67834 2.00391 8.3649 2.00391 15.154Z" fill="#00A6ED"/><path d="M22.1939 5.86245C22.1939 6.49073 21.6846 7.00005 21.0563 7.00005C20.428 7.00005 19.9187 6.49073 19.9187 5.86245C19.9187 5.23417 20.428 4.72485 21.0563 4.72485C21.6846 4.72485 22.1939 5.23417 22.1939 5.86245Z" fill="#B4F6FC"/><path d="M27.9251 10.2761C28.5534 10.2761 29.0627 9.76673 29.0627 9.13845C29.0627 8.51017 28.5534 8.00085 27.9251 8.00085C27.2968 8.00085 26.7875 8.51017 26.7875 9.13845C26.7875 9.76673 27.2968 10.2761 27.9251 10.2761Z" fill="#B4F6FC"/><path d="M27.9251 16.1137C28.5534 16.1137 29.0627 15.6044 29.0627 14.9761C29.0627 14.3478 28.5534 13.8385 27.9251 13.8385C27.2968 13.8385 26.7875 14.3478 26.7875 14.9761C26.7875 15.6044 27.2968 16.1137 27.9251 16.1137Z" fill="#B4F6FC"/><path d="M19.1854 14.1376C19.1854 14.7659 18.676 15.2752 18.0478 15.2752C17.4195 15.2752 16.9102 14.7659 16.9102 14.1376C16.9102 13.5093 17.4195 13 18.0478 13C18.676 13 19.1854 13.5093 19.1854 14.1376Z" fill="#B4F6FC"/><path d="M25.023 13.1946C25.6513 13.1946 26.1606 12.6853 26.1606 12.057C26.1606 11.6134 25.9066 11.229 25.5361 11.0415C25.8288 10.6142 26 10.0971 26 9.54011C26 8.07111 24.8092 6.88025 23.3402 6.88025C22.4254 6.88025 21.6184 7.34206 21.1398 8.04526C20.6611 7.34206 19.8542 6.88025 18.9394 6.88025C18.1349 6.88025 17.4139 7.23738 16.9262 7.80174C16.4384 7.23738 15.7174 6.88025 14.9129 6.88025C13.4439 6.88025 12.2531 8.07111 12.2531 9.54011C12.2531 11.0091 13.4439 12.2 14.9129 12.2C15.7174 12.2 16.4384 11.8428 16.9262 11.2785C17.4139 11.8428 18.1349 12.2 18.9394 12.2C19.8542 12.2 20.6611 11.7382 21.1398 11.035C21.6184 11.7382 22.4254 12.2 23.3402 12.2C23.5282 12.2 23.7116 12.1805 23.8886 12.1434C23.9327 12.7313 24.4237 13.1946 25.023 13.1946Z" fill="#B4F6FC"/></svg>';
+
+    // 更新瀑布流悬浮微标的文本内容与激活状态（显示当前窗口所在页 / 当前可见总页数）
     function updateBadge() {
         const badge = getOrCreateBadge();
         if (!badge) return;
         if (isWaterfallPaused) {
-            badge.innerHTML = `<span>🌊 已暂停: 第 ${currentViewportPage} 页</span>`;
+            badge.innerHTML = `${ICON_WAVE_SVG}<span>已暂停: 第 ${currentViewportPage}/${totalViewportPages} 页</span>`;
             badge.classList.add('paused');
         } else {
-            badge.innerHTML = `<span>🌊 瀑布流: 第 ${currentViewportPage} 页</span>`;
+            badge.innerHTML = `${ICON_WAVE_SVG}<span>瀑布流: 第 ${currentViewportPage}/${totalViewportPages} 页</span>`;
             badge.classList.remove('paused');
         }
     }
@@ -1023,12 +1499,10 @@
                 if (cardPage > lastPassedPage) {
                     lastPassedPage = cardPage;
                 }
-            } else if (rect.top >= viewportHeight + 100) {
-                // 当前卡片已完全超出可视区下方，后续在文档流更下方的卡片无需再算，提前退出
-                break;
             }
         }
 
+        const newTotalPages = Math.max(1, Math.ceil(currentRow / 6));
         let newPage = currentViewportPage;
         if (inViewPages.length > 0) {
             // 如果可视窗口中出现多个页中的视频卡片则显示最大页数那个
@@ -1036,9 +1510,11 @@
         } else if (currentRow > 0) {
             newPage = lastPassedPage;
         }
+        newPage = Math.min(Math.max(1, newPage), newTotalPages);
 
-        if (newPage !== currentViewportPage) {
+        if (newPage !== currentViewportPage || newTotalPages !== totalViewportPages) {
             currentViewportPage = newPage;
+            totalViewportPages = newTotalPages;
             updateBadge();
         }
     }
@@ -1230,14 +1706,14 @@
     }
 
     // 渲染网络/接口异常提示，并提供一键重试交互
-    function showErrorLoader() {
+    function showErrorLoader(customMsg = '⚠️ 加载失败，点击重试') {
         const loader = getOrCreateLoader();
         if (!loader) return;
         loader.classList.add('active');
         loader.classList.remove('ended');
         const txtEl = loader.querySelector('.bili-waterfall-loader-text');
         if (txtEl) {
-            txtEl.innerHTML = `<span class="bili-waterfall-retry-btn" style="cursor: pointer; color: #ff6699; font-weight: 500;">⚠️ 加载失败，点击重试</span>`;
+            txtEl.innerHTML = `<span class="bili-waterfall-retry-btn" style="cursor: pointer; color: #ff6699; font-weight: 500;">${customMsg}</span>`;
         }
         const spinner = loader.querySelector('.bili-waterfall-spinner');
         if (spinner) {
@@ -1354,6 +1830,19 @@
         return str;
     }
 
+    // 检测当前屏幕卡片是否充盈，不足时触发瀑布流增补
+    function checkWaterfallFillScreen() {
+        if (!isWaterfall || isWaterfallPaused || isPaging || isAllLoaded) return;
+        const mainContainer = getMainListContainer(document);
+        if (!mainContainer) return;
+
+        const visibleCards = Array.from(mainContainer.children).filter(c => c.style.display !== 'none' && !c.classList.contains('flex_center'));
+        // 可视卡片少于 10 张时，触发一次下一页静默抓取
+        if (visibleCards.length < 10) {
+            triggerLoadNextPage();
+        }
+    }
+
     // 获取并预清洗纯净母卡模板骨架（单例缓存，彻底消除高开销的重复选择器查询与节点剔除）
     function getCardTemplate() {
         if (cachedCardTemplate) {
@@ -1375,11 +1864,12 @@
         // 克隆并预清洗为纯净模板骨架
         const tpl = sampleCol.cloneNode(true);
         delete tpl.dataset.purifiedQuery;
-        tpl.classList.remove('bili-cleaner-highlighted', 'bili-cleaner-dimmed');
-        tpl.querySelectorAll('.bili-cleaner-highlighted, .bili-cleaner-dimmed').forEach(el => el.classList.remove('bili-cleaner-highlighted', 'bili-cleaner-dimmed'));
+        tpl.classList.remove('bili-cleaner-dimmed');
+        tpl.querySelectorAll('.bili-cleaner-dimmed').forEach(el => el.classList.remove('bili-cleaner-dimmed'));
+        tpl.querySelectorAll('.bili-cleaner-badge-col').forEach(el => el.remove());
 
-        // 彻底清理直播专属节点（内联直播播放器、直播中状态标等）及残留的活动播放器
-        tpl.querySelectorAll('.v-inline-live-player, .bili-video-card__info--living, .v-inline-player, .bpx-docker, video').forEach(el => el.remove());
+        // 彻底清理直播专属节点、赞助商角标（如 SponsorBlock/插件注入的 sponsorThumbnailLabel）及残留播放器
+        tpl.querySelectorAll('.v-inline-live-player, .bili-video-card__info--living, .v-inline-player, .bpx-docker, video, .sponsorThumbnailLabel, [class*="sponsorThumbnailLabel"]').forEach(el => el.remove());
 
         // 清理 picture 内部残留的旧 source 标签，防止干扰后续动态封面
         const pictureEl = tpl.querySelector('picture');
@@ -1422,6 +1912,9 @@
             col.querySelectorAll('a[href*="/video/"], a[href*="live.bilibili.com"], a[href*="/cheese/"]').forEach(a => {
                 a.href = videoHref;
             });
+
+            // 彻底移除母卡上残留的赞助商角标（如 sponsorThumbnailLabel 等扩展注入元素）
+            col.querySelectorAll('.sponsorThumbnailLabel, [class*="sponsorThumbnailLabel"]').forEach(el => el.remove());
 
             const titEl = col.querySelector('.bili-video-card__info--tit, h3');
             if (titEl) {
@@ -1541,6 +2034,21 @@
                 </div>
             `;
         }
+
+        // 为瀑布流卡片挂载评价勋章（方案 B：右侧竖向勋章），作为封面类的最后一个子元素
+        const coverEl = col.querySelector('.v-img.bili-video-card__cover, .bili-video-card__cover');
+        if (coverEl) {
+            const stat = {
+                play: Number(item.play) || 0,
+                like: Number(item.like) || 0,
+                favorites: Number(item.favorites) || 0,
+                danmaku: Number(item.danmaku !== undefined ? item.danmaku : item.video_review) || 0,
+                duration: item.duration,
+                review: Number(item.review) || 0
+            };
+            renderBadgeColumn(coverEl, stat);
+        }
+
         return col;
     }
 
@@ -1570,6 +2078,21 @@
                 }
             }
 
+            // 存储量化统计数据供评价勋章计算
+            if (item.bvid) {
+                const stat = {
+                    play: Number(item.play) || 0,
+                    like: Number(item.like) || 0,
+                    favorites: Number(item.favorites) || 0,
+                    danmaku: Number(item.danmaku !== undefined ? item.danmaku : item.video_review) || 0,
+                    duration: item.duration,
+                    review: Number(item.review) || 0,
+                    pubdate: Number(item.pubdate) || 0
+                };
+                videoStatMap.set(item.bvid.toLowerCase(), stat);
+                if (item.aid) videoStatMap.set(String(item.aid), stat);
+            }
+
             // 直接构建卡片
             const cardNode = createCardElement(item);
             fragment.appendChild(cardNode);
@@ -1581,6 +2104,9 @@
             // 增量预净化：在挂载入主 DOM 树前完成类名与样式设定，杜绝页面闪烁与全量扫描
             filterDOMElements(newCards);
             mainContainer.appendChild(fragment);
+            if (isEvaluationBadge && typeof updateQualityFilterCounts === 'function') {
+                updateQualityFilterCounts();
+            }
             updateViewportPage();
         }
         return addedCount;
@@ -1627,6 +2153,7 @@
 
         currentPagingPromise = (async () => {
             let success = false;
+            let riskMsg = null;
             try {
                 const keys = await getWbiKeys();
                 if (controller.signal.aborted || sessionSeq !== pagingSessionSeq) return;
@@ -1656,7 +2183,7 @@
                     platform: 'pc',
                     highlight: 1,
                     single_column: 0,
-                    keyword: getCleanApiKeyword() || decodeURIComponent(rawKeyword.replace(/\+/g, ' ')),
+                    keyword: (isSyntaxFilter ? getCleanApiKeyword() : '') || decodeURIComponent(rawKeyword.replace(/\+/g, ' ')),
                     source_tag: 3,
                     gaia_vtoken: '',
                     web_location: 1430654,
@@ -1671,6 +2198,12 @@
                 });
                 const data = await res.json();
                 if (controller.signal.aborted || sessionSeq !== pagingSessionSeq) return;
+
+                // 识别风控熔断码（-412 / -403），避免误判为自然到底
+                if (data?.code === -412 || data?.code === -403) {
+                    riskMsg = `⚠️ 触发风控 (${data.code})，请稍候点击重试`;
+                    return;
+                }
 
                 let videoItems = [];
                 if (data?.data?.result) {
@@ -1711,7 +2244,7 @@
                 }
                 currentPagingPromise = null;
                 if (!controller.signal.aborted && sessionSeq === pagingSessionSeq) {
-                    finishPaging(success);
+                    finishPaging(success, riskMsg);
                 }
             }
         })();
@@ -1730,7 +2263,7 @@
     }
 
     // 结束单次分页拉取事务，重置加载状态并按需触发视口连续预加载或异常重试引导
-    function finishPaging(success = true) {
+    function finishPaging(success = true, riskMsg = null) {
         updateBadge();
 
         if (isAllLoaded) {
@@ -1739,7 +2272,7 @@
         }
 
         if (!success) {
-            showErrorLoader();
+            showErrorLoader(riskMsg || undefined);
             return;
         }
 
@@ -1856,6 +2389,7 @@
             // 新搜索场景：强制回到第 1 页并解除已全部加载完毕的状态
             currentRequestedPage = 1;
             currentViewportPage = 1;
+            totalViewportPages = 1;
             cachedCardTemplate = null;
             isAllLoaded = false;
             updateDynamicMaxPage();
@@ -1912,6 +2446,7 @@
             abortRunningPaging();
             currentRequestedPage = 1;
             currentViewportPage = 1;
+            totalViewportPages = 1;
             isAllLoaded = maxWaterfallPage <= 1;
         }
         cachedCardTemplate = null;
@@ -2068,6 +2603,7 @@
             updateDynamicMaxPage();
             currentRequestedPage = 1;
             currentViewportPage = 1;
+            totalViewportPages = 1;
             isAllLoaded = maxWaterfallPage <= 1;
             isPaging = false;
 
@@ -2105,6 +2641,529 @@
     window.addEventListener('load', () => {
         syncWaterfallLifecycle();
     });
+
+    // ==========================================
+    // 11. 视频品级独立模块（评价勋章 & 品质筛选）
+    // ==========================================
+
+    // 挂载/更新品质药丸筛选行（位置 A：嵌入 .more-conditions）
+    const QUALITY_FILTER_OPTIONS = [
+        {
+            key: 'all',
+            label: '全部',
+            isAll: true,
+            criteria: '不限制品质分类，展示当前搜索词下的全部有效视频'
+        },
+        {
+            key: 'q-hall-of-fame',
+            label: '🏆 殿堂神作',
+            criteria: '时长 ≥ 90秒，且播放 ≥ 2万，赞播比*权重 ≥ 7%，藏播比*权重 ≥ 3.5%，赞 ≥ 1500，藏 ≥ 800\n【特点】长篇深度精作，双率断层爆棚，三连拉满的顶峰神作'
+        },
+        {
+            key: 'q-hardcore',
+            label: '💡 硬核干货',
+            criteria: '时长 ≥ 90秒，且 ((播放 ≥ 5000 且 藏播比*权重 ≥ 4%，藏 ≥ 250) 或 (藏 ≥ 2000 且 藏播比*权重 ≥ 2.5%))\n【特点】收藏转化极高，深度实用干货与知识合集'
+        },
+        {
+            key: 'q-high-reputation',
+            label: '⭐ 高口碑佳作',
+            criteria: '(播放 ≥ 5000 且 赞播比*权重 ≥ 7%，赞 ≥ 400) 或 (赞 ≥ 5000 且 赞播比*权重 ≥ 4.5%)\n【特点】观众清一色好评点赞，高认可度优质佳作（时长加权）'
+        },
+        {
+            key: 'q-balanced-masterpiece',
+            label: '🏅 综合标杆',
+            criteria: '播放 ≥ 1万 且 赞播比*权重 ≥ 4.5%，藏播比*权重 ≥ 2.2%，赞 ≥ 600，藏 ≥ 300\n【特点】赞藏双优全面扎实，六边形无短板水准（时长加权）'
+        },
+        {
+            key: 'q-hidden-gem',
+            label: '💎 冷门宝藏',
+            criteria: '播放 < 2万，赞 ≥ 200，藏 ≥ 80，且 (赞播比*权重 ≥ 8% 或 藏播比*权重 ≥ 4.5%)\n【特点】中小样本下的极高纯度遗珠，小众高分佳作（时长加权）'
+        },
+        {
+            key: 'q-routine',
+            label: '🍀 稳健良作',
+            criteria: '播放 ≥ 3000，且未触碰避坑线 (赞播比≥1.2%或藏播比≥0.5%)，各项数据平稳均衡\n【特点】品质可靠健康，内容扎实的中流砥柱良品'
+        },
+        {
+            key: 'q-opinion-storm',
+            label: '💥 话题焦点',
+            criteria: '弹幕密集 (密度≥15条/分且弹幕≥300，或弹幕≥3000且密度≥8) 且 评赞比 ≥ 10%\n【特点】弹幕刷屏与评论热议齐飞，全网热议/深度探讨'
+        },
+        {
+            key: 'q-heated-debate',
+            label: '💬 激辩热议',
+            criteria: '评赞比 ≥ 10% 且 评论绝对量大 (评≥300且评播比≥0.35% 或 评≥1500且评播比≥0.2%)\n【特点】长篇评论密集对线，观点激烈深度碰撞'
+        },
+        {
+            key: 'q-danmaku-carnival',
+            label: '🔥 弹幕密集',
+            criteria: '弹幕密度 ≥ 15条/分 且 弹幕 ≥ 300，或 弹幕总量 ≥ 3000 且密度 ≥ 8条/分\n【特点】弹幕高频如潮，高能互动、笑点或名场面聚集'
+        },
+        {
+            key: 'q-viral-short',
+            label: '⚡ 爆款短片',
+            criteria: '时长 < 90秒，且 (播放 ≥ 2万 且 赞 ≥ 1500，赞播比 ≥ 6% 或 藏播比 ≥ 3%) 或 (播放 ≥ 1万 且 赞 ≥ 1000 且 赞播比 ≥ 8%) 或 (赞 ≥ 3万 且 (赞播比 ≥ 3% 或 藏播比 ≥ 1.5%))\n【特点】高能快节奏短片，完播互动极高，爆款短视频精选'
+        }
+    ];
+
+    // 参与范围选择与单选排他的基础品质分类键（有序）
+    const QUALITY_CATEGORY_KEYS = [
+        'q-hall-of-fame',
+        'q-hardcore',
+        'q-high-reputation',
+        'q-balanced-masterpiece',
+        'q-hidden-gem',
+        'q-routine',
+        'q-opinion-storm',
+        'q-heated-debate',
+        'q-danmaku-carnival',
+        'q-viral-short'
+    ];
+    let lastQualityAnchorKey = null;
+
+    function injectQualityFilterRow(container) {
+        if (!container || !container.isConnected) return;
+        if (!isEvaluationBadge) {
+            const oldRow = container.querySelector('.bili-cleaner-quality-filter-row');
+            if (oldRow) oldRow.remove();
+            return;
+        }
+
+        let filterRow = container.querySelector(':scope > .bili-cleaner-quality-filter-row');
+        if (!filterRow) {
+            filterRow = document.createElement('div');
+            filterRow.className = 'search-condition-row bili-cleaner-quality-filter-row';
+            container.appendChild(filterRow);
+        }
+
+        // 仅在初次构建或内部按钮数不一致时生成结构
+        if (!filterRow.dataset.rendered) {
+            filterRow.dataset.rendered = 'true';
+            filterRow.innerHTML = `
+                <div class="bili-cleaner-filter-label" title="点击单选，支持按住 Ctrl 多选、按住 Shift 范围连选">🏷️ 视频品质:</div>
+                <div class="bili-cleaner-filter-pills-box"></div>
+            `;
+            const box = filterRow.querySelector('.bili-cleaner-filter-pills-box');
+            QUALITY_FILTER_OPTIONS.forEach(opt => {
+                const btn = document.createElement('div');
+                btn.className = 'bili-cleaner-filter-pill-btn';
+                if (opt.isAll) btn.classList.add('pill-all');
+                btn.dataset.key = opt.key;
+                btn.innerHTML = `<span class="bili-cleaner-pill-text">${opt.label}</span><span class="bili-cleaner-pill-count"></span>`;
+                if (opt.criteria) {
+                    const actionTip = opt.isAll 
+                        ? '点击重置为全部' 
+                        : '点击单选 | 按住 Ctrl 点击多选 | 按住 Shift 点击范围连选';
+                    btn.title = `【${opt.label}】筛选标准：\n${opt.criteria}\n────────────────────\n💡 ${actionTip}`;
+                }
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    toggleQualityFilter(opt.key, e);
+                });
+                box.appendChild(btn);
+            });
+        }
+
+        updateQualityFilterButtons(filterRow);
+        updateQualityFilterCounts();
+    }
+
+    // 切换品质筛选状态（类文件夹式交互：默认单选，Ctrl多选，Shift范围连选）
+    function toggleQualityFilter(key, event) {
+        const isCtrl = !!(event && (event.ctrlKey || event.metaKey));
+        const isShift = !!(event && event.shiftKey);
+
+        if (key === 'all') {
+            // 点击【全部】：重置所有品质分类筛选
+            activeQualityFilters.clear();
+            lastQualityAnchorKey = null;
+        } else if (QUALITY_CATEGORY_KEYS.includes(key)) {
+            if (isShift) {
+                // 【Shift 范围连选】：选中从上一个锚点 (lastQualityAnchorKey) 到当前项闭区间内所有分类
+                let anchorKey = lastQualityAnchorKey;
+                if (!anchorKey || !QUALITY_CATEGORY_KEYS.includes(anchorKey)) {
+                    // 若无前置锚点，取当前已选中的首项，若完全无选中则以第一项为锚点
+                    const firstSelected = QUALITY_CATEGORY_KEYS.find(k => activeQualityFilters.has(k));
+                    anchorKey = firstSelected || QUALITY_CATEGORY_KEYS[0];
+                }
+                const startIdx = QUALITY_CATEGORY_KEYS.indexOf(anchorKey);
+                const targetIdx = QUALITY_CATEGORY_KEYS.indexOf(key);
+                const minIdx = Math.min(startIdx, targetIdx);
+                const maxIdx = Math.max(startIdx, targetIdx);
+
+                if (!isCtrl) {
+                    // 非 Ctrl+Shift 时，范围连选替换现有品质分类选择
+                    QUALITY_CATEGORY_KEYS.forEach(k => activeQualityFilters.delete(k));
+                }
+                for (let i = minIdx; i <= maxIdx; i++) {
+                    activeQualityFilters.add(QUALITY_CATEGORY_KEYS[i]);
+                }
+                if (!lastQualityAnchorKey) lastQualityAnchorKey = anchorKey;
+            } else if (isCtrl) {
+                // 【Ctrl 独立多选】：反转当前项选中状态
+                if (activeQualityFilters.has(key)) {
+                    activeQualityFilters.delete(key);
+                } else {
+                    activeQualityFilters.add(key);
+                }
+                lastQualityAnchorKey = key;
+            } else {
+                // 【默认单选效果】：清空其余品质项，仅选中当前项
+                QUALITY_CATEGORY_KEYS.forEach(k => activeQualityFilters.delete(k));
+                activeQualityFilters.add(key);
+                lastQualityAnchorKey = key;
+            }
+        }
+
+        // 持久化存储用户选中的筛选项
+        try {
+            localStorage.setItem('bili_cleaner_active_quality_filters', JSON.stringify([...activeQualityFilters]));
+        } catch (e) {}
+
+        // 刷新所有筛选按钮的高亮态
+        document.querySelectorAll('.bili-cleaner-quality-filter-row').forEach(updateQualityFilterButtons);
+
+        // 重新安检过滤已有卡片
+        document.querySelectorAll('[data-purified-query]').forEach(card => {
+            delete card.dataset.purifiedQuery;
+        });
+        filterDOMElements();
+
+        // 若开启瀑布流，检测当前屏幕如果卡片变少不足以撑满一屏，主动尝试静默增补拉取
+        if (isWaterfall && typeof checkWaterfallFillScreen === 'function') {
+            checkWaterfallFillScreen();
+        }
+    }
+
+    // 更新药丸按钮 active 高亮样式
+    function updateQualityFilterButtons(filterRow) {
+        if (!filterRow) return;
+        const btns = filterRow.querySelectorAll('.bili-cleaner-filter-pill-btn');
+        const isAllSelected = activeQualityFilters.size === 0;
+
+        btns.forEach(btn => {
+            const key = btn.dataset.key;
+            if (key === 'all') {
+                btn.classList.toggle('active', isAllSelected);
+            } else {
+                btn.classList.toggle('active', activeQualityFilters.has(key));
+            }
+        });
+    }
+
+    // 统计当前已加载视频卡片在各品级下的数量（非灰色卡片 / 总数）并更新按钮展示
+    function updateQualityFilterCounts() {
+        if (!isEvaluationBadge) return;
+        const rows = document.querySelectorAll('.bili-cleaner-quality-filter-row');
+        if (!rows.length) return;
+
+        const container = getMainListContainer(document) || document;
+        const cards = container.querySelectorAll('[data-syntax-pass]');
+        const counts = { all: { clear: 0, total: 0 } };
+        QUALITY_CATEGORY_KEYS.forEach(k => {
+            counts[k] = { clear: 0, total: 0 };
+        });
+
+        const seenCards = new Set();
+        cards.forEach(el => {
+            const card = el.closest('[class*="col_"], .video-list-item, .bili-live-card') || el;
+            if (seenCards.has(card)) return;
+            seenCards.add(card);
+            if (!card.isConnected) return;
+            if (card.dataset.isLive === '1') return;
+            // 排除非脚本自身隐藏的卡片（在未设置脚本内联 display:none 时持久化记录，防止切换筛选时反复跳变）
+            if (card.dataset.externalHidden === '1') return;
+
+            const isClear = card.dataset.syntaxPass === '1';
+            const qClass = card.dataset.qualityClass || '';
+
+            counts.all.total++;
+            if (isClear) counts.all.clear++;
+
+            if (qClass && counts[qClass]) {
+                counts[qClass].total++;
+                if (isClear) counts[qClass].clear++;
+            }
+        });
+
+        const showTotal = isSyntaxFilter && isDimmed;
+        rows.forEach(row => {
+            row.querySelectorAll('.bili-cleaner-filter-pill-btn').forEach(btn => {
+                const key = btn.dataset.key;
+                const stat = counts[key];
+                const countEl = btn.querySelector('.bili-cleaner-pill-count');
+                if (stat && countEl) {
+                    countEl.textContent = showTotal ? `(${stat.clear}/${stat.total})` : `(${stat.clear})`;
+                    btn.classList.toggle('is-empty', key !== 'all' && (showTotal ? stat.total === 0 : stat.clear === 0));
+                }
+            });
+        });
+    }
+
+    // 解析时间时长为分钟浮点数（用于计算弹幕密度）
+    function parseDurationMinutes(val) {
+        if (!val && val !== 0) return 0;
+        if (typeof val === 'number') return val > 0 ? (val / 60) : 0;
+        const parts = String(val).trim().split(':').map(Number);
+        if (parts.length === 3) return parts[0] * 60 + parts[1] + parts[2] / 60;
+        if (parts.length === 2) return parts[0] + parts[1] / 60;
+        const num = parseFloat(val);
+        return (!isNaN(num) && num > 0) ? (num / 60) : 0;
+    }
+
+    // 从 DOM 节点文本解析数值（支持万/亿/k 缩写，如 '62.3万' -> 623000）
+    function parseStatText(text) {
+        if (!text) return 0;
+        const clean = String(text).replace(/[^\d.万亿wWkK]/g, '').trim();
+        if (!clean) return 0;
+        if (clean.includes('万') || clean.toLowerCase().endsWith('w')) {
+            return parseFloat(clean) * 10000;
+        }
+        if (clean.includes('亿')) {
+            return parseFloat(clean) * 100000000;
+        }
+        if (clean.toLowerCase().endsWith('k')) {
+            return parseFloat(clean) * 1000;
+        }
+        return parseFloat(clean) || 0;
+    }
+
+    // 从 DOM 卡片节点回退提取播放量、弹幕与时长
+    function extractStatFromCard(card) {
+        let play = 0;
+        let danmaku = 0;
+        let duration = '';
+        const statItems = card.querySelectorAll('.bili-video-card__stats--item');
+        if (statItems.length >= 1) {
+            play = parseStatText(statItems[0].textContent);
+        }
+        if (statItems.length >= 2) {
+            danmaku = parseStatText(statItems[1].textContent);
+        }
+        const durEl = card.querySelector('.bili-video-card__stats__duration');
+        if (durEl) {
+            duration = durEl.textContent.trim();
+        }
+        return { play, like: 0, favorites: 0, danmaku, duration, review: 0, isPartial: true };
+    }
+
+    // 纯视频品质象限判定函数（返回命中象限对象）
+    function getQualityQuadrant(stat) {
+        if (!stat) return null;
+        // 方案 1：数据尚未就绪（仅卡片 DOM 提取的粗略部分数据，无真实点赞/收藏）时，一开始不评级
+        if (stat.isPartial) return null;
+        const play = stat?.play || 0;
+        const like = stat?.like || 0;
+        const favorites = stat?.favorites || 0;
+        const danmaku = stat?.danmaku || 0;
+        const review = stat?.review || 0;
+        const durationMinutes = parseDurationMinutes(stat?.duration);
+
+        const likeRatio = play > 0 ? (like / play) : 0;
+        const favRatio = play > 0 ? (favorites / play) : 0;
+        const reviewRatio = play > 0 ? (review / play) : 0;
+        const reviewLikeRatio = like > 0 ? (review / like) : (review > 0 ? 1 : 0);
+        const danmakuDensity = durationMinutes > 0 ? (danmaku / durationMinutes) : 0;
+
+        // 方案 3：时长加权归一化（数学模型修正）
+        // 5分钟为标准基准时长（durFactor = 1.0）；长视频完播难度大、观众付出时间成本极高，给予加权提升；短视频互动完播轻快无压力，给予系数惩罚（下限0.4，上限2.0）
+        const durFactor = durationMinutes > 0 ? Math.min(2.0, Math.max(0.4, Math.sqrt(durationMinutes / 5.0))) : 1.0;
+        const normLikeRatio = likeRatio * durFactor;
+        const normFavRatio = favRatio * durFactor;
+
+        // 弹幕与评论热度特征分析
+        // 争议/论战特征校验：真实网络对线与争议事件的核心特征是“观众不愿点赞，集中在评论区写小作文互撕”，评赞比异常高（>= 10%）
+        // 若点赞极高而评论仅占很小比例（如 4.5万赞 vs 2659评，评赞比仅 5.9%），表明观众一边倒热情好评，属于高能互动而非争议对线
+        const isDanmakuHigh = (danmakuDensity >= 15 && danmaku >= 300) || (danmaku >= 3000 && danmakuDensity >= 8);
+        const isReviewDebated = (reviewLikeRatio >= 0.10) && (
+            (review >= 300 && reviewRatio >= 0.0035) || 
+            (review >= 1500 && reviewRatio >= 0.002)
+        );
+
+        // 【第一层：冷门置信度保护】播放量不足 3000 时，不作随意定性（极少数纯度极高者破格授予冷门宝藏）
+        if (play < 3000) {
+            if (play >= 1000 && (like >= 150 || favorites >= 80) && (normLikeRatio >= 0.08 || normFavRatio >= 0.045)) {
+                return {
+                    className: 'q-hidden-gem',
+                    tag: '💎 冷门宝藏',
+                    desc: '小众高纯度佳品，播放虽少但互动扎实'
+                };
+            } else {
+                return {
+                    className: 'q-low-sample',
+                    tag: '🌱 样本较少',
+                    desc: '数据样本量较少（播放量 < 3000），暂不作定性评级'
+                };
+            }
+        } else if (play >= 20000 && like > 0 && likeRatio < 0.012 && favRatio < 0.005 && (durationMinutes <= 15 || durationMinutes === 0)) {
+            // 【风控防线：低质劣作避坑】大样本且极低转化（限制时长 <= 15分钟，排除歌单/长录像误判）
+            return {
+                className: 'q-warning',
+                tag: '⚠️ 谨慎观看',
+                desc: '高播放低评价，含金量较低谨慎点击'
+            };
+        } else if (durationMinutes >= 1.5 && play >= 20000 && normLikeRatio >= 0.07 && normFavRatio >= 0.035 && like >= 1500 && favorites >= 800) {
+            // 【T0 顶峰神作】：大样本 + 最低时长门槛 >= 90秒 + 双率时长归一化达标 + 绝对量达标
+            return {
+                className: 'q-hall-of-fame',
+                tag: '🏆 殿堂神作',
+                desc: '殿堂级神作，三连爆满无需犹豫'
+            };
+        } else if (durationMinutes > 0 && durationMinutes < 1.5 && (
+            (play >= 20000 && like >= 1500 && (likeRatio >= 0.06 || favRatio >= 0.03)) ||
+            (play >= 10000 && like >= 1000 && likeRatio >= 0.08) ||
+            (like >= 30000 && (likeRatio >= 0.03 || favRatio >= 0.015))
+        )) {
+            // 【专设独立分类：⚡ 爆款短片】时长 < 90秒，快节奏高完播互动爆款
+            return {
+                className: 'q-viral-short',
+                tag: '⚡ 爆款短片',
+                desc: '高能快节奏短片，互动爆棚完播极高'
+            };
+        } else if (play < 20000 && like >= 200 && favorites >= 80 && (normLikeRatio >= 0.08 || normFavRatio >= 0.045)) {
+            // 【T2 璞玉遗珠】：中小样本下的极高纯度宝藏（时长加权）
+            return {
+                className: 'q-hidden-gem',
+                tag: '💎 冷门宝藏',
+                desc: '小众冷门宝藏，播放虽少但纯度极高'
+            };
+        } else if (durationMinutes >= 1.5 && ((play >= 5000 && normFavRatio >= 0.04 && favorites >= 250) || (favorites >= 2000 && normFavRatio >= 0.025))) {
+            // 【T1 一流干货】：样本充足、时长门槛 >= 90秒且收藏转化极高（加权）
+            return {
+                className: 'q-hardcore',
+                tag: '💡 硬核干货',
+                desc: '顶级实用干货，建议立即收藏备用'
+            };
+        } else if ((play >= 5000 && normLikeRatio >= 0.07 && like >= 400) || (like >= 5000 && normLikeRatio >= 0.045)) {
+            // 【T1 一流口碑】：样本充足且点赞好评清一色（时长加权）
+            return {
+                className: 'q-high-reputation',
+                tag: '⭐ 高口碑佳作',
+                desc: '观众清一色好评，极高品质无踩雷'
+            };
+        } else if (play >= 10000 && normLikeRatio >= 0.045 && normFavRatio >= 0.022 && like >= 600 && favorites >= 300) {
+            // 【T1.5 综合标杆】：点赞、收藏、播放全方位均衡达标，六边形无短板综合水准（时长加权）
+            return {
+                className: 'q-balanced-masterpiece',
+                tag: '🏅 综合标杆',
+                desc: '赞藏双优全面扎实，六边形无短板综合标杆'
+            };
+        } else if (isDanmakuHigh && isReviewDebated) {
+            // 【焦点级热议】：弹幕密集与评论热烈齐飞（全网大事件/深度探讨/全平台话题焦点）
+            return {
+                className: 'q-opinion-storm',
+                tag: '💥 话题焦点',
+                desc: '弹幕刷屏与评论热议齐飞，全网热议/深度探讨话题焦点'
+            };
+        } else if (isReviewDebated) {
+            // 【评论深度交锋】：评论区长篇小作文对线（多方观点激烈碰撞/争议焦点）
+            return {
+                className: 'q-heated-debate',
+                tag: '💬 激辩热议',
+                desc: '评论区高密度交锋对线，观点碰撞引发深度热议'
+            };
+        } else if (isDanmakuHigh) {
+            // 【弹幕即时高能】：弹幕极度密集（满屏互动、乐子欢呼或现场吵架名场面）
+            return {
+                className: 'q-danmaku-carnival',
+                tag: '🔥 弹幕密集',
+                desc: '弹幕密集高频，高能互动、乐子或热议焦点'
+            };
+        } else {
+            // 【T3 基准良作】：各项指标均衡扎实
+            return {
+                className: 'q-routine',
+                tag: '🍀 稳健良作',
+                desc: '各项数据均衡扎实，品质稳健可靠'
+            };
+        }
+    }
+
+    // 在视频封面 .v-img.bili-video-card__cover 内挂载/更新评价勋章列
+    function renderBadgeColumn(coverEl, stat) {
+        if (!coverEl) return;
+        if (!isEvaluationBadge) {
+            const existing = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
+            if (existing) existing.remove();
+            return;
+        }
+
+        const quadrant = getQualityQuadrant(stat);
+        // 数据未就绪或未命中评级时，清空原有勋章并留白
+        if (!quadrant) {
+            const existing = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
+            if (existing) existing.remove();
+            return;
+        }
+
+        const play = stat?.play || 0;
+        const like = stat?.like || 0;
+        const favorites = stat?.favorites || 0;
+        const danmaku = stat?.danmaku || 0;
+        const review = stat?.review || 0;
+        const durationMinutes = parseDurationMinutes(stat?.duration);
+        const durFactor = durationMinutes > 0 ? Math.min(2.0, Math.max(0.4, Math.sqrt(durationMinutes / 5.0))) : 1.0;
+
+        const likeRatio = play > 0 ? (like / play) : 0;
+        const favRatio = play > 0 ? (favorites / play) : 0;
+        const reviewRatio = play > 0 ? (review / play) : 0;
+        const danmakuDensity = durationMinutes > 0 ? (danmaku / durationMinutes) : 0;
+
+        // 精选高光减负策略：未开启“全部显示”时，稳健良作 (q-routine) 与 样本较少 (q-low-sample) 默认留白不显示
+        if (!isEvalFullMode && (quadrant.className === 'q-routine' || quadrant.className === 'q-low-sample')) {
+            const existing = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
+            if (existing) existing.remove();
+            return;
+        }
+
+        let badgeCol = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
+        if (!badgeCol) {
+            badgeCol = document.createElement('div');
+            badgeCol.className = 'bili-cleaner-badge-col';
+            coverEl.appendChild(badgeCol);
+        }
+
+        // 构造悬停提示文本 (Tooltip)
+        const tipLines = [
+            `【${quadrant.tag}】${quadrant.desc}`,
+            '────────────────────'
+        ];
+        if (like > 0) {
+            tipLines.push(`👍 赞播比: ${(likeRatio * 100).toFixed(1)}% (${formatStat(like)})`);
+        }
+        if (favorites > 0) {
+            tipLines.push(`⭐ 藏播比: ${(favRatio * 100).toFixed(1)}% (${formatStat(favorites)})`);
+        }
+        if (play > 0) {
+            tipLines.push(`▶️ 播放量: ${formatStat(play)}`);
+        }
+        if (danmaku > 0) {
+            const densityText = durationMinutes > 0 ? ` (${danmakuDensity.toFixed(1)}条/分)` : '';
+            tipLines.push(`💬 弹幕数: ${formatStat(danmaku)}${densityText}`);
+        }
+        if (review > 0) {
+            tipLines.push(`📝 评论数: ${formatStat(review)} (评播比 ${(reviewRatio * 100).toFixed(2)}%)`);
+        }
+        if (stat?.duration) {
+            const factorText = (durationMinutes > 0 && Math.abs(durFactor - 1.0) >= 0.05) ? ` (时长权重 ${durFactor.toFixed(2)}x)` : '';
+            tipLines.push(`⏱️ 视频时长: ${formatDuration(stat.duration)}${factorText}`);
+        }
+
+        const tip = tipLines.join('\n');
+
+        // 幂等性守卫：若勋章已存在且评级未变，仅更新 title 提示，严禁销毁重建 DOM 节点（避免重置正在播放的 CSS 动画）
+        const pill = badgeCol.querySelector('.bili-cleaner-badge-pill');
+        if (pill && pill.classList.contains(quadrant.className)) {
+            if (pill.title !== tip) pill.title = tip;
+            return;
+        }
+
+        badgeCol.innerHTML = `
+            <div class="bili-cleaner-badge-pill ${quadrant.className}" title="${tip}">
+                <span class="bili-cleaner-badge-tag">${quadrant.tag}</span>
+            </div>
+        `;
+    }
 
     console.log('[Bilibili 搜索净化] 3.0.0 已启动。');
 })();
