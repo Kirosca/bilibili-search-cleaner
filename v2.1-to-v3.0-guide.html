@@ -98,6 +98,18 @@
       word-break: break-word;
     }
 
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    section[id] {
+      scroll-margin-top: 96px;
+    }
+
     /* 移动端表格自适应卡片化（< 768px 零横向滚动） */
     @media (max-width: 767px) {
       .responsive-table thead {
@@ -141,6 +153,11 @@
         border-top: 1px dashed #e2e8f0;
       }
       /* 1. 对比表移动端标签前缀 */
+      .compare-table tbody td:nth-child(1) {
+        font-size: 14px;
+        padding-bottom: 4px !important;
+        border-bottom: 1px solid #f1f5f9;
+      }
       .compare-table tbody td:nth-child(2)::before {
         content: "v2.1.0：";
         font-weight: 600;
@@ -160,9 +177,32 @@
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased">
 
+  <!-- 顶部吸顶锚点导航栏（参考 PiliPlus 文档，支持移动端横向滑动） -->
+  <header class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+      <div class="h-12 sm:h-14 flex items-center justify-between border-b border-slate-100">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="font-extrabold text-sm sm:text-base tracking-tight text-slate-900 truncate">Bilibili 搜索净化</span>
+          <span class="shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-200">升级指南</span>
+        </div>
+        <div class="shrink-0 text-[11px] sm:text-xs text-slate-500 font-mono bg-slate-100 px-2 py-0.5 rounded">v2.1.0 → v3.0.0</div>
+      </div>
+      <nav class="flex items-center space-x-4 sm:space-x-6 text-xs sm:text-sm font-medium text-slate-600 overflow-x-auto py-2.5 no-scrollbar whitespace-nowrap">
+        <a href="#summary" class="text-sky-700 font-semibold hover:text-sky-600 transition">功能速览</a>
+        <a href="#compare" class="hover:text-sky-600 active:text-sky-700 transition">全维度对比</a>
+        <a href="#menu" class="hover:text-sky-600 active:text-sky-700 transition">油猴菜单</a>
+        <a href="#syntax" class="hover:text-sky-600 active:text-sky-700 transition">搜索语法</a>
+        <a href="#shortcuts" class="hover:text-sky-600 active:text-sky-700 transition">快捷键与交互</a>
+        <a href="#waterfall" class="hover:text-sky-600 active:text-sky-700 transition">WBI 瀑布流</a>
+        <a href="#quality" class="hover:text-sky-600 active:text-sky-700 transition">12 维品质门槛</a>
+        <a href="#quality-taxonomy" class="hover:text-sky-600 active:text-sky-700 transition">视频品级分类</a>
+      </nav>
+    </div>
+  </header>
+
   <!-- 顶部 Hero Banner -->
   <div class="bg-gradient-to-br from-slate-900 via-slate-800 to-sky-950 text-white border-b border-slate-700/60">
-    <div class="max-w-6xl mx-auto px-6 py-10">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-7 sm:py-10">
       <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
         <div class="space-y-3">
           <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/15 border border-sky-400/30 text-sky-300 text-xs font-semibold">
@@ -208,30 +248,97 @@
           <div class="text-[11px] text-cyan-300 mt-1">纯前端 MD5+WBI · -412 风控熔断</div>
         </div>
       </div>
-
-      <!-- 章节快速导航 -->
-      <nav class="flex flex-wrap gap-2 mt-6 pt-5 border-t border-white/10 text-xs">
-        <a href="#compare" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-sky-500/30 text-slate-200 transition">一、全维度对比</a>
-        <a href="#menu" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-sky-500/30 text-slate-200 transition">二、油猴菜单与默认状态</a>
-        <a href="#syntax" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-sky-500/30 text-slate-200 transition">三、搜索语法与防误判守卫</a>
-        <a href="#shortcuts" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-sky-500/30 text-slate-200 transition">四、快捷键与交互细节</a>
-        <a href="#waterfall" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-sky-500/30 text-slate-200 transition">五、WBI 瀑布流协议栈</a>
-        <a href="#quality" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-sky-500/30 text-slate-200 transition">六、12 维品质评级完整门槛</a>
-      </nav>
     </div>
   </div>
 
   <!-- 正文主体 -->
-  <main class="max-w-6xl mx-auto px-6 py-8 space-y-8">
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8">
+
+    <!-- 功能速览（简洁版） -->
+    <section id="summary" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="px-4 sm:px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <h2 class="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2.5">
+          <span class="w-2 h-5 bg-sky-600 rounded-full shrink-0"></span>
+          功能速览（30 秒看懂 v3.0.0 核心能力）
+        </h2>
+        <span class="text-xs text-slate-500">点击卡片右下角可直接跳转对应详解</span>
+      </div>
+
+      <div class="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm">
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between gap-3">
+          <div class="space-y-2">
+            <div class="font-bold text-slate-900 flex items-center gap-2">
+              <span class="w-6 h-6 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center text-xs font-mono font-bold shrink-0">1</span>
+              <span>四维搜索语法 + 简繁互通</span>
+            </div>
+            <p class="text-slate-600 leading-relaxed">
+              支持 <code class="px-1 py-0.5 rounded bg-white border border-slate-200 font-mono text-xs">普通词</code>、<code class="px-1 py-0.5 rounded bg-white border border-slate-200 font-mono text-xs">-排除词</code>、<code class="px-1 py-0.5 rounded bg-white border border-slate-200 font-mono text-xs">@UP主</code>、<code class="px-1 py-0.5 rounded bg-white border border-slate-200 font-mono text-xs">#Tag</code> 四道精准过滤；发往 B 站接口前自动剥离语法外壳最大化召回，并内置 OpenCC 繁简归一与直播卡防误标守卫。
+            </p>
+          </div>
+          <div class="flex items-center justify-between text-[11px] sm:text-xs text-slate-500 pt-2 border-t border-slate-200/70">
+            <span>开箱默认开启 · 支持热键瞬切</span>
+            <a href="#syntax" class="text-sky-600 hover:text-sky-700 font-semibold whitespace-nowrap">查看语法详解 →</a>
+          </div>
+        </div>
+
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between gap-3">
+          <div class="space-y-2">
+            <div class="font-bold text-slate-900 flex items-center gap-2">
+              <span class="w-6 h-6 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center text-xs font-mono font-bold shrink-0">2</span>
+              <span>聚光灯虚化 + 快捷键工作流</span>
+            </div>
+            <p class="text-slate-600 leading-relaxed">
+              按 <kbd class="px-1.5 py-0.5 text-xs font-mono bg-white border border-slate-300 rounded">/</kbd> 随时聚焦搜索框，按 <kbd class="px-1.5 py-0.5 text-xs font-mono bg-white border border-slate-300 rounded">Alt+Q</kbd> 瞬切语法过滤；可在油猴菜单中将“物理隐藏”切换为“聚光灯半透明虚化”，千张卡片 <code class="font-mono text-xs">O(1)</code> 无卡顿切换。
+            </p>
+          </div>
+          <div class="flex items-center justify-between text-[11px] sm:text-xs text-slate-500 pt-2 border-t border-slate-200/70">
+            <span>支持 ⚡ 一键全开/全关总控</span>
+            <a href="#shortcuts" class="text-sky-600 hover:text-sky-700 font-semibold whitespace-nowrap">查看快捷键 →</a>
+          </div>
+        </div>
+
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between gap-3">
+          <div class="space-y-2">
+            <div class="font-bold text-slate-900 flex items-center gap-2">
+              <span class="w-6 h-6 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center text-xs font-mono font-bold shrink-0">3</span>
+              <span>纯前端 WBI 无缝瀑布流</span>
+            </div>
+            <p class="text-slate-600 leading-relaxed">
+              开启后隐藏原站底部分页器，滚动触底按屏幕列数（4~7 列 × 6 行）连续拉取并增量安检；左下角悬浮徽标实时显示 <code class="font-mono text-xs">第 X/Y 页</code>，左键暂停/继续、右键平滑回顶，遇风控自动提示重试。
+            </p>
+          </div>
+          <div class="flex items-center justify-between text-[11px] sm:text-xs text-slate-500 pt-2 border-t border-slate-200/70">
+            <span>默认关闭 · 菜单一键启用</span>
+            <a href="#waterfall" class="text-sky-600 hover:text-sky-700 font-semibold whitespace-nowrap">查看协议栈 →</a>
+          </div>
+        </div>
+
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between gap-3">
+          <div class="space-y-2">
+            <div class="font-bold text-slate-900 flex items-center gap-2">
+              <span class="w-6 h-6 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center text-xs font-mono font-bold shrink-0">4</span>
+              <span>12 维视频品质雷达与品级筛选</span>
+            </div>
+            <p class="text-slate-600 leading-relaxed">
+              综合赞播比、藏播比、弹幕密度、评赞比与时长加权，在封面左上角渲染 <code class="font-mono text-xs">🏆 殿堂神作</code>、<code class="font-mono text-xs">💡 硬核干货</code> 等微标；顶部嵌入【品级标签】栏支持 <kbd class="px-1 py-0.5 text-[11px] font-mono bg-white border border-slate-300 rounded">Ctrl</kbd>/<kbd class="px-1 py-0.5 text-[11px] font-mono bg-white border border-slate-300 rounded">Shift</kbd> 多选并实时计数。
+            </p>
+          </div>
+          <div class="flex items-center justify-between text-[11px] sm:text-xs text-slate-500 pt-2 border-t border-slate-200/70">
+            <span>默认仅精选展示 · 视觉清爽</span>
+            <a href="#quality-taxonomy" class="text-sky-600 hover:text-sky-700 font-semibold whitespace-nowrap">查看品级分类 →</a>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <!-- 一、全维度对比 -->
     <section id="compare" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-        <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2.5">
-          <span class="w-2 h-5 bg-sky-500 rounded-full"></span>
+      <div class="px-4 sm:px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2">
+        <h2 class="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2.5">
+          <span class="w-2 h-5 bg-sky-500 rounded-full shrink-0"></span>
           一、v2.1.0 → v3.0.0 全维度对比
         </h2>
-        <span class="text-xs text-slate-400 font-mono">Architecture Diff</span>
+        <span class="text-xs text-slate-400 font-mono shrink-0">Architecture Diff</span>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full text-sm text-left border-collapse responsive-table compare-table">
@@ -285,15 +392,15 @@
 
     <!-- 二、油猴菜单结构与默认状态 -->
     <section id="menu" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2.5">
-          <span class="w-2 h-5 bg-emerald-500 rounded-full"></span>
+      <div class="px-4 sm:px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <h2 class="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2.5">
+          <span class="w-2 h-5 bg-emerald-500 rounded-full shrink-0"></span>
           二、油猴菜单结构与持久化配置（按实际注册顺序）
         </h2>
         <span class="text-xs text-slate-500">新用户开箱默认开启：<strong class="text-emerald-700">筛选常驻 + 语法过滤 + 品质标签(仅精选)</strong></span>
       </div>
 
-      <div class="p-6 grid lg:grid-cols-2 gap-4 text-sm">
+      <div class="p-4 sm:p-6 grid lg:grid-cols-2 gap-4 text-sm">
         <!-- 1. 一键总控 -->
         <div class="p-4 rounded-xl border border-amber-200 bg-amber-50/40 lg:col-span-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
@@ -387,13 +494,13 @@
     <!-- 三 & 四：搜索语法 + 快捷键与交互 -->
     <div class="grid lg:grid-cols-2 gap-6">
       <section id="syntax" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-6 py-4 bg-slate-50 border-b border-slate-200">
-          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2.5">
-            <span class="w-2 h-5 bg-indigo-500 rounded-full"></span>
+        <div class="px-4 sm:px-6 py-4 bg-slate-50 border-b border-slate-200">
+          <h2 class="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2.5">
+            <span class="w-2 h-5 bg-indigo-500 rounded-full shrink-0"></span>
             三、搜索语法、简繁与底层防误判守卫
           </h2>
         </div>
-        <div class="p-6 space-y-4 text-sm">
+        <div class="p-4 sm:p-6 space-y-4 text-sm">
           <div class="space-y-2.5">
             <div class="flex items-start gap-3">
               <code class="shrink-0 px-2 py-0.5 rounded bg-slate-900 text-white font-mono text-xs">普通词</code>
@@ -423,13 +530,13 @@
       </section>
 
       <section id="shortcuts" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-6 py-4 bg-slate-50 border-b border-slate-200">
-          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2.5">
-            <span class="w-2 h-5 bg-amber-500 rounded-full"></span>
+        <div class="px-4 sm:px-6 py-4 bg-slate-50 border-b border-slate-200">
+          <h2 class="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2.5">
+            <span class="w-2 h-5 bg-amber-500 rounded-full shrink-0"></span>
             四、快捷键、品级栏交互与动态计数
           </h2>
         </div>
-        <div class="p-6 space-y-4 text-sm">
+        <div class="p-4 sm:p-6 space-y-4 text-sm">
           <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
             <div class="flex items-start gap-3">
               <kbd class="shrink-0 px-2.5 py-1 text-xs font-mono font-bold bg-white border border-slate-300 rounded-md shadow-xs text-slate-800">/</kbd>
@@ -459,15 +566,15 @@
 
     <!-- 五、无缝瀑布流与 WBI 协议栈 -->
     <section id="waterfall" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-        <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2.5">
-          <span class="w-2 h-5 bg-cyan-500 rounded-full"></span>
+      <div class="px-4 sm:px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+        <h2 class="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2.5">
+          <span class="w-2 h-5 bg-cyan-500 rounded-full shrink-0"></span>
           五、无缝瀑布流与纯前端 WBI 签名协议栈
         </h2>
         <span class="text-xs font-mono text-slate-400">WBI + IntersectionObserver</span>
       </div>
 
-      <div class="p-6 space-y-4">
+      <div class="p-4 sm:p-6 space-y-4">
         <div class="grid md:grid-cols-3 gap-4 text-xs sm:text-sm text-slate-600">
           <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
             <div class="font-bold text-slate-900 mb-1.5">1. WBI 鉴权与密钥同步</div>
@@ -497,17 +604,17 @@
 
     <!-- 六、12 维视频品质评级体系 -->
     <section id="quality" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2.5">
-          <span class="w-2 h-5 bg-purple-500 rounded-full"></span>
+      <div class="px-4 sm:px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <h2 class="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2.5">
+          <span class="w-2 h-5 bg-purple-500 rounded-full shrink-0"></span>
           六、12 维视频品质评级完整门槛（按代码自上而下优先匹配）
         </h2>
-        <span class="text-xs font-mono text-sky-800 bg-sky-50 border border-sky-200 px-3 py-1 rounded-lg">
+        <span class="text-xs font-mono text-sky-800 bg-sky-50 border border-sky-200 px-3 py-1 rounded-lg w-fit">
           时长权重 = clamp(√(时长分 / 5.0), 0.40, 2.00)
         </span>
       </div>
 
-      <div class="p-6 space-y-4">
+      <div class="p-4 sm:p-6 space-y-4">
         <div class="grid sm:grid-cols-3 gap-3 text-xs text-slate-600">
           <div class="p-3 rounded-lg bg-slate-50 border border-slate-200">
             <strong class="text-slate-900">⏱️ 时长加权归一化：</strong>以 <code class="font-mono">5.0 分钟</code> 为 <code class="font-mono">1.00x</code> 基准，10 秒短片权重压至 <code class="font-mono">0.40x</code>，20 分钟长片提升至 <code class="font-mono">2.00x</code>。
@@ -611,6 +718,119 @@
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 七、视频品级分类说明 -->
+    <section id="quality-taxonomy" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="px-4 sm:px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <h2 class="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2.5">
+          <span class="w-2 h-5 bg-amber-500 rounded-full shrink-0"></span>
+          七、视频品级分类说明
+        </h2>
+        <span class="text-xs text-slate-500 font-mono">12 Tiers · 3 Functional Dimensions</span>
+      </div>
+
+      <div class="p-4 sm:p-6 space-y-4 sm:space-y-5 text-xs sm:text-sm text-slate-700">
+        <!-- 一、正向内容质量金字塔 -->
+        <div class="p-4 rounded-xl border border-amber-200/80 bg-amber-50/30 space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+            <h3 class="font-bold text-slate-900 text-sm sm:text-base">一、正向内容质量金字塔（7 级）</h3>
+            <span class="text-xs text-amber-800 bg-amber-100/80 border border-amber-200 px-2.5 py-0.5 rounded-full w-fit">按含金量与传播纯度分层 · 均支持顶部筛选</span>
+          </div>
+          <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            <div class="p-3 rounded-lg bg-white border border-slate-200/90 space-y-1">
+              <div class="flex items-center justify-between gap-2">
+                <span class="pill q-hall-of-fame">🏆 殿堂神作</span>
+                <span class="text-[11px] font-mono text-amber-700">T0 顶峰</span>
+              </div>
+              <p class="text-xs text-slate-600 leading-relaxed">90 秒以上长篇深度精作，赞播比与藏播比双率断层领先，三连拉满。</p>
+            </div>
+            <div class="p-3 rounded-lg bg-white border border-slate-200/90 space-y-1">
+              <div class="flex items-center justify-between gap-2">
+                <span class="pill q-viral-short">⚡ 爆款短片</span>
+                <span class="text-[11px] font-mono text-cyan-700">T0/T1 短片</span>
+              </div>
+              <p class="text-xs text-slate-600 leading-relaxed">90 秒内高能快节奏短片，完播与互动爆发力极强，防止与长篇神作互相挤压。</p>
+            </div>
+            <div class="p-3 rounded-lg bg-white border border-slate-200/90 space-y-1">
+              <div class="flex items-center justify-between gap-2">
+                <span class="pill q-hardcore">💡 硬核干货</span>
+                <span class="text-[11px] font-mono text-amber-700">T1 收藏向</span>
+              </div>
+              <p class="text-xs text-slate-600 leading-relaxed">90 秒以上高收藏转化内容，主打实用教程、深度科普与知识合集。</p>
+            </div>
+            <div class="p-3 rounded-lg bg-white border border-slate-200/90 space-y-1">
+              <div class="flex items-center justify-between gap-2">
+                <span class="pill q-high-reputation">⭐ 高口碑佳作</span>
+                <span class="text-[11px] font-mono text-sky-700">T1 好评向</span>
+              </div>
+              <p class="text-xs text-slate-600 leading-relaxed">经时长加权后赞播比突出的高认可度作品，观众普遍给予正面好评。</p>
+            </div>
+            <div class="p-3 rounded-lg bg-white border border-slate-200/90 space-y-1">
+              <div class="flex items-center justify-between gap-2">
+                <span class="pill q-balanced-masterpiece">🏅 综合标杆</span>
+                <span class="text-[11px] font-mono text-slate-700">T1.5 六边形</span>
+              </div>
+              <p class="text-xs text-slate-600 leading-relaxed">赞播比与藏播比双优均衡，无明显短板的全面扎实水准。</p>
+            </div>
+            <div class="p-3 rounded-lg bg-white border border-slate-200/90 space-y-1">
+              <div class="flex items-center justify-between gap-2">
+                <span class="pill q-hidden-gem">💎 冷门宝藏</span>
+                <span class="text-[11px] font-mono text-purple-700">小众破格</span>
+              </div>
+              <p class="text-xs text-slate-600 leading-relaxed">播放量在 1000~2万之间的中小样本高纯度遗珠，适合挖掘被埋没的佳作。</p>
+            </div>
+            <div class="p-3 rounded-lg bg-white border border-slate-200/90 space-y-1 sm:col-span-2 lg:col-span-3">
+              <div class="flex items-center justify-between gap-2">
+                <span class="pill q-routine">🍀 稳健良作</span>
+                <span class="text-[11px] font-mono text-emerald-700">T3 基准兜底（仅精选模式下隐藏封面微标）</span>
+              </div>
+              <p class="text-xs text-slate-600 leading-relaxed">播放 ≥ 3000 且未触碰低质预警线，亦未落入高阶或热议象限的常规健康内容，作为可靠基本盘。</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 二、互动与话题热度象限 & 三、置信度与避坑预警 -->
+        <div class="grid lg:grid-cols-2 gap-4">
+          <div class="p-4 rounded-xl border border-indigo-200/80 bg-indigo-50/30 space-y-3">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+              <h3 class="font-bold text-slate-900 text-sm sm:text-base">二、互动与话题热度象限（3 级）</h3>
+              <span class="text-xs text-indigo-800 bg-indigo-100/80 border border-indigo-200 px-2.5 py-0.5 rounded-full w-fit">支持顶部筛选</span>
+            </div>
+            <div class="space-y-2.5">
+              <div class="p-3 rounded-lg bg-white border border-slate-200/90 flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3">
+                <span class="pill q-opinion-storm shrink-0 w-fit">💥 话题焦点</span>
+                <p class="text-xs text-slate-600 leading-relaxed">同时满足弹幕密集与激辩热议，弹幕刷屏与评论区探讨齐飞。</p>
+              </div>
+              <div class="p-3 rounded-lg bg-white border border-slate-200/90 flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3">
+                <span class="pill q-heated-debate shrink-0 w-fit">💬 激辩热议</span>
+                <p class="text-xs text-slate-600 leading-relaxed">评赞比 ≥ 10% 且评论绝对量高，代表存在观点碰撞、长评输出或争议讨论。</p>
+              </div>
+              <div class="p-3 rounded-lg bg-white border border-slate-200/90 flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3">
+                <span class="pill q-danmaku-carnival shrink-0 w-fit">🔥 弹幕密集</span>
+                <p class="text-xs text-slate-600 leading-relaxed">单位分钟弹幕密度或弹幕总量极高，适合快速识别高能名场面与强陪伴感视频。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/70 space-y-3">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+              <h3 class="font-bold text-slate-900 text-sm sm:text-base">三、置信度与避坑预警（2 级）</h3>
+              <span class="text-xs text-slate-600 bg-slate-200/80 border border-slate-300 px-2.5 py-0.5 rounded-full w-fit">仅作封面提示 · 不入筛选栏</span>
+            </div>
+            <div class="space-y-2.5">
+              <div class="p-3 rounded-lg bg-white border border-rose-200/80 flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3">
+                <span class="pill q-warning shrink-0 w-fit">⚠️ 谨慎观看</span>
+                <p class="text-xs text-slate-600 leading-relaxed">播放 ≥ 2万但赞播比 &lt; 1.2% 且藏播比 &lt; 0.5%（15 分钟内或未知时长），提示标题党或低质风险；在【仅精选】模式下仍强制展示。</p>
+              </div>
+              <div class="p-3 rounded-lg bg-white border border-slate-200/90 flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3">
+                <span class="pill q-low-sample shrink-0 w-fit">🌱 样本较少</span>
+                <p class="text-xs text-slate-600 leading-relaxed">播放 &lt; 3000 且未触发💎冷门宝藏破格条件，因统计样本不足暂不定性，避免小基数比率波动造成误导（【仅精选】模式下留白隐藏）。</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
