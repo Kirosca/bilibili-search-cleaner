@@ -88,7 +88,7 @@
         const toggleAllLabel = `⚡ 一键全开/全关: ${toggleAllStatus}`;
         toggleAllMenuId = GM_registerMenuCommand(toggleAllLabel, toggleAllFeatures);
 
-        const syntaxFilterLabel = `🗝️ 搜索语法过滤: ${isSyntaxFilter ? '✅ 已开启' : '❌ 已关闭'}`;
+        const syntaxFilterLabel = `🗝️ 搜索语法过滤 (Alt+Q): ${isSyntaxFilter ? '✅ 已开启' : '❌ 已关闭'}`;
         syntaxFilterMenuId = GM_registerMenuCommand(syntaxFilterLabel, toggleSyntaxFilter);
 
         const filterStickyLabel = `⚓ 搜索筛选常驻: ${isFilterSticky ? '✅ 已开启' : '❌ 已关闭'}`;
@@ -636,6 +636,32 @@
         @keyframes bili-wf-spin {
             to { transform: rotate(360deg); }
         }
+        #bili-cleaner-toast {
+            position: fixed;
+            left: 24px;
+            bottom: 24px;
+            background: var(--bg1_float, rgba(255, 255, 255, 0.95));
+            border: 1px solid rgba(0, 174, 236, 0.45);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
+            color: var(--v_text1, #18191c);
+            padding: 8px 14px;
+            border-radius: 18px;
+            font-size: 13px;
+            font-weight: 600;
+            z-index: 100000;
+            backdrop-filter: blur(8px);
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+        #bili-cleaner-toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        html.bili-waterfall-enabled #bili-cleaner-toast {
+            bottom: 72px;
+        }
         #bili-waterfall-badge {
             position: fixed;
             left: 24px;
@@ -1099,7 +1125,25 @@
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
 
-    // 8. 快捷键支持：在搜索结果页按 '/' 快速聚焦并全选搜索框
+    // 8. 快捷键支持：'/' 快速聚焦搜索框；'Alt+Q' 切换搜索语法过滤并展示轻量 Toast
+    let toastTimer = null;
+    function showCleanerToast(msg) {
+        if (!document.body) return;
+        let toast = document.getElementById('bili-cleaner-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'bili-cleaner-toast';
+            document.body.appendChild(toast);
+        }
+        toast.textContent = msg;
+        void toast.offsetWidth;
+        toast.classList.add('show');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+            toast.classList.remove('show');
+        }, 1500);
+    }
+
     // 获取当前页面中的搜索输入框元素
     function getSearchInput() {
         return document.querySelector('input.search-input-el') ||
@@ -1110,23 +1154,31 @@
     }
 
     document.addEventListener('keydown', function(e) {
+        const active = document.activeElement;
+        const isEditing = active && (
+            active.tagName === 'INPUT' ||
+            active.tagName === 'TEXTAREA' ||
+            active.isContentEditable
+        );
+
         // 当按键为 '/' 且未按下 Ctrl / Alt / Meta(Cmd) 组合键时触发
         if ((e.key === '/' || e.code === 'Slash') && !e.ctrlKey && !e.altKey && !e.metaKey) {
-            const active = document.activeElement;
-
-            // 若当前已聚焦于输入框、文本域或可编辑区域，不拦截正常字符输入
-            const isEditing = active && (
-                active.tagName === 'INPUT' ||
-                active.tagName === 'TEXTAREA' ||
-                active.isContentEditable
-            );
-
             if (!isEditing) {
                 const input = getSearchInput();
                 if (input) {
                     e.preventDefault(); // 阻止 '/' 字符输入到框内
                     input.focus();
                 }
+            }
+            return;
+        }
+
+        // 当按下 Alt + Q 时切换【搜索语法过滤】并在左下角弹出轻量 Toast 提示
+        if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && (e.code === 'KeyQ' || (e.key && e.key.toLowerCase() === 'q'))) {
+            if (!isEditing) {
+                e.preventDefault();
+                toggleSyntaxFilter();
+                showCleanerToast(`🗝️ 搜索语法过滤：${isSyntaxFilter ? '已开启' : '已关闭'}`);
             }
         }
     });
