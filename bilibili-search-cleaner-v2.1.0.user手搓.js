@@ -29,9 +29,9 @@
     // 菜单管理与持久化配置（虚化显示 & 筛选常驻 & 无缝瀑布流 & 评价体系）
     // ==========================================
     let isDimmed = localStorage.getItem('bili_cleaner_dimmed') === 'true';
-    let isFilterSticky = localStorage.getItem('bili_cleaner_sticky_filter') === 'true';
+    let isFilterSticky = localStorage.getItem('bili_cleaner_sticky_filter') !== 'false';
     let isWaterfall = localStorage.getItem('bili_cleaner_waterfall') === 'true';
-    let isEvaluationBadge = localStorage.getItem('bili_cleaner_eval_badge') === 'true';
+    let isEvaluationBadge = localStorage.getItem('bili_cleaner_eval_badge') !== 'false';
     let isEvalFullMode = localStorage.getItem('bili_cleaner_eval_full_mode') === 'true';
     const isSyntaxFilter = true;
     // 选中的品质标签筛选集合（多选，空集合代表全部/不限）
@@ -144,7 +144,7 @@
         filterDOMElements();
     }
 
-    // 切换视频评价体系显示状态并持久化配置（默认关闭）
+    // 切换视频评价体系显示状态并持久化配置（默认开启）
     function toggleEvaluationBadge() {
         isEvaluationBadge = !isEvaluationBadge;
         localStorage.setItem('bili_cleaner_eval_badge', String(isEvaluationBadge));
@@ -701,8 +701,8 @@
             if (v.season_id) videoTagMap.set(String(v.season_id), rawTags);
             if (v.roomid) videoTagMap.set(String(v.roomid), rawTags);
 
-            // 存储量化统计数据（播放、点赞、收藏、弹幕等），供封面评价勋章计算
-            if (v.bvid || v.aid || v.id) {
+            // 存储量化统计数据（播放、点赞、收藏、弹幕等），供封面评价勋章计算（跳过直播间条目）
+            if ((v.bvid || v.aid || v.id) && v.type !== 'live_room' && !v.roomid) {
                 const stat = {
                     play: Number(v.play) || 0,
                     like: Number(v.like) || 0,
@@ -954,8 +954,11 @@
                 // 在类 v-img bili-video-card__cover 中追加评价勋章（方案 B：右侧竖向勋章），作为最后一个子元素
                 let quadrant = null;
                 let hasFullStat = false;
+                const isLiveCard = card.matches('.bili-live-card') ||
+                                   Boolean(matchLive) ||
+                                   Boolean(card.querySelector('.bili-video-card__info--living, .v-inline-live-player'));
                 const coverEl = card.querySelector('.v-img.bili-video-card__cover, .bili-video-card__cover');
-                if (coverEl && !card.matches('.bili-live-card')) {
+                if (coverEl && !isLiveCard) {
                     let stat = id ? (videoStatMap.get(id.toLowerCase()) || videoStatMap.get(id)) : null;
                     if (stat) {
                         hasFullStat = true;
@@ -964,8 +967,12 @@
                     }
                     quadrant = getQualityQuadrant(stat);
                     renderBadgeColumn(coverEl, stat);
-                } else if (card.matches('.bili-live-card')) {
+                } else if (isLiveCard) {
                     hasFullStat = true;
+                    if (coverEl) {
+                        const existingBadge = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
+                        if (existingBadge) existingBadge.remove();
+                    }
                 }
 
                 // 只有在 Tag 数据就绪且品质全量数据就绪时，才记录缓存标记，避免半成品数据时被提前锁死
