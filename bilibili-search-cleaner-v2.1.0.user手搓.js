@@ -539,6 +539,17 @@
             font-weight: 600;
             box-shadow: 0 2px 8px rgba(0, 174, 236, 0.35);
         }
+        .bili-cleaner-filter-pill-btn.is-empty:not(.active) {
+            opacity: 0.55;
+        }
+        .bili-cleaner-pill-count {
+            font-size: 11px;
+            opacity: 0.78;
+            font-weight: 400;
+        }
+        .bili-cleaner-filter-pill-btn.active .bili-cleaner-pill-count {
+            opacity: 0.92;
+        }
 
         /* 5. 瀑布流相关样式 */
         html.bili-waterfall-enabled .vui_pagenation,
@@ -906,8 +917,9 @@
             elements.forEach(el => {
                 const card = el.closest('[class*="col_"], .video-list-item, .bili-live-card') || el;
  
-                // 排除活动、游戏、付费课程等非视频横幅容器
+                // 排除活动、游戏、付费课程及商业推广/广告卡片
                 if (card.closest('.activity-game-list, .activity-card, .activity-game-list-item')) return;
+                if (card.querySelector('.bili-video-card__info--ad, svg.bili-video-card__info--ad-creative, a[href*="cm.bilibili.com"]')) return;
 
                 // 性能缓存：当前卡片在本次搜索词及当前模式下若已判定过，直接跳过，零重复计算
                 if (card.dataset.purifiedQuery === currentQueryKey) return;
@@ -978,6 +990,9 @@
                 // 只有在 Tag 数据就绪且品质全量数据就绪时，才记录缓存标记，避免半成品数据时被提前锁死
                 const isTagReady = !tags.length || videoTagMap.size > 0 || !isSyntaxFilter;
                 const isStatReady = !isEvaluationBadge || hasFullStat;
+                card.dataset.isLive = isLiveCard ? '1' : '0';
+                card.dataset.syntaxPass = isSyntaxFail ? '0' : '1';
+                card.dataset.qualityClass = quadrant?.className || '';
                 if (isTagReady && isStatReady) {
                     card.dataset.purifiedQuery = currentQueryKey;
                 }
@@ -1020,6 +1035,9 @@
                     }
                 }
             });
+            if (isEvaluationBadge && typeof updateQualityFilterCounts === 'function') {
+                updateQualityFilterCounts();
+            }
             if (isWaterfall && typeof updateViewportPage === 'function') {
                 updateViewportPage();
             }
@@ -1997,6 +2015,9 @@
             // 增量预净化：在挂载入主 DOM 树前完成类名与样式设定，杜绝页面闪烁与全量扫描
             filterDOMElements(newCards);
             mainContainer.appendChild(fragment);
+            if (isEvaluationBadge && typeof updateQualityFilterCounts === 'function') {
+                updateQualityFilterCounts();
+            }
             updateViewportPage();
         }
         return addedCount;
@@ -2636,7 +2657,7 @@
                 btn.className = 'bili-cleaner-filter-pill-btn';
                 if (opt.isAll) btn.classList.add('pill-all');
                 btn.dataset.key = opt.key;
-                btn.textContent = opt.label;
+                btn.innerHTML = `<span class="bili-cleaner-pill-text">${opt.label}</span><span class="bili-cleaner-pill-count"></span>`;
                 if (opt.criteria) {
                     const actionTip = opt.isAll 
                         ? '点击重置为全部' 
@@ -2652,6 +2673,7 @@
         }
 
         updateQualityFilterButtons(filterRow);
+        updateQualityFilterCounts();
     }
 
     // 切换品质筛选状态（类文件夹式交互：默认单选，Ctrl多选，Shift范围连选）
@@ -2734,6 +2756,54 @@
             } else {
                 btn.classList.toggle('active', activeQualityFilters.has(key));
             }
+        });
+    }
+
+    // 统计当前已加载视频卡片在各品级下的数量（非灰色卡片 / 总数）并更新按钮展示
+    function updateQualityFilterCounts() {
+        if (!isEvaluationBadge) return;
+        const rows = document.querySelectorAll('.bili-cleaner-quality-filter-row');
+        if (!rows.length) return;
+
+        const container = getMainListContainer(document) || document;
+        const cards = container.querySelectorAll('[data-syntax-pass]');
+        const counts = { all: { clear: 0, total: 0 } };
+        QUALITY_CATEGORY_KEYS.forEach(k => {
+            counts[k] = { clear: 0, total: 0 };
+        });
+
+        const seenCards = new Set();
+        cards.forEach(el => {
+            const card = el.closest('[class*="col_"], .video-list-item, .bili-live-card') || el;
+            if (seenCards.has(card)) return;
+            seenCards.add(card);
+            if (!card.isConnected) return;
+            if (card.dataset.isLive === '1') return;
+            // 排除非脚本自身隐藏的卡片（如广告规则、扩展拦截或 B 站自身隐藏的占位节点）
+            if (card.style.display !== 'none' && getComputedStyle(card).display === 'none') return;
+
+            const isClear = card.dataset.syntaxPass === '1';
+            const qClass = card.dataset.qualityClass || '';
+
+            counts.all.total++;
+            if (isClear) counts.all.clear++;
+
+            if (qClass && counts[qClass]) {
+                counts[qClass].total++;
+                if (isClear) counts[qClass].clear++;
+            }
+        });
+
+        rows.forEach(row => {
+            row.querySelectorAll('.bili-cleaner-filter-pill-btn').forEach(btn => {
+                const key = btn.dataset.key;
+                const stat = counts[key];
+                const countEl = btn.querySelector('.bili-cleaner-pill-count');
+                if (stat && countEl) {
+                    countEl.textContent = `(${stat.clear}/${stat.total})`;
+                    btn.classList.toggle('is-empty', key !== 'all' && stat.total === 0);
+                }
+            });
         });
     }
 
