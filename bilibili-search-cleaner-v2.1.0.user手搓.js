@@ -993,6 +993,9 @@
                 card.dataset.isLive = isLiveCard ? '1' : '0';
                 card.dataset.syntaxPass = isSyntaxFail ? '0' : '1';
                 card.dataset.qualityClass = quadrant?.className || '';
+                if (card.style.display !== 'none') {
+                    card.dataset.externalHidden = getComputedStyle(card).display === 'none' ? '1' : '0';
+                }
                 if (isTagReady && isStatReady) {
                     card.dataset.purifiedQuery = currentQueryKey;
                 }
@@ -2779,8 +2782,8 @@
             seenCards.add(card);
             if (!card.isConnected) return;
             if (card.dataset.isLive === '1') return;
-            // 排除非脚本自身隐藏的卡片（如广告规则、扩展拦截或 B 站自身隐藏的占位节点）
-            if (card.style.display !== 'none' && getComputedStyle(card).display === 'none') return;
+            // 排除非脚本自身隐藏的卡片（在未设置脚本内联 display:none 时持久化记录，防止切换筛选时反复跳变）
+            if (card.dataset.externalHidden === '1') return;
 
             const isClear = card.dataset.syntaxPass === '1';
             const qClass = card.dataset.qualityClass || '';
