@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>12 维视频品质标签展示 · Bilibili 搜索净化 v3.0.0</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* 100% 还原脚本封面品级胶囊样式 */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 9px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.2;
+      white-space: nowrap;
+      letter-spacing: 0.2px;
+      user-select: none;
+    }
+    .q-hall-of-fame {
+      background: linear-gradient(135deg, rgba(255, 170, 0, 0.95), rgba(255, 102, 0, 0.95));
+      color: #ffffff;
+      border: 1px solid rgba(255, 235, 180, 0.7);
+      box-shadow: 0 0 10px rgba(255, 170, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.22);
+    }
+    .q-viral-short {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.95), rgba(16, 185, 129, 0.95));
+      color: #ffffff;
+      border: 1px solid rgba(165, 243, 252, 0.7);
+      box-shadow: 0 0 10px rgba(6, 182, 212, 0.4), 0 2px 6px rgba(0, 0, 0, 0.22);
+    }
+    .q-hardcore {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.92), rgba(217, 119, 6, 0.92));
+      color: #ffffff;
+      border: 1px solid rgba(255, 215, 0, 0.5);
+      box-shadow: 0 2px 6px rgba(245, 158, 11, 0.35);
+    }
+    .q-high-reputation {
+      background: linear-gradient(135deg, rgba(0, 174, 236, 0.92), rgba(0, 120, 215, 0.92));
+      color: #ffffff;
+      border: 1px solid rgba(180, 230, 255, 0.5);
+      box-shadow: 0 2px 6px rgba(0, 174, 236, 0.35);
+    }
+    .q-hidden-gem {
+      background: linear-gradient(135deg, rgba(147, 51, 234, 0.92), rgba(99, 102, 241, 0.92));
+      color: #ffffff;
+      border: 1px solid rgba(220, 180, 255, 0.5);
+      box-shadow: 0 2px 6px rgba(147, 51, 234, 0.35);
+    }
+    .q-balanced-masterpiece {
+      background: linear-gradient(135deg, rgba(71, 85, 105, 0.95), rgba(30, 41, 59, 0.98));
+      color: #f8fafc;
+      border: 1px solid rgba(226, 232, 240, 0.75);
+      box-shadow: 0 0 8px rgba(148, 163, 184, 0.32), 0 2px 6px rgba(0, 0, 0, 0.25);
+    }
+    .q-opinion-storm {
+      background: linear-gradient(135deg, rgba(236, 72, 153, 0.95), rgba(168, 85, 247, 0.95));
+      color: #ffffff;
+      border: 1px solid rgba(251, 207, 232, 0.7);
+      box-shadow: 0 0 10px rgba(236, 72, 153, 0.42), 0 2px 6px rgba(0, 0, 0, 0.22);
+    }
+    .q-heated-debate {
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.95), rgba(79, 70, 229, 0.95));
+      color: #ffffff;
+      border: 1px solid rgba(191, 219, 254, 0.7);
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.38);
+    }
+    .q-danmaku-carnival {
+      background: linear-gradient(135deg, rgba(255, 68, 102, 0.92), rgba(255, 120, 40, 0.92));
+      color: #ffffff;
+      border: 1px solid rgba(255, 200, 210, 0.5);
+      box-shadow: 0 2px 6px rgba(255, 68, 102, 0.35);
+    }
+    .q-warning {
+      background: linear-gradient(135deg, rgba(220, 38, 38, 0.92), rgba(153, 27, 27, 0.92));
+      color: #ffffff;
+      border: 1px solid rgba(254, 202, 202, 0.5);
+      box-shadow: 0 2px 6px rgba(220, 38, 38, 0.35);
+    }
+    .q-routine {
+      background: linear-gradient(135deg, rgba(16, 110, 75, 0.88), rgba(10, 70, 50, 0.92));
+      color: #ffffff;
+      border: 1px solid rgba(74, 222, 128, 0.35);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+    .q-low-sample {
+      background: rgba(30, 41, 59, 0.85);
+      color: rgba(203, 213, 225, 0.98);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.18);
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased py-6 px-4 sm:px-6">
+
+  <!-- 适合单屏截图的 12 维视频品质标签海报卡片 -->
+  <div class="max-w-5xl mx-auto bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden">
+
+    <!-- 顶部横幅 -->
+    <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-sky-950 text-white px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div>
+        <div class="flex items-center gap-2 text-xs text-sky-300 font-semibold">
+          <span>🏷️ Bilibili 去掉搜索无关视频 v3.0.0</span>
+          <span class="text-sky-400/50">·</span>
+          <span class="font-mono">12 维视频品质雷达</span>
+        </div>
+        <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-white mt-1">
+          视频品质标签体系一览
+        </h1>
+      </div>
+      <div class="flex flex-col sm:items-end gap-1.5">
+        <span class="px-3 py-1 rounded-lg bg-white/10 border border-white/15 font-mono text-xs text-amber-200 w-fit">
+          时长权重 = clamp(√(时长分 / 5.0), 0.40, 2.00)
+        </span>
+        <span class="text-[11px] text-slate-300">支持封面左上角微标展示 + 顶部【品级标签】多选筛选与实时计数</span>
+      </div>
+    </div>
+
+    <div class="p-5 sm:p-6 space-y-5">
+
+      <!-- 一、正向内容质量金字塔 -->
+      <section class="p-4 rounded-xl border border-amber-200/90 bg-amber-50/30 space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+          <h2 class="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+            <span class="w-1.5 h-4 bg-amber-500 rounded-full"></span>
+            一、正向内容质量金字塔（7 级）
+          </h2>
+          <span class="text-[11px] font-medium text-amber-800 bg-amber-100/90 border border-amber-200 px-2.5 py-0.5 rounded-full w-fit">
+            按含金量与传播纯度分层 · 全部支持顶部筛选
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+          <div class="p-3 rounded-lg bg-white border border-slate-200/90 flex flex-col justify-between gap-2">
+            <div class="flex items-center justify-between gap-2">
+              <span class="pill q-hall-of-fame">🏆 殿堂神作</span>
+              <span class="text-[11px] font-mono font-semibold text-amber-700">T0 顶峰</span>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">90 秒以上长篇深度精作，赞播比、藏播比双率断层领先，三连拉满。</p>
+            <div class="text-[11px] font-mono text-slate-400 pt-1.5 border-t border-slate-100">播放≥2万 · 赞≥1500 · 藏≥800</div>
+          </div>
+
+          <div class="p-3 rounded-lg bg-white border border-slate-200/90 flex flex-col justify-between gap-2">
+            <div class="flex items-center justify-between gap-2">
+              <span class="pill q-viral-short">⚡ 爆款短片</span>
+              <span class="text-[11px] font-mono font-semibold text-cyan-700">T0/T1 短片</span>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">90 秒内高能快节奏短片，完播与互动爆发力极强，独立赛道不互卷。</p>
+            <div class="text-[11px] font-mono text-slate-400 pt-1.5 border-t border-slate-100">时长&lt;90秒 · 高赞播/藏播比</div>
+          </div>
+
+          <div class="p-3 rounded-lg bg-white border border-slate-200/90 flex flex-col justify-between gap-2">
+            <div class="flex items-center justify-between gap-2">
+              <span class="pill q-hardcore">💡 硬核干货</span>
+              <span class="text-[11px] font-mono font-semibold text-amber-700">T1 收藏向</span>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">90 秒以上高收藏转化内容，主打实用教程、深度科普与知识合集。</p>
+            <div class="text-[11px] font-mono text-slate-400 pt-1.5 border-t border-slate-100">藏≥250且加权藏播≥4% / 藏≥2000</div>
+          </div>
+
+          <div class="p-3 rounded-lg bg-white border border-slate-200/90 flex flex-col justify-between gap-2">
+            <div class="flex items-center justify-between gap-2">
+              <span class="pill q-high-reputation">⭐ 高口碑佳作</span>
+              <span class="text-[11px] font-mono font-semibold text-sky-700">T1 好评向</span>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">经时长加权后赞播比突出的高认可度作品，观众清一色正面好评。</p>
+            <div class="text-[11px] font-mono text-slate-400 pt-1.5 border-t border-slate-100">赞≥400且加权赞播≥7% / 赞≥5000</div>
+          </div>
+
+          <div class="p-3 rounded-lg bg-white border border-slate-200/90 flex flex-col justify-between gap-2">
+            <div class="flex items-center justify-between gap-2">
+              <span class="pill q-balanced-masterpiece">🏅 综合标杆</span>
+              <span class="text-[11px] font-mono font-semibold text-slate-700">T1.5 六边形</span>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">赞播比与藏播比双优均衡，无明显短板的全面扎实水准。</p>
+            <div class="text-[11px] font-mono text-slate-400 pt-1.5 border-t border-slate-100">播放≥1万 · 赞≥600 · 藏≥300</div>
+          </div>
+
+          <div class="p-3 rounded-lg bg-white border border-slate-200/90 flex flex-col justify-between gap-2">
+            <div class="flex items-center justify-between gap-2">
+              <span class="pill q-hidden-gem">💎 冷门宝藏</span>
+              <span class="text-[11px] font-mono font-semibold text-purple-700">小众破格</span>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">中小播放量下的极高纯度遗珠，专门挖掘低曝光但高口碑的佳作。</p>
+            <div class="text-[11px] font-mono text-slate-400 pt-1.5 border-t border-slate-100">播放 1000~2万 · 加权赞≥8%/藏≥4.5%</div>
+          </div>
+
+          <div class="p-3 rounded-lg bg-white border border-slate-200/90 flex flex-col justify-between gap-2 sm:col-span-2">
+            <div class="flex items-center justify-between gap-2">
+              <span class="pill q-routine">🍀 稳健良作</span>
+              <span class="text-[11px] font-mono font-semibold text-emerald-700">T3 基准兜底 · 【仅精选】模式隐藏封面微标</span>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">播放 ≥ 3000 且未触碰低质预警线，亦未落入高阶或热议象限的常规健康内容，作为可靠基本盘保留。</p>
+            <div class="text-[11px] font-mono text-slate-400 pt-1.5 border-t border-slate-100">播放≥3000 · 仅精选留白不打扰封面，顶部筛选仍可勾选</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 二 & 三 并排 -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+        <!-- 二、互动与话题热度象限 -->
+        <section class="p-4 rounded-xl border border-indigo-200/90 bg-indigo-50/30 space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+            <h2 class="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+              <span class="w-1.5 h-4 bg-indigo-500 rounded-full"></span>
+              二、互动与话题热度象限（3 级）
+            </h2>
+            <span class="text-[11px] font-medium text-indigo-800 bg-indigo-100/90 border border-indigo-200 px-2.5 py-0.5 rounded-full w-fit">
+              支持顶部筛选
+            </span>
+          </div>
+
+          <div class="space-y-2.5">
+            <div class="p-3 rounded-lg bg-white border border-slate-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div class="flex items-start sm:items-center gap-2.5">
+                <span class="pill q-opinion-storm shrink-0">💥 话题焦点</span>
+                <span class="text-xs text-slate-600">弹幕刷屏与评论区热议齐飞的全网焦点</span>
+              </div>
+              <span class="text-[11px] font-mono text-slate-400 shrink-0">弹幕密集 + 激辩热议</span>
+            </div>
+
+            <div class="p-3 rounded-lg bg-white border border-slate-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div class="flex items-start sm:items-center gap-2.5">
+                <span class="pill q-heated-debate shrink-0">💬 激辩热议</span>
+                <span class="text-xs text-slate-600">评论区观点激烈碰撞、长评输出密集</span>
+              </div>
+              <span class="text-[11px] font-mono text-slate-400 shrink-0">评赞比≥10% · 评≥300</span>
+            </div>
+
+            <div class="p-3 rounded-lg bg-white border border-slate-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div class="flex items-start sm:items-center gap-2.5">
+                <span class="pill q-danmaku-carnival shrink-0">🔥 弹幕密集</span>
+                <span class="text-xs text-slate-600">高能名场面与笑点密集，弹幕高频如潮</span>
+              </div>
+              <span class="text-[11px] font-mono text-slate-400 shrink-0">密度≥15条/分 / 弹幕≥3000</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 三、置信度与避坑预警 -->
+        <section class="p-4 rounded-xl border border-slate-200 bg-slate-50/70 space-y-3 flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+              <h2 class="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+                <span class="w-1.5 h-4 bg-rose-500 rounded-full"></span>
+                三、置信度与避坑预警（2 级）
+              </h2>
+              <span class="text-[11px] font-medium text-slate-600 bg-slate-200/80 border border-slate-300 px-2.5 py-0.5 rounded-full w-fit">
+                仅作封面提示 · 不入筛选栏
+              </span>
+            </div>
+
+            <div class="space-y-2.5">
+              <div class="p-3 rounded-lg bg-white border border-rose-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div class="flex items-start sm:items-center gap-2.5">
+                  <span class="pill q-warning shrink-0">⚠️ 谨慎观看</span>
+                  <span class="text-xs text-slate-600">高播放但赞藏双低，低质/标题党预警（始终展示）</span>
+                </div>
+                <span class="text-[11px] font-mono text-rose-500 shrink-0">播放≥2万 · 赞&lt;1.2% · 藏&lt;0.5%</span>
+              </div>
+
+              <div class="p-3 rounded-lg bg-white border border-slate-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div class="flex items-start sm:items-center gap-2.5">
+                  <span class="pill q-low-sample shrink-0">🌱 样本较少</span>
+                  <span class="text-xs text-slate-600">样本不足暂不定性，防止小基数误判（仅精选隐藏）</span>
+                </div>
+                <span class="text-[11px] font-mono text-slate-400 shrink-0">播放&lt;3000 且未破格</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="px-3 py-2 rounded-lg bg-white border border-slate-200 text-[11px] text-slate-500 flex flex-wrap items-center justify-between gap-2">
+            <span>💡 <strong>悬停任意封面微标</strong>可查看实时赞播比、藏播比、弹幕密度与时长权重</span>
+            <span class="font-mono text-slate-400">直播卡已自动跳过防误标</span>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
