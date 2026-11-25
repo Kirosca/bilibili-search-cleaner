@@ -2,7 +2,7 @@
 // @name         Bilibili 去掉搜索无关视频
 // @namespace    http://tampermonkey.net/
 // @version      3.0.0
-// @description  自动隐藏 Bilibili 搜索结果中不包含关键词的无关视频，支持 @UP主 定向筛选、-排除词 与 #Tag 专项筛选，内置 WBI 签名协议栈与无缝瀑布流，彻底净化搜索体验。（支持简繁归一化）
+// @description  B站搜索神器：12 维视频品质标签筛选（神作/干货/宝藏/避坑）+ 聚光灯虚化 + -排除词/@UP/#Tag 语法过滤 + 无缝瀑布流与筛选常驻（支持简繁归一）。
 // @author       Kirosca
 // @match        *://search.bilibili.com/*
 // @icon         https://www.bilibili.com/favicon.ico
