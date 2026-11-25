@@ -2827,14 +2827,15 @@
             }
         });
 
+        const showTotal = isSyntaxFilter && isDimmed;
         rows.forEach(row => {
             row.querySelectorAll('.bili-cleaner-filter-pill-btn').forEach(btn => {
                 const key = btn.dataset.key;
                 const stat = counts[key];
                 const countEl = btn.querySelector('.bili-cleaner-pill-count');
                 if (stat && countEl) {
-                    countEl.textContent = isDimmed ? `(${stat.clear}/${stat.total})` : `(${stat.clear})`;
-                    btn.classList.toggle('is-empty', key !== 'all' && (isDimmed ? stat.total === 0 : stat.clear === 0));
+                    countEl.textContent = showTotal ? `(${stat.clear}/${stat.total})` : `(${stat.clear})`;
+                    btn.classList.toggle('is-empty', key !== 'all' && (showTotal ? stat.total === 0 : stat.clear === 0));
                 }
             });
         });
