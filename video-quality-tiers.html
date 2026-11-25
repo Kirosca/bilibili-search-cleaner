@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bilibili 搜索净化 · 视频品级判定体系说明</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background: #f1f5f9;
+      color: #1e293b;
+      padding: 36px 24px;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .poster-card {
+      max-width: 1080px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 18px;
+      box-shadow: 0 12px 36px rgba(15, 23, 42, 0.08);
+      border: 1px solid #e2e8f0;
+      overflow: hidden;
+    }
+
+    .poster-header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #0c4a6e 100%);
+      color: #ffffff;
+      padding: 28px 32px 24px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .poster-title {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      margin-bottom: 6px;
+    }
+
+    .poster-subtitle {
+      font-size: 13.5px;
+      color: #cbd5e1;
+    }
+
+    .poster-badge {
+      flex-shrink: 0;
+      background: rgba(0, 174, 236, 0.18);
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      color: #7dd3fc;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .table-wrap {
+      padding: 24px 28px 18px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 13px;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    thead th {
+      background: #f8fafc;
+      color: #475569;
+      font-weight: 700;
+      text-align: left;
+      padding: 12px 14px;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 12.5px;
+      white-space: nowrap;
+    }
+
+    tbody td {
+      padding: 12px 14px;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: middle;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fafcff;
+    }
+
+    .group-row td {
+      background: #f1f5f9 !important;
+      color: #334155;
+      font-weight: 700;
+      font-size: 12px;
+      padding: 7px 14px;
+      letter-spacing: 0.4px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    /* 复刻脚本封面胶囊微标样式 */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 9px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.25;
+      white-space: nowrap;
+      letter-spacing: 0.2px;
+    }
+
+    .q-hall-of-fame {
+      background: linear-gradient(135deg, rgba(255, 170, 0, 0.95), rgba(255, 102, 0, 0.95));
+      color: #ffffff;
+      border: 1px solid rgba(255, 235, 180, 0.7);
+      box-shadow: 0 2px 8px rgba(255, 170, 0, 0.35);
+    }
+    .q-viral-short {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.95), rgba(16, 185, 129, 0.95));
+      color: #ffffff;
+      border: 1px solid rgba(165, 243, 252, 0.7);
+      box-shadow: 0 2px 8px rgba(6, 182, 212, 0.3);
+    }
+    .q-hardcore {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.92), rgba(217, 119, 6, 0.92));
+      color: #ffffff;
+      border: 1px solid rgba(255, 215, 0, 0.5);
+      box-shadow: 0 2px 6px rgba(245, 158, 11, 0.28);
+    }
+    .q-high-reputation {
+      background: linear-gradient(135deg, rgba(0, 174, 236, 0.92), rgba(0, 120, 215, 0.92));
+      color: #ffffff;
+      border: 1px solid rgba(180, 230, 255, 0.5);
+      box-shadow: 0 2px 6px rgba(0, 174, 236, 0.28);
+    }
+    .q-hidden-gem {
+      background: linear-gradient(135deg, rgba(147, 51, 234, 0.92), rgba(99, 102, 241, 0.92));
+      color: #ffffff;
+      border: 1px solid rgba(220, 180, 255, 0.5);
+      box-shadow: 0 2px 6px rgba(147, 51, 234, 0.28);
+    }
+    .q-balanced-masterpiece {
+      background: linear-gradient(135deg, rgba(71, 85, 105, 0.95), rgba(30, 41, 59, 0.98));
+      color: #f8fafc;
+      border: 1px solid rgba(226, 232, 240, 0.75);
+      box-shadow: 0 2px 6px rgba(30, 41, 59, 0.25);
+    }
+    .q-opinion-storm {
+      background: linear-gradient(135deg, rgba(236, 72, 153, 0.95), rgba(168, 85, 247, 0.95));
+      color: #ffffff;
+      border: 1px solid rgba(251, 207, 232, 0.7);
+      box-shadow: 0 2px 8px rgba(236, 72, 153, 0.3);
+    }
+    .q-heated-debate {
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.95), rgba(79, 70, 229, 0.95));
+      color: #ffffff;
+      border: 1px solid rgba(191, 219, 254, 0.7);
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.28);
+    }
+    .q-danmaku-carnival {
+      background: linear-gradient(135deg, rgba(255, 68, 102, 0.92), rgba(255, 120, 40, 0.92));
+      color: #ffffff;
+      border: 1px solid rgba(255, 200, 210, 0.5);
+      box-shadow: 0 2px 6px rgba(255, 68, 102, 0.28);
+    }
+    .q-routine {
+      background: linear-gradient(135deg, rgba(16, 110, 75, 0.88), rgba(10, 70, 50, 0.92));
+      color: #ffffff;
+      border: 1px solid rgba(74, 222, 128, 0.35);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+    }
+    .q-warning {
+      background: linear-gradient(135deg, rgba(220, 38, 38, 0.92), rgba(153, 27, 27, 0.92));
+      color: #ffffff;
+      border: 1px solid rgba(254, 202, 202, 0.5);
+      box-shadow: 0 2px 6px rgba(220, 38, 38, 0.28);
+    }
+    .q-low-sample {
+      background: rgba(30, 41, 59, 0.85);
+      color: rgba(203, 213, 225, 0.98);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.16);
+    }
+
+    .col-tier { width: 145px; }
+    .col-pos { width: 140px; color: #475569; font-weight: 500; }
+    .col-rule { color: #0f172a; }
+    .col-mode { width: 108px; text-align: center; white-space: nowrap; }
+
+    code {
+      background: #f1f5f9;
+      color: #0369a1;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .tag-show {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      background: #e0f2fe;
+      color: #0369a1;
+    }
+
+    .tag-hide {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      background: #f1f5f9;
+      color: #64748b;
+    }
+
+    .tag-warn {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .notes-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      padding: 0 28px 26px;
+    }
+
+    .note-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 13px 16px;
+      font-size: 12.5px;
+      color: #334155;
+    }
+
+    .note-box h3 {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 6px;
+    }
+
+    .note-box ul {
+      padding-left: 18px;
+    }
+
+    .note-box li + li {
+      margin-top: 3px;
+    }
+  </style>
+</head>
+<body>
+  <div class="poster-card">
+    <div class="poster-header">
+      <div>
+        <div class="poster-title">🏷️ Bilibili 搜索净化 · 视频品级判定体系</div>
+        <div class="poster-subtitle">基于「赞播比 / 藏播比 × 时长加权归一化」与「弹幕 / 评论争议特征」的多维内容质量雷达</div>
+      </div>
+      <div class="poster-badge">v3.0.0 评级标准</div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="col-tier">品级徽标</th>
+            <th class="col-pos">定位说明</th>
+            <th>核心判定门槛（按代码自上而下优先匹配）</th>
+            <th class="col-mode">仅精选模式</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="group-row">
+            <td colspan="4">一、 正向内容质量金字塔（支持顶部【品级标签】单选 / Ctrl 多选 / Shift 连选）</td>
+          </tr>
+          <tr>
+            <td><span class="pill q-hall-of-fame">🏆 殿堂神作</span></td>
+            <td class="col-pos">长篇顶峰神作</td>
+            <td class="col-rule">
+              <code>时长 ≥ 90秒</code> 且 <code>播放 ≥ 2万</code>，<code>赞 ≥ 1500</code>，<code>藏 ≥ 800</code>，且 <code>赞播比×权重 ≥ 7%</code>、<code>藏播比×权重 ≥ 3.5%</code>
+            </td>
+            <td class="col-mode"><span class="tag-show">展示</span></td>
+          </tr>
+          <tr>
+            <td><span class="pill q-viral-short">⚡ 爆款短片</span></td>
+            <td class="col-pos">高能快节奏短片</td>
+            <td class="col-rule">
+              <code>0 &lt; 时长 &lt; 90秒</code>，且满足：<code>(播放 ≥ 2万 且 赞 ≥ 1500 且 (赞播比 ≥ 6% 或 藏播比 ≥ 3%))</code> 或 <code>(播放 ≥ 1万 且 赞 ≥ 1000 且 赞播比 ≥ 8%)</code>
+            </td>
+            <td class="col-mode"><span class="tag-show">展示</span></td>
+          </tr>
+          <tr>
+            <td><span class="pill q-hidden-gem">💎 冷门宝藏</span></td>
+            <td class="col-pos">小众高纯度遗珠</td>
+            <td class="col-rule">
+              <code>赞播比×权重 ≥ 8%</code> 或 <code>藏播比×权重 ≥ 4.5%</code>；且满足 <code>(1000 ≤ 播放 &lt; 3000 且 (赞 ≥ 150 或 藏 ≥ 80))</code> 或 <code>(3000 ≤ 播放 &lt; 2万 且 赞 ≥ 200 且 藏 ≥ 80)</code>
+            </td>
+            <td class="col-mode"><span class="tag-show">展示</span></td>
+          </tr>
+          <tr>
+            <td><span class="pill q-hardcore">💡 硬核干货</span></td>
+            <td class="col-pos">高收藏实用内容</td>
+            <td class="col-rule">
+              <code>时长 ≥ 90秒</code>，且满足：<code>(播放 ≥ 5000 且 藏 ≥ 250 且 藏播比×权重 ≥ 4%)</code> 或 <code>(藏 ≥ 2000 且 藏播比×权重 ≥ 2.5%)</code>
+            </td>
+            <td class="col-mode"><span class="tag-show">展示</span></td>
+          </tr>
+          <tr>
+            <td><span class="pill q-high-reputation">⭐ 高口碑佳作</span></td>
+            <td class="col-pos">清一色好评佳作</td>
+            <td class="col-rule">
+              满足：<code>(播放 ≥ 5000 且 赞 ≥ 400 且 赞播比×权重 ≥ 7%)</code> 或 <code>(赞 ≥ 5000 且 赞播比×权重 ≥ 4.5%)</code>
+            </td>
+            <td class="col-mode"><span class="tag-show">展示</span></td>
+          </tr>
+          <tr>
+            <td><span class="pill q-balanced-masterpiece">🏅 综合标杆</span></td>
+            <td class="col-pos">赞藏双优六边形</td>
+            <td class="col-rule">
+              <code>播放 ≥ 1万</code>，<code>赞 ≥ 600</code>，<code>藏 ≥ 300</code>，且 <code>赞播比×权重 ≥ 4.5%</code>、<code>藏播比×权重 ≥ 2.2%</code>
+            </td>
+            <td class="col-mode"><span class="tag-show">展示</span></td>
+          </tr>
+          <tr>
+            <td><span class="pill q-routine">🍀 稳健良作</span></td>
+            <td class="col-pos">达标基准良品</td>
+            <td class="col-rule">
+              <code>播放 ≥ 3000</code>，未触碰低质预警线且未落入以上高阶/热议象限，整体数据平稳可靠
+            </td>
+            <td class="col-mode"><span class="tag-hide">默认留白</span></td>
+          </tr>
+
+          <tr class="group-row">
+            <td colspan="4">二、 互动热度与讨论特征（弹幕密度 &amp; 评赞比识别）</td>
+          </tr>
+          <tr>
+            <td><span class="pill q-opinion-storm">💥 话题焦点</span></td>
+            <td class="col-pos">弹幕评论双爆</td>
+            <td class="col-rule">
+              同时满足下方 <strong>🔥 弹幕密集</strong> 与 <strong>💬 激辩热议</strong> 两项条件（全网大事件 / 深度热议焦点）
+            </td>
+            <td class="col-mode"><span class="tag-show">展示</span></td>
+          </tr>
+          <tr>
+            <td><span class="pill q-heated-debate">💬 激辩热议</span></td>
+            <td class="col-pos">评论区深度交锋</td>
+            <td class="col-rule">
+              <code>评赞比 ≥ 10%</code>，且满足：<code>(评 ≥ 300 且 评播比 ≥ 0.35%)</code> 或 <code>(评 ≥ 1500 且 评播比 ≥ 0.2%)</code>
+            </td>
+            <td class="col-mode"><span class="tag-show">展示</span></td>
+          </tr>
+          <tr>
+            <td><span class="pill q-danmaku-carnival">🔥 弹幕密集</span></td>
+            <td class="col-pos">高能名场面聚集</td>
+            <td class="col-rule">
+              <code>(弹幕密度 ≥ 15条/分 且 弹幕 ≥ 300)</code> 或 <code>(弹幕 ≥ 3000 且 弹幕密度 ≥ 8条/分)</code>
+            </td>
+            <td class="col-mode"><span class="tag-show">展示</span></td>
+          </tr>
+
+          <tr class="group-row">
+            <td colspan="4">三、 置信度保护与低质风控防线（仅作封面透视标记，不参与正向【品级标签】筛选）</td>
+          </tr>
+          <tr>
+            <td><span class="pill q-warning">⚠️ 谨慎观看</span></td>
+            <td class="col-pos">高播低评避坑</td>
+            <td class="col-rule">
+              <code>播放 ≥ 2万</code> 且 <code>赞 &gt; 0</code>，<code>赞播比 &lt; 1.2%</code> 且 <code>藏播比 &lt; 0.5%</code>（限 <code>时长 ≤ 15分钟</code> 或未知，防长录像误判）
+            </td>
+            <td class="col-mode"><span class="tag-warn">始终预警</span></td>
+          </tr>
+          <tr>
+            <td><span class="pill q-low-sample">🌱 样本较少</span></td>
+            <td class="col-pos">置信度保护</td>
+            <td class="col-rule">
+              <code>播放 &lt; 3000</code> 且未达到 <strong>💎 冷门宝藏</strong> 的破格门槛，数据样本不足暂不作定性评级
+            </td>
+            <td class="col-mode"><span class="tag-hide">默认留白</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="notes-grid">
+      <div class="note-box">
+        <h3>⏱️ 时长加权归一化公式（防短视频虚高）</h3>
+        <ul>
+          <li>以 <code>5.0 分钟</code> 为基准锚点（权重 <code>1.00x</code>）：<code>权重 = min(2.0, max(0.4, √(时长分钟 / 5.0)))</code>。</li>
+          <li><strong>短视频抑制</strong>：10 秒短片权重压至 <code>0.40x</code>，防止随手点赞挤占长篇神作席位。</li>
+          <li><strong>长视频奖励</strong>：20 分钟长片权重升至 <code>2.00x</code>，3.5% 赞播比即可等效 7.0%。</li>
+        </ul>
+      </div>
+      <div class="note-box">
+        <h3>🔍 判定顺序与数据就绪机制</h3>
+        <ul>
+          <li><strong>优先顺序</strong>：<code>样本较少/破格</code> → <code>谨慎观看</code> → <code>殿堂神作</code> → <code>爆款短片</code> → <code>冷门宝藏</code> → <code>硬核干货</code> → <code>高口碑</code> → <code>综合标杆</code> → <code>话题焦点/激辩/弹幕</code> → <code>稳健良作</code>。</li>
+          <li><strong>防误判守卫</strong>：仅读取到 DOM 粗略数据时（缺少赞/藏）暂不评级，待接口全量统计就绪后自动补全。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
