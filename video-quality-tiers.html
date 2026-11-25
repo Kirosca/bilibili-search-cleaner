@@ -275,6 +275,119 @@
     .note-box li + li {
       margin-top: 3px;
     }
+
+    code {
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 12px 8px;
+      }
+
+      .poster-card {
+        border-radius: 14px;
+      }
+
+      .poster-header {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 20px 16px 18px;
+        gap: 12px;
+      }
+
+      .poster-title {
+        font-size: 18px;
+      }
+
+      .poster-subtitle {
+        font-size: 12.5px;
+      }
+
+      .table-wrap {
+        padding: 14px 12px 12px;
+      }
+
+      table {
+        border: none;
+        border-radius: 0;
+        overflow: visible;
+      }
+
+      thead {
+        display: none;
+      }
+
+      tbody {
+        display: block;
+      }
+
+      tbody tr {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 10px;
+        padding: 12px;
+        margin-bottom: 10px;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        background: #ffffff !important;
+      }
+
+      tbody tr.group-row {
+        display: block;
+        padding: 0;
+        margin: 14px 0 8px;
+        border: none;
+        background: transparent !important;
+      }
+
+      tbody tr.group-row:first-child {
+        margin-top: 0;
+      }
+
+      tbody td {
+        display: block;
+        padding: 0;
+        border-bottom: none;
+      }
+
+      .group-row td {
+        width: 100%;
+        border-radius: 8px;
+        padding: 8px 12px;
+        border: 1px solid #e2e8f0;
+      }
+
+      .col-pos {
+        width: auto;
+        font-size: 12px;
+      }
+
+      .col-mode {
+        width: auto;
+        margin-left: auto;
+      }
+
+      .col-rule {
+        width: 100%;
+        font-size: 12.5px;
+        line-height: 1.65;
+        padding-top: 4px;
+        border-top: 1px dashed #e2e8f0;
+      }
+
+      .notes-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        padding: 0 12px 16px;
+      }
+
+      .note-box {
+        padding: 12px 14px;
+      }
+    }
   </style>
 </head>
 <body>

@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bilibili 搜索净化 · v2.1.0 → v3.0.0 完整升级说明书</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* 100% 还原脚本封面品级胶囊样式 */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2.5px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.2;
+      white-space: nowrap;
+      letter-spacing: 0.2px;
+      user-select: none;
+    }
+    .q-hall-of-fame {
+      background: linear-gradient(135deg, rgba(255, 170, 0, 0.95), rgba(255, 102, 0, 0.95));
+      color: #ffffff;
+      border: 1px solid rgba(255, 235, 180, 0.7);
+      box-shadow: 0 0 10px rgba(255, 170, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.22);
+    }
+    .q-viral-short {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.95), rgba(16, 185, 129, 0.95));
+      color: #ffffff;
+      border: 1px solid rgba(165, 243, 252, 0.7);
+      box-shadow: 0 0 10px rgba(6, 182, 212, 0.4), 0 2px 6px rgba(0, 0, 0, 0.22);
+    }
+    .q-hardcore {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.92), rgba(217, 119, 6, 0.92));
+      color: #ffffff;
+      border: 1px solid rgba(255, 215, 0, 0.5);
+      box-shadow: 0 2px 6px rgba(245, 158, 11, 0.35);
+    }
+    .q-high-reputation {
+      background: linear-gradient(135deg, rgba(0, 174, 236, 0.92), rgba(0, 120, 215, 0.92));
+      color: #ffffff;
+      border: 1px solid rgba(180, 230, 255, 0.5);
+      box-shadow: 0 2px 6px rgba(0, 174, 236, 0.35);
+    }
+    .q-hidden-gem {
+      background: linear-gradient(135deg, rgba(147, 51, 234, 0.92), rgba(99, 102, 241, 0.92));
+      color: #ffffff;
+      border: 1px solid rgba(220, 180, 255, 0.5);
+      box-shadow: 0 2px 6px rgba(147, 51, 234, 0.35);
+    }
+    .q-balanced-masterpiece {
+      background: linear-gradient(135deg, rgba(71, 85, 105, 0.95), rgba(30, 41, 59, 0.98));
+      color: #f8fafc;
+      border: 1px solid rgba(226, 232, 240, 0.75);
+      box-shadow: 0 0 8px rgba(148, 163, 184, 0.32), 0 2px 6px rgba(0, 0, 0, 0.25);
+    }
+    .q-opinion-storm {
+      background: linear-gradient(135deg, rgba(236, 72, 153, 0.95), rgba(168, 85, 247, 0.95));
+      color: #ffffff;
+      border: 1px solid rgba(251, 207, 232, 0.7);
+      box-shadow: 0 0 10px rgba(236, 72, 153, 0.42), 0 2px 6px rgba(0, 0, 0, 0.22);
+    }
+    .q-heated-debate {
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.95), rgba(79, 70, 229, 0.95));
+      color: #ffffff;
+      border: 1px solid rgba(191, 219, 254, 0.7);
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.38);
+    }
+    .q-danmaku-carnival {
+      background: linear-gradient(135deg, rgba(255, 68, 102, 0.92), rgba(255, 120, 40, 0.92));
+      color: #ffffff;
+      border: 1px solid rgba(255, 200, 210, 0.5);
+      box-shadow: 0 2px 6px rgba(255, 68, 102, 0.35);
+    }
+    .q-warning {
+      background: linear-gradient(135deg, rgba(220, 38, 38, 0.92), rgba(153, 27, 27, 0.92));
+      color: #ffffff;
+      border: 1px solid rgba(254, 202, 202, 0.5);
+      box-shadow: 0 2px 6px rgba(220, 38, 38, 0.35);
+    }
+    .q-routine {
+      background: linear-gradient(135deg, rgba(16, 110, 75, 0.88), rgba(10, 70, 50, 0.92));
+      color: #ffffff;
+      border: 1px solid rgba(74, 222, 128, 0.35);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+    .q-low-sample {
+      background: rgba(30, 41, 59, 0.85);
+      color: rgba(203, 213, 225, 0.98);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.18);
+    }
+
+    code {
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    /* 移动端表格自适应卡片化（< 768px 零横向滚动） */
+    @media (max-width: 767px) {
+      .responsive-table thead {
+        display: none;
+      }
+      .responsive-table,
+      .responsive-table tbody {
+        display: block;
+      }
+      .responsive-table tbody tr {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 10px;
+        padding: 12px;
+        border-bottom: 1px solid #e2e8f0;
+      }
+      .responsive-table tbody tr:last-child {
+        border-bottom: none;
+      }
+      .responsive-table tbody td {
+        display: block;
+        padding: 0 !important;
+        width: 100%;
+        text-align: left !important;
+      }
+      /* 6. 品质表首行横排徽标 + 标签，次行全宽公式 */
+      .quality-table tbody td:nth-child(1) {
+        width: auto;
+        flex: 1 1 auto;
+      }
+      .quality-table tbody td:nth-child(3),
+      .quality-table tbody td:nth-child(4) {
+        width: auto;
+        font-size: 12px;
+      }
+      .quality-table tbody td:nth-child(2) {
+        order: 4;
+        width: 100%;
+        padding-top: 6px !important;
+        border-top: 1px dashed #e2e8f0;
+      }
+      /* 1. 对比表移动端标签前缀 */
+      .compare-table tbody td:nth-child(2)::before {
+        content: "v2.1.0：";
+        font-weight: 600;
+        color: #64748b;
+      }
+      .compare-table tbody td:nth-child(3) {
+        padding: 8px 10px !important;
+        border-radius: 8px;
+      }
+      .compare-table tbody td:nth-child(3)::before {
+        content: "v3.0.0：";
+        font-weight: 700;
+        color: #0369a1;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased">
+
+  <!-- 顶部 Hero Banner -->
+  <div class="bg-gradient-to-br from-slate-900 via-slate-800 to-sky-950 text-white border-b border-slate-700/60">
+    <div class="max-w-6xl mx-auto px-6 py-10">
+      <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+        <div class="space-y-3">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/15 border border-sky-400/30 text-sky-300 text-xs font-semibold">
+            <span>🚀 版本演进说明书</span>
+            <span class="text-sky-400/60">|</span>
+            <span class="font-mono">v2.1.0 → v3.0.0</span>
+          </div>
+          <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
+            Bilibili 去掉搜索无关视频
+          </h1>
+          <p class="text-slate-300 text-sm sm:text-base max-w-2xl leading-relaxed">
+            从 260 行的“单一关键词物理隐藏脚本”，全面进化为集 <span class="text-sky-300 font-semibold">搜索语法过滤</span>、<span class="text-sky-300 font-semibold">O(1) 聚光灯虚化</span>、<span class="text-sky-300 font-semibold">WBI 无缝瀑布流</span> 与 <span class="text-sky-300 font-semibold">12 维视频品质雷达</span> 于一体的搜索净化工作台。
+          </p>
+        </div>
+
+        <!-- 元数据徽章 -->
+        <div class="flex flex-wrap lg:flex-col items-start lg:items-end gap-2 text-xs text-slate-300">
+          <span class="px-3 py-1 rounded-lg bg-white/10 border border-white/15 font-mono">*://search.bilibili.com/*</span>
+          <span class="px-3 py-1 rounded-lg bg-white/10 border border-white/15 font-mono">@run-at document-start · MIT</span>
+        </div>
+      </div>
+
+      <!-- 4 项核心指标卡片 -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mt-8">
+        <div class="rounded-xl bg-white/5 border border-white/10 p-4 backdrop-blur-sm">
+          <div class="text-xs text-slate-400">代码规模演进</div>
+          <div class="text-xl font-bold text-white mt-1">260 → 3160+ 行</div>
+          <div class="text-[11px] text-sky-300 mt-1">顶层窗口隔离 · 离屏渲染优化</div>
+        </div>
+        <div class="rounded-xl bg-white/5 border border-white/10 p-4 backdrop-blur-sm">
+          <div class="text-xs text-slate-400">油猴控制体系</div>
+          <div class="text-xl font-bold text-white mt-1">5 主开关 + 2 子菜单</div>
+          <div class="text-[11px] text-emerald-300 mt-1">支持 ⚡ 一键全开/全关三态总控</div>
+        </div>
+        <div class="rounded-xl bg-white/5 border border-white/10 p-4 backdrop-blur-sm">
+          <div class="text-xs text-slate-400">内容透视模型</div>
+          <div class="text-xl font-bold text-white mt-1">12 维品质金字塔</div>
+          <div class="text-[11px] text-amber-300 mt-1">时长加权 0.40x~2.00x · 实时计数</div>
+        </div>
+        <div class="rounded-xl bg-white/5 border border-white/10 p-4 backdrop-blur-sm">
+          <div class="text-xs text-slate-400">流式加载引擎</div>
+          <div class="text-xl font-bold text-white mt-1">4~7 列 × 6 行</div>
+          <div class="text-[11px] text-cyan-300 mt-1">纯前端 MD5+WBI · -412 风控熔断</div>
+        </div>
+      </div>
+
+      <!-- 章节快速导航 -->
+      <nav class="flex flex-wrap gap-2 mt-6 pt-5 border-t border-white/10 text-xs">
+        <a href="#compare" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-sky-500/30 text-slate-200 transition">一、全维度对比</a>
+        <a href="#menu" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-sky-500/30 text-slate-200 transition">二、油猴菜单与默认状态</a>
+        <a href="#syntax" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-sky-500/30 text-slate-200 transition">三、搜索语法与防误判守卫</a>
+        <a href="#shortcuts" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-sky-500/30 text-slate-200 transition">四、快捷键与交互细节</a>
+        <a href="#waterfall" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-sky-500/30 text-slate-200 transition">五、WBI 瀑布流协议栈</a>
+        <a href="#quality" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-sky-500/30 text-slate-200 transition">六、12 维品质评级完整门槛</a>
+      </nav>
+    </div>
+  </div>
+
+  <!-- 正文主体 -->
+  <main class="max-w-6xl mx-auto px-6 py-8 space-y-8">
+
+    <!-- 一、全维度对比 -->
+    <section id="compare" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+        <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2.5">
+          <span class="w-2 h-5 bg-sky-500 rounded-full"></span>
+          一、v2.1.0 → v3.0.0 全维度对比
+        </h2>
+        <span class="text-xs text-slate-400 font-mono">Architecture Diff</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left border-collapse responsive-table compare-table">
+          <thead>
+            <tr class="border-b border-slate-200 text-xs uppercase text-slate-500 bg-slate-50/70">
+              <th class="py-3 px-4 font-semibold w-36">对比维度</th>
+              <th class="py-3 px-4 font-semibold w-1/3">v2.1.0（初代基础版）</th>
+              <th class="py-3 px-4 font-semibold text-sky-700 bg-sky-50/40">v3.0.0（当前完整版）</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 text-slate-700">
+            <tr class="hover:bg-slate-50/60">
+              <td class="py-3.5 px-4 font-semibold text-slate-900">脚本权限与隔离</td>
+              <td class="py-3.5 px-4 text-slate-500"><code class="px-1.5 py-0.5 bg-slate-100 rounded text-xs font-mono">@grant none</code>，无菜单接口，未做子窗口隔离</td>
+              <td class="py-3.5 px-4 bg-sky-50/20">新增 <code class="px-1.5 py-0.5 bg-sky-100/70 text-sky-800 rounded text-xs font-mono">GM_registerMenuCommand</code> / <code class="px-1.5 py-0.5 bg-sky-100/70 text-sky-800 rounded text-xs font-mono">GM_unregisterMenuCommand</code> / <code class="px-1.5 py-0.5 bg-sky-100/70 text-sky-800 rounded text-xs font-mono">unsafeWindow</code>；入口增加 <code class="px-1.5 py-0.5 bg-slate-100 rounded text-xs font-mono">window.self !== window.top</code> 隔离</td>
+            </tr>
+            <tr class="hover:bg-slate-50/60">
+              <td class="py-3.5 px-4 font-semibold text-slate-900">菜单与持久化</td>
+              <td class="py-3.5 px-4 text-slate-500">无任何开关，规则固定写死</td>
+              <td class="py-3.5 px-4 bg-sky-50/20">5 项主开关 + 2 项二级级联子菜单 + <code class="font-semibold">⚡ 一键全开/全关</code> 三态总控，全量持久化至 <code class="px-1.5 py-0.5 bg-slate-100 rounded text-xs font-mono">localStorage</code></td>
+            </tr>
+            <tr class="hover:bg-slate-50/60">
+              <td class="py-3.5 px-4 font-semibold text-slate-900">过滤与呈现双轨</td>
+              <td class="py-3.5 px-4 text-slate-500">强制开启语法过滤，不匹配直接 <code class="px-1.5 py-0.5 bg-slate-100 rounded text-xs font-mono">display: none</code></td>
+              <td class="py-3.5 px-4 bg-sky-50/20">支持菜单或 <kbd class="px-1.5 py-0.5 text-xs font-mono bg-white border border-slate-300 rounded shadow-xs">Alt+Q</kbd> 随时开关语法过滤；支持 <strong>物理隐藏 / 聚光灯虚化</strong> <code class="font-mono text-xs">O(1)</code> 根类名瞬切 + 0.25s 双向平滑过渡</td>
+            </tr>
+            <tr class="hover:bg-slate-50/60">
+              <td class="py-3.5 px-4 font-semibold text-slate-900">翻页驱动机制</td>
+              <td class="py-3.5 px-4 text-slate-500">仅依赖 B 站原生底部分页器</td>
+              <td class="py-3.5 px-4 bg-sky-50/20">纯前端 <strong>MD5 + WBI 签名协议栈</strong>，可选开启 <strong>🌊 无缝瀑布流</strong>（自适应列数步长、母卡克隆、左下角 <code class="font-mono text-xs">第 X/Y 页</code> 徽标、风控拦截重试）</td>
+            </tr>
+            <tr class="hover:bg-slate-50/60">
+              <td class="py-3.5 px-4 font-semibold text-slate-900">视频品质雷达</td>
+              <td class="py-3.5 px-4 text-slate-500">无</td>
+              <td class="py-3.5 px-4 bg-sky-50/20">基于赞播比、藏播比、弹幕密度、评赞比与 <strong>时长加权归一化</strong> 的 12 维品质评级 + 封面左上角胶囊 + 顶部【品级标签】多选与实时计数</td>
+            </tr>
+            <tr class="hover:bg-slate-50/60">
+              <td class="py-3.5 px-4 font-semibold text-slate-900">数据源与繁简</td>
+              <td class="py-3.5 px-4 text-slate-500">仅 <code class="font-mono text-xs">fetch</code> 拦截 + <code class="font-mono text-xs">opencc-js@1.0.5 full.js</code></td>
+              <td class="py-3.5 px-4 bg-sky-50/20">新增 <strong>Pinia 首屏状态扫描 + 80ms×20 次高频轮询</strong>；升级 <code class="font-mono text-xs">opencc-js@1.4.2 t2cn.js</code> 并带 <code class="font-mono text-xs">jsdelivr</code> 动态保底注入</td>
+            </tr>
+            <tr class="hover:bg-slate-50/60">
+              <td class="py-3.5 px-4 font-semibold text-slate-900">性能与防误判</td>
+              <td class="py-3.5 px-4 text-slate-500">基础 CSS 隐藏广告 + <code class="font-mono text-xs">cleanAdsOnly</code></td>
+              <td class="py-3.5 px-4 bg-sky-50/20">新增 <code class="font-mono text-xs">content-visibility: auto</code> 离屏优化、<strong>直播卡三重识别防误标</strong>、<strong>外部隐藏卡隔离</strong>、<strong>活动/游戏横幅跳过</strong> 与 <strong>数据就绪防提前锁死守卫</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 二、油猴菜单结构与默认状态 -->
+    <section id="menu" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2.5">
+          <span class="w-2 h-5 bg-emerald-500 rounded-full"></span>
+          二、油猴菜单结构与持久化配置（按实际注册顺序）
+        </h2>
+        <span class="text-xs text-slate-500">新用户开箱默认开启：<strong class="text-emerald-700">筛选常驻 + 语法过滤 + 品质标签(仅精选)</strong></span>
+      </div>
+
+      <div class="p-6 grid lg:grid-cols-2 gap-4 text-sm">
+        <!-- 1. 一键总控 -->
+        <div class="p-4 rounded-xl border border-amber-200 bg-amber-50/40 lg:col-span-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div class="flex items-center gap-2 font-bold text-slate-900">
+              <span>1. ⚡ 一键全开/全关</span>
+              <span class="text-xs font-normal px-2 py-0.5 rounded bg-white border border-amber-200 text-amber-700">三态指示：✅ 已开启 / 🌓 部分开启 / ❌ 已关闭</span>
+            </div>
+            <p class="text-xs text-slate-600 mt-1.5">严格按顺序依次同步 5 项主开关，并将【无缝瀑布流】置于最后执行，安全处理第 1 页路由复位与页面重载。</p>
+          </div>
+          <span class="shrink-0 text-xs font-semibold px-3 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300">默认：🌓 部分开启</span>
+        </div>
+
+        <!-- 2. 搜索筛选常驻 -->
+        <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/60 flex flex-col justify-between gap-3">
+          <div>
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-bold text-slate-900">2. ⚓ 搜索筛选常驻</span>
+              <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">✅ 默认开启</span>
+            </div>
+            <div class="text-[11px] font-mono text-slate-400 mt-0.5">localStorage: bili_cleaner_sticky_filter</div>
+            <p class="text-xs text-slate-600 mt-2 leading-relaxed">
+              通过 <code class="px-1 bg-white border border-slate-200 rounded font-mono">stickyObserver</code> 监听 <code class="px-1 bg-white border border-slate-200 rounded font-mono">div.more-conditions</code>，强制移除 <code class="font-mono">ov_hidden</code>/<code class="font-mono">hide</code> 并锁定 <code class="font-mono">height: auto</code>，隐藏原站“更多筛选”折叠按钮，让顶部【品级标签】一进页面即可见。
+            </p>
+          </div>
+        </div>
+
+        <!-- 3. 无缝瀑布流 -->
+        <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/60 flex flex-col justify-between gap-3">
+          <div>
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-bold text-slate-900">3. 🌊 无缝瀑布流</span>
+              <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-700 border border-slate-300">❌ 默认关闭</span>
+            </div>
+            <div class="text-[11px] font-mono text-slate-400 mt-0.5">localStorage: bili_cleaner_waterfall</div>
+            <p class="text-xs text-slate-600 mt-2 leading-relaxed">
+              隐藏原站底部分页器，滚动触底通过 WBI 接口连续追加视频并增量安检；切换该开关时会自动点击官方第 1 页并清洗 URL 残留的 <code class="font-mono">page</code> / <code class="font-mono">o</code> 参数后刷新页面。
+            </p>
+          </div>
+        </div>
+
+        <!-- 4. 搜索语法过滤 + 子菜单 -->
+        <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-3">
+          <div>
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-bold text-slate-900">4. 🗝️ 搜索语法过滤 (Alt+Q)</span>
+              <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">✅ 默认开启</span>
+            </div>
+            <div class="text-[11px] font-mono text-slate-400 mt-0.5">localStorage: bili_cleaner_syntax_filter</div>
+            <p class="text-xs text-slate-600 mt-2 leading-relaxed">
+              开启时执行四道关键词安检并在发请求前脱壳；<strong>关闭后停止接口脱壳</strong>（原样透传搜索词），释放全部视频，但<strong>依然保留去广告与品质筛选</strong>。
+            </p>
+          </div>
+          <div class="p-3 rounded-lg bg-white border border-sky-200/80 border-l-4 border-l-sky-500">
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-semibold text-slate-800 text-xs sm:text-sm">└─ 虚化显示模糊内容</span>
+              <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">❌ 默认关闭</span>
+            </div>
+            <div class="text-[11px] font-mono text-slate-400 mt-0.5">localStorage: bili_cleaner_dimmed（仅语法过滤开启时显示）</div>
+            <p class="text-xs text-slate-500 mt-1.5 leading-relaxed">
+              关闭时物理隐藏未匹配卡片；开启时改为半透明灰度（<code class="font-mono">opacity: 0.16; grayscale(85%)</code>），悬停恢复清晰。采用 <code class="font-mono">html.bili-dimmed-enabled</code> <code class="font-mono">O(1)</code> 瞬时切换，千张卡片零卡顿。
+            </p>
+          </div>
+        </div>
+
+        <!-- 5. 视频品质标签 + 子菜单 -->
+        <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-3">
+          <div>
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-bold text-slate-900">5. 🏷️ 视频品质标签</span>
+              <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">✅ 默认开启</span>
+            </div>
+            <div class="text-[11px] font-mono text-slate-400 mt-0.5">localStorage: bili_cleaner_eval_badge</div>
+            <p class="text-xs text-slate-600 mt-2 leading-relaxed">
+              在封面左上角渲染品级微标，并在顶部面板嵌入【品级标签】筛选栏；关闭时自动清空已选品级与存储记忆、移除角标与筛选行并恢复所有被隐藏卡片。
+            </p>
+          </div>
+          <div class="p-3 rounded-lg bg-white border border-sky-200/80 border-l-4 border-l-sky-500">
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-semibold text-slate-800 text-xs sm:text-sm">└─ 标签可见范围</span>
+              <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 border border-sky-200">✨ 默认仅精选</span>
+            </div>
+            <div class="text-[11px] font-mono text-slate-400 mt-0.5">localStorage: bili_cleaner_eval_full_mode（仅品质标签开启时显示）</div>
+            <p class="text-xs text-slate-500 mt-1.5 leading-relaxed">
+              <strong>✨ 仅精选</strong> 模式下封面不画 <code class="font-mono">🍀 稳健良作</code> 与 <code class="font-mono">🌱 样本较少</code>，保持视觉清爽（不影响顶部筛选）；切为 <strong>📑 全部展示</strong> 则全量渲染。
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 三 & 四：搜索语法 + 快捷键与交互 -->
+    <div class="grid lg:grid-cols-2 gap-6">
+      <section id="syntax" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 bg-slate-50 border-b border-slate-200">
+          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2.5">
+            <span class="w-2 h-5 bg-indigo-500 rounded-full"></span>
+            三、搜索语法、简繁与底层防误判守卫
+          </h2>
+        </div>
+        <div class="p-6 space-y-4 text-sm">
+          <div class="space-y-2.5">
+            <div class="flex items-start gap-3">
+              <code class="shrink-0 px-2 py-0.5 rounded bg-slate-900 text-white font-mono text-xs">普通词</code>
+              <span class="text-slate-600 text-xs sm:text-sm">视频标题必须包含全部普通词（逻辑 AND）。</span>
+            </div>
+            <div class="flex items-start gap-3">
+              <code class="shrink-0 px-2 py-0.5 rounded bg-rose-600 text-white font-mono text-xs">-排除词</code>
+              <span class="text-slate-600 text-xs sm:text-sm">标题包含即一票否决；发往 B 站接口前自动剥离该词，最大化召回候选集。</span>
+            </div>
+            <div class="flex items-start gap-3">
+              <code class="shrink-0 px-2 py-0.5 rounded bg-sky-600 text-white font-mono text-xs">@UP主</code>
+              <span class="text-slate-600 text-xs sm:text-sm">限定第一署名作者名称包含指定词（去除合作者后缀）；接口前剥离 <code class="font-mono">@</code>。</span>
+            </div>
+            <div class="flex items-start gap-3">
+              <code class="shrink-0 px-2 py-0.5 rounded bg-purple-600 text-white font-mono text-xs">#Tag</code>
+              <span class="text-slate-600 text-xs sm:text-sm">限定后台 Tag/分类字段包含全部标签；兼容未编码 <code class="font-mono">#</code> 截断进 <code class="font-mono">location.hash</code> 的拼回。</span>
+            </div>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1.5">
+            <div class="font-semibold text-slate-800">底层增强守卫：</div>
+            <div>• <strong>繁简与实体归一</strong>：接入 <code class="font-mono">OpenCC (t2cn)</code> + <code class="font-mono">jsdelivr</code> 动态保底脚本，自动反转义 <code class="font-mono">&amp;quot;</code>/<code class="font-mono">&amp;#x27;</code> 等实体与中文单引号。</div>
+            <div>• <strong>防提前锁死</strong>：仅当 <code class="font-mono">isTagReady &amp;&amp; isStatReady</code> 均满足时才写入 <code class="font-mono">data-purified-query</code> 缓存。</div>
+            <div>• <strong>直播/活动/外部隐藏隔离</strong>：跳过 <code class="font-mono">.activity-game-list</code> 与广告卡；三重识别直播卡（<code class="font-mono">.bili-live-card</code> / <code class="font-mono">live.bilibili.com</code> / <code class="font-mono">living</code>），并在接口写入阶段跳过 <code class="font-mono">live_room</code>，彻底杜绝直播卡误标“样本较少”。</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="shortcuts" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 bg-slate-50 border-b border-slate-200">
+          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2.5">
+            <span class="w-2 h-5 bg-amber-500 rounded-full"></span>
+            四、快捷键、品级栏交互与动态计数
+          </h2>
+        </div>
+        <div class="p-6 space-y-4 text-sm">
+          <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
+            <div class="flex items-start gap-3">
+              <kbd class="shrink-0 px-2.5 py-1 text-xs font-mono font-bold bg-white border border-slate-300 rounded-md shadow-xs text-slate-800">/</kbd>
+              <div class="text-xs sm:text-sm text-slate-600">非输入框聚焦状态下快速聚焦搜索框，并阻止 <code class="font-mono">/</code> 字符输入。</div>
+            </div>
+            <div class="flex items-start gap-3">
+              <kbd class="shrink-0 px-2 py-1 text-xs font-mono font-bold bg-white border border-slate-300 rounded-md shadow-xs text-slate-800">Alt + Q</kbd>
+              <div class="text-xs sm:text-sm text-slate-600">非输入状态下瞬切【搜索语法过滤】（已拦截 Mac <code class="font-mono">Option+Q</code> 输出 <code class="font-mono">œ</code>），并在左下角弹出 1.5 秒轻量 Toast 提示（瀑布流开启时自动上移至 <code class="font-mono">bottom: 72px</code> 避开页码徽标）。</div>
+            </div>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-sky-50/50 border border-sky-200 space-y-2 text-xs sm:text-sm text-slate-700">
+            <div class="font-bold text-slate-900">顶部【品级标签】类文件夹式交互：</div>
+            <div>• <strong>单击</strong>：单选某品级并设锚点（点击【全部】重置）。</div>
+            <div>• <strong><kbd class="px-1.5 py-0.5 text-xs font-mono bg-white border border-slate-300 rounded">Ctrl</kbd> / <kbd class="px-1.5 py-0.5 text-xs font-mono bg-white border border-slate-300 rounded">Cmd</kbd> + 单击</strong>：独立多选 / 反选。</div>
+            <div>• <strong><kbd class="px-1.5 py-0.5 text-xs font-mono bg-white border border-slate-300 rounded">Shift</kbd> + 单击</strong>：从锚点到当前项闭区间范围连选（配合 <kbd class="px-1 py-0.5 text-xs font-mono bg-white border border-slate-300 rounded">Ctrl</kbd> 可叠加）。</div>
+            <div>• <strong>瀑布流补屏</strong>：筛选后若当前屏幕可视卡片 &lt; 10 张且已开瀑布流，自动触发 <code class="font-mono text-xs">triggerLoadNextPage()</code> 静默补拉。</div>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600">
+            <span class="font-semibold text-slate-800">动态按钮计数规则：</span>
+            仅当【搜索语法过滤】与【虚化显示模糊内容】同开时显示 <code class="font-mono font-semibold text-sky-700">(非灰色/总数)</code>；其余模式仅显示 <code class="font-mono font-semibold text-sky-700">(当前可见数)</code>；无命中项自动置灰（<code class="font-mono">opacity: 0.55</code>），且通过 <code class="font-mono">data-external-hidden</code> 排除广告/原站隐藏节点，切换筛选总数零跳变。
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- 五、无缝瀑布流与 WBI 协议栈 -->
+    <section id="waterfall" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+        <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2.5">
+          <span class="w-2 h-5 bg-cyan-500 rounded-full"></span>
+          五、无缝瀑布流与纯前端 WBI 签名协议栈
+        </h2>
+        <span class="text-xs font-mono text-slate-400">WBI + IntersectionObserver</span>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <div class="grid md:grid-cols-3 gap-4 text-xs sm:text-sm text-slate-600">
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="font-bold text-slate-900 mb-1.5">1. WBI 鉴权与密钥同步</div>
+            <p class="leading-relaxed">内联轻量 MD5（<code class="font-mono text-xs">computeMd5</code>）与 64 字节混淆映射表（<code class="font-mono text-xs">mixinKeyEncTab</code>），优先从首屏 <code class="font-mono text-xs">__INITIAL_STATE__.wbi_img</code> 零请求取钥，兜底拉取 <code class="font-mono text-xs">/x/web-interface/nav</code>，直连 <code class="font-mono text-xs">/x/web-interface/wbi/search/type</code>。</p>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="font-bold text-slate-900 mb-1.5">2. 自适应步长与模板克隆</div>
+            <p class="leading-relaxed">仅测前两行计算物理列数（4~7 列）× 6 行 = 单页拉取 <code class="font-mono text-xs">24~42</code> 条；缓存预清洗后的母卡骨架（移除直播播放器与 SponsorBlock 角标），以 <code class="font-mono text-xs">seenBvidMap</code> 去重并在入树前增量安检。</p>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="font-bold text-slate-900 mb-1.5">3. 并发防串台与风控自愈</div>
+            <p class="leading-relaxed"><code class="font-mono text-xs">isPaging</code> + <code class="font-mono text-xs">AbortController</code> + <code class="font-mono text-xs">pagingSessionSeq</code> 彻底掐断切词旧请求；劫持 <code class="font-mono text-xs">pushState</code>/<code class="font-mono text-xs">replaceState</code>；分页器 <code class="font-mono text-xs">isConnected</code> 脱落自动重绑；捕获 <code class="font-mono text-xs">-412/-403</code> 风控码并支持点击重试。</p>
+          </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-cyan-50/50 border border-cyan-200 text-xs sm:text-sm text-slate-700">
+          <div class="space-y-1">
+            <div><strong>左下角悬浮徽标</strong>：内联微软 Fluent SVG 波浪图标，依据当前可见视频物理行数（每 6 行为 1 页）实时计算并展示 <code class="font-mono">第 X/Y 页</code>；<strong>左键</strong>暂停/继续，<strong>右键</strong>平滑回到顶部。</div>
+            <div><strong>底部加载提示条</strong>：实时反馈已检索原始视频数（<code class="font-mono">正在筛选... (已检索 N 条)</code>），触底自然结束或异常时提供点击重试。</div>
+          </div>
+          <div class="shrink-0 px-3.5 py-1.5 rounded-full bg-white border border-sky-300 shadow-sm text-xs font-semibold text-slate-800 whitespace-nowrap">
+            🌊 瀑布流: 第 2/5 页
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 六、12 维视频品质评级体系 -->
+    <section id="quality" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2.5">
+          <span class="w-2 h-5 bg-purple-500 rounded-full"></span>
+          六、12 维视频品质评级完整门槛（按代码自上而下优先匹配）
+        </h2>
+        <span class="text-xs font-mono text-sky-800 bg-sky-50 border border-sky-200 px-3 py-1 rounded-lg">
+          时长权重 = clamp(√(时长分 / 5.0), 0.40, 2.00)
+        </span>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <div class="grid sm:grid-cols-3 gap-3 text-xs text-slate-600">
+          <div class="p-3 rounded-lg bg-slate-50 border border-slate-200">
+            <strong class="text-slate-900">⏱️ 时长加权归一化：</strong>以 <code class="font-mono">5.0 分钟</code> 为 <code class="font-mono">1.00x</code> 基准，10 秒短片权重压至 <code class="font-mono">0.40x</code>，20 分钟长片提升至 <code class="font-mono">2.00x</code>。
+          </div>
+          <div class="p-3 rounded-lg bg-slate-50 border border-slate-200">
+            <strong class="text-slate-900">🛡️ 数据就绪守卫：</strong>仅提取到 DOM 粗略数据时（无赞/藏全量指标）暂不评级，待全量统计就绪后自动补全；直播卡直接跳过。
+          </div>
+          <div class="p-3 rounded-lg bg-slate-50 border border-slate-200">
+            <strong class="text-slate-900">💬 悬浮详情 &amp; 幂等：</strong>悬停胶囊展示赞播比、藏播比、弹幕密度、评播比与时长权重；评级未变时仅刷新 <code class="font-mono">title</code>，不重建 DOM。
+          </div>
+        </div>
+
+        <div class="overflow-x-auto border border-slate-200 rounded-xl">
+          <table class="w-full text-xs sm:text-sm text-left border-collapse responsive-table quality-table">
+            <thead>
+              <tr class="border-b border-slate-200 text-xs text-slate-500 bg-slate-50">
+                <th class="py-2.5 px-3 font-semibold w-40">优先序 &amp; 封面微标</th>
+                <th class="py-2.5 px-3 font-semibold">完整判定公式 / 门槛</th>
+                <th class="py-2.5 px-3 font-semibold w-24 text-center">仅精选模式</th>
+                <th class="py-2.5 px-3 font-semibold w-24 text-center">顶部筛选</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 text-slate-700">
+              <tr class="hover:bg-slate-50/70">
+                <td class="py-3 px-3"><span class="pill q-hidden-gem">💎 冷门宝藏</span><span class="block text-[11px] text-slate-400 mt-1">1. 小样本破格</span></td>
+                <td class="py-3 px-3"><code class="font-mono text-xs bg-slate-100 px-1 rounded">1000 ≤ 播放 &lt; 3000</code> 且 <code class="font-mono text-xs bg-slate-100 px-1 rounded">(赞 ≥ 150 或 藏 ≥ 80)</code> 且 <code class="font-mono text-xs bg-slate-100 px-1 rounded">(赞播比×权重 ≥ 8% 或 藏播比×权重 ≥ 4.5%)</code></td>
+                <td class="py-3 px-3 text-center"><span class="px-2 py-0.5 rounded bg-sky-50 text-sky-700 text-xs font-medium">展示</span></td>
+                <td class="py-3 px-3 text-center">✅ 支持</td>
+              </tr>
+              <tr class="hover:bg-slate-50/70">
+                <td class="py-3 px-3"><span class="pill q-low-sample">🌱 样本较少</span><span class="block text-[11px] text-slate-400 mt-1">2. 置信度保护</span></td>
+                <td class="py-3 px-3"><code class="font-mono text-xs bg-slate-100 px-1 rounded">播放 &lt; 3000</code> 且未达上述破格门槛，暂不作定性评级</td>
+                <td class="py-3 px-3 text-center"><span class="px-2 py-0.5 rounded bg-slate-100 text-slate-500 text-xs font-medium">留白隐藏</span></td>
+                <td class="py-3 px-3 text-center text-slate-400">—</td>
+              </tr>
+              <tr class="hover:bg-slate-50/70">
+                <td class="py-3 px-3"><span class="pill q-warning">⚠️ 谨慎观看</span><span class="block text-[11px] text-slate-400 mt-1">3. 低质预警</span></td>
+                <td class="py-3 px-3"><code class="font-mono text-xs bg-slate-100 px-1 rounded">播放 ≥ 2万</code> 且 <code class="font-mono text-xs bg-slate-100 px-1 rounded">赞 &gt; 0</code> 且 <code class="font-mono text-xs bg-slate-100 px-1 rounded">赞播比 &lt; 1.2%</code> 且 <code class="font-mono text-xs bg-slate-100 px-1 rounded">藏播比 &lt; 0.5%</code>（限 <code class="font-mono text-xs bg-slate-100 px-1 rounded">时长 ≤ 15分</code> 或未知，防长录像误判）</td>
+                <td class="py-3 px-3 text-center"><span class="px-2 py-0.5 rounded bg-red-50 text-red-700 text-xs font-medium">始终预警</span></td>
+                <td class="py-3 px-3 text-center text-slate-400">—</td>
+              </tr>
+              <tr class="hover:bg-slate-50/70">
+                <td class="py-3 px-3"><span class="pill q-hall-of-fame">🏆 殿堂神作</span><span class="block text-[11px] text-slate-400 mt-1">4. T0 顶峰</span></td>
+                <td class="py-3 px-3"><code class="font-mono text-xs bg-slate-100 px-1 rounded">时长 ≥ 90秒</code> 且 <code class="font-mono text-xs bg-slate-100 px-1 rounded">播放 ≥ 2万</code> 且 <code class="font-mono text-xs bg-slate-100 px-1 rounded">赞 ≥ 1500</code> 且 <code class="font-mono text-xs bg-slate-100 px-1 rounded">藏 ≥ 800</code> 且 <code class="font-mono text-xs bg-slate-100 px-1 rounded">赞播比×权重 ≥ 7%</code> 且 <code class="font-mono text-xs bg-slate-100 px-1 rounded">藏播比×权重 ≥ 3.5%</code></td>
+                <td class="py-3 px-3 text-center"><span class="px-2 py-0.5 rounded bg-sky-50 text-sky-700 text-xs font-medium">展示</span></td>
+                <td class="py-3 px-3 text-center">✅ 支持</td>
+              </tr>
+              <tr class="hover:bg-slate-50/70">
+                <td class="py-3 px-3"><span class="pill q-viral-short">⚡ 爆款短片</span><span class="block text-[11px] text-slate-400 mt-1">5. 短片独立池</span></td>
+                <td class="py-3 px-3"><code class="font-mono text-xs bg-slate-100 px-1 rounded">0 &lt; 时长 &lt; 90秒</code>，且满足：<code class="font-mono text-xs bg-slate-100 px-1 rounded">(播放 ≥ 2万 && 赞 ≥ 1500 && (赞播比 ≥ 6% || 藏播比 ≥ 3%))</code> 或 <code class="font-mono text-xs bg-slate-100 px-1 rounded">(播放 ≥ 1万 && 赞 ≥ 1000 && 赞播比 ≥ 8%)</code> 或 <code class="font-mono text-xs bg-slate-100 px-1 rounded">(赞 ≥ 3万 && (赞播比 ≥ 3% || 藏播比 ≥ 1.5%))</code></td>
+                <td class="py-3 px-3 text-center"><span class="px-2 py-0.5 rounded bg-sky-50 text-sky-700 text-xs font-medium">展示</span></td>
+                <td class="py-3 px-3 text-center">✅ 支持</td>
+              </tr>
+              <tr class="hover:bg-slate-50/70">
+                <td class="py-3 px-3"><span class="pill q-hidden-gem">💎 冷门宝藏</span><span class="block text-[11px] text-slate-400 mt-1">6. 常规遗珠</span></td>
+                <td class="py-3 px-3"><code class="font-mono text-xs bg-slate-100 px-1 rounded">3000 ≤ 播放 &lt; 2万</code> 且 <code class="font-mono text-xs bg-slate-100 px-1 rounded">赞 ≥ 200</code> 且 <code class="font-mono text-xs bg-slate-100 px-1 rounded">藏 ≥ 80</code> 且 <code class="font-mono text-xs bg-slate-100 px-1 rounded">(赞播比×权重 ≥ 8% 或 藏播比×权重 ≥ 4.5%)</code></td>
+                <td class="py-3 px-3 text-center"><span class="px-2 py-0.5 rounded bg-sky-50 text-sky-700 text-xs font-medium">展示</span></td>
+                <td class="py-3 px-3 text-center">✅ 支持</td>
+              </tr>
+              <tr class="hover:bg-slate-50/70">
+                <td class="py-3 px-3"><span class="pill q-hardcore">💡 硬核干货</span><span class="block text-[11px] text-slate-400 mt-1">7. T1 收藏向</span></td>
+                <td class="py-3 px-3"><code class="font-mono text-xs bg-slate-100 px-1 rounded">时长 ≥ 90秒</code>，且 <code class="font-mono text-xs bg-slate-100 px-1 rounded">(播放 ≥ 5000 && 藏 ≥ 250 && 藏播比×权重 ≥ 4%)</code> 或 <code class="font-mono text-xs bg-slate-100 px-1 rounded">(藏 ≥ 2000 && 藏播比×权重 ≥ 2.5%)</code></td>
+                <td class="py-3 px-3 text-center"><span class="px-2 py-0.5 rounded bg-sky-50 text-sky-700 text-xs font-medium">展示</span></td>
+                <td class="py-3 px-3 text-center">✅ 支持</td>
+              </tr>
+              <tr class="hover:bg-slate-50/70">
+                <td class="py-3 px-3"><span class="pill q-high-reputation">⭐ 高口碑佳作</span><span class="block text-[11px] text-slate-400 mt-1">8. T1 好评向</span></td>
+                <td class="py-3 px-3"><code class="font-mono text-xs bg-slate-100 px-1 rounded">(播放 ≥ 5000 && 赞 ≥ 400 && 赞播比×权重 ≥ 7%)</code> 或 <code class="font-mono text-xs bg-slate-100 px-1 rounded">(赞 ≥ 5000 && 赞播比×权重 ≥ 4.5%)</code></td>
+                <td class="py-3 px-3 text-center"><span class="px-2 py-0.5 rounded bg-sky-50 text-sky-700 text-xs font-medium">展示</span></td>
+                <td class="py-3 px-3 text-center">✅ 支持</td>
+              </tr>
+              <tr class="hover:bg-slate-50/70">
+                <td class="py-3 px-3"><span class="pill q-balanced-masterpiece">🏅 综合标杆</span><span class="block text-[11px] text-slate-400 mt-1">9. T1.5 六边形</span></td>
+                <td class="py-3 px-3"><code class="font-mono text-xs bg-slate-100 px-1 rounded">播放 ≥ 1万</code> 且 <code class="font-mono text-xs bg-slate-100 px-1 rounded">赞 ≥ 600</code> 且 <code class="font-mono text-xs bg-slate-100 px-1 rounded">藏 ≥ 300</code> 且 <code class="font-mono text-xs bg-slate-100 px-1 rounded">赞播比×权重 ≥ 4.5%</code> 且 <code class="font-mono text-xs bg-slate-100 px-1 rounded">藏播比×权重 ≥ 2.2%</code></td>
+                <td class="py-3 px-3 text-center"><span class="px-2 py-0.5 rounded bg-sky-50 text-sky-700 text-xs font-medium">展示</span></td>
+                <td class="py-3 px-3 text-center">✅ 支持</td>
+              </tr>
+              <tr class="hover:bg-slate-50/70">
+                <td class="py-3 px-3"><span class="pill q-opinion-storm">💥 话题焦点</span><span class="block text-[11px] text-slate-400 mt-1">10. 弹幕+评论双爆</span></td>
+                <td class="py-3 px-3">同时满足下方 <strong>🔥 弹幕密集</strong> 与 <strong>💬 激辩热议</strong> 两项条件</td>
+                <td class="py-3 px-3 text-center"><span class="px-2 py-0.5 rounded bg-sky-50 text-sky-700 text-xs font-medium">展示</span></td>
+                <td class="py-3 px-3 text-center">✅ 支持</td>
+              </tr>
+              <tr class="hover:bg-slate-50/70">
+                <td class="py-3 px-3"><span class="pill q-heated-debate">💬 激辩热议</span><span class="block text-[11px] text-slate-400 mt-1">11. 评论交锋</span></td>
+                <td class="py-3 px-3"><code class="font-mono text-xs bg-slate-100 px-1 rounded">评赞比 ≥ 10%</code>，且 <code class="font-mono text-xs bg-slate-100 px-1 rounded">(评 ≥ 300 && 评播比 ≥ 0.35%)</code> 或 <code class="font-mono text-xs bg-slate-100 px-1 rounded">(评 ≥ 1500 && 评播比 ≥ 0.2%)</code></td>
+                <td class="py-3 px-3 text-center"><span class="px-2 py-0.5 rounded bg-sky-50 text-sky-700 text-xs font-medium">展示</span></td>
+                <td class="py-3 px-3 text-center">✅ 支持</td>
+              </tr>
+              <tr class="hover:bg-slate-50/70">
+                <td class="py-3 px-3"><span class="pill q-danmaku-carnival">🔥 弹幕密集</span><span class="block text-[11px] text-slate-400 mt-1">12. 高频弹幕</span></td>
+                <td class="py-3 px-3"><code class="font-mono text-xs bg-slate-100 px-1 rounded">(弹幕密度 ≥ 15条/分 && 弹幕 ≥ 300)</code> 或 <code class="font-mono text-xs bg-slate-100 px-1 rounded">(弹幕 ≥ 3000 && 弹幕密度 ≥ 8条/分)</code></td>
+                <td class="py-3 px-3 text-center"><span class="px-2 py-0.5 rounded bg-sky-50 text-sky-700 text-xs font-medium">展示</span></td>
+                <td class="py-3 px-3 text-center">✅ 支持</td>
+              </tr>
+              <tr class="hover:bg-slate-50/70">
+                <td class="py-3 px-3"><span class="pill q-routine">🍀 稳健良作</span><span class="block text-[11px] text-slate-400 mt-1">13. T3 基准兜底</span></td>
+                <td class="py-3 px-3"><code class="font-mono text-xs bg-slate-100 px-1 rounded">播放 ≥ 3000</code> 且未触碰低质预警线，亦未落入以上高阶/热议象限的兜底良品</td>
+                <td class="py-3 px-3 text-center"><span class="px-2 py-0.5 rounded bg-slate-100 text-slate-500 text-xs font-medium">留白隐藏</span></td>
+                <td class="py-3 px-3 text-center">✅ 支持</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <footer class="text-center text-xs text-slate-400 pt-2 pb-6">
+      Bilibili 去掉搜索无关视频 v3.0.0 · 完整升级说明书 · MIT License
+    </footer>
+  </main>
+</body>
+</html>
