@@ -33,7 +33,7 @@
     let isWaterfall = localStorage.getItem('bili_cleaner_waterfall') === 'true';
     let isEvaluationBadge = localStorage.getItem('bili_cleaner_eval_badge') !== 'false';
     let isEvalFullMode = localStorage.getItem('bili_cleaner_eval_full_mode') === 'true';
-    const isSyntaxFilter = true;
+    let isSyntaxFilter = localStorage.getItem('bili_cleaner_syntax_filter') !== 'false';
     // 选中的品质标签筛选集合（多选，空集合代表全部/不限）
     let activeQualityFilters = new Set();
     try {
@@ -45,6 +45,7 @@
         }
     } catch (e) {}
     let toggleAllMenuId = null;
+    let syntaxFilterMenuId = null;
     let filterStickyMenuId = null;
     let dimmedMenuId = null;
     let waterfallMenuId = null;
@@ -59,6 +60,9 @@
         if (typeof GM_unregisterMenuCommand === 'function') {
             if (toggleAllMenuId !== null) {
                 try { GM_unregisterMenuCommand(toggleAllMenuId); } catch (e) {}
+            }
+            if (syntaxFilterMenuId !== null) {
+                try { GM_unregisterMenuCommand(syntaxFilterMenuId); } catch (e) {}
             }
             if (filterStickyMenuId !== null) {
                 try { GM_unregisterMenuCommand(filterStickyMenuId); } catch (e) {}
@@ -78,11 +82,14 @@
             }
         }
 
-        const isAllEnabled = isFilterSticky && isDimmed && isWaterfall && isEvaluationBadge;
-        const isAllDisabled = !isFilterSticky && !isDimmed && !isWaterfall && !isEvaluationBadge;
+        const isAllEnabled = isSyntaxFilter && isFilterSticky && isDimmed && isWaterfall && isEvaluationBadge;
+        const isAllDisabled = !isSyntaxFilter && !isFilterSticky && !isDimmed && !isWaterfall && !isEvaluationBadge;
         const toggleAllStatus = isAllEnabled ? '✅ 已开启' : (isAllDisabled ? '❌ 已关闭' : '🌓 部分开启');
         const toggleAllLabel = `⚡ 一键全开/全关: ${toggleAllStatus}`;
         toggleAllMenuId = GM_registerMenuCommand(toggleAllLabel, toggleAllFeatures);
+
+        const syntaxFilterLabel = `🗝️ 搜索语法过滤: ${isSyntaxFilter ? '✅ 已开启' : '❌ 已关闭'}`;
+        syntaxFilterMenuId = GM_registerMenuCommand(syntaxFilterLabel, toggleSyntaxFilter);
 
         const filterStickyLabel = `⚓ 搜索筛选常驻: ${isFilterSticky ? '✅ 已开启' : '❌ 已关闭'}`;
         filterStickyMenuId = GM_registerMenuCommand(filterStickyLabel, toggleFilterSticky);
@@ -103,10 +110,27 @@
         }
     }
 
+    // 切换搜索语法过滤状态并持久化配置（默认开启；关闭后停止接口脱壳并保留广告剔除与品质筛选）
+    function toggleSyntaxFilter() {
+        isSyntaxFilter = !isSyntaxFilter;
+        localStorage.setItem('bili_cleaner_syntax_filter', String(isSyntaxFilter));
+        registerMenu();
+
+        document.querySelectorAll('[data-purified-query]').forEach(card => {
+            delete card.dataset.purifiedQuery;
+        });
+        filterDOMElements();
+    }
+
     // 一键全开 / 全关所有功能（严格按顺序依次调用现有菜单方法，最后开关【无缝瀑布流】）
     function toggleAllFeatures() {
-        const isAllEnabled = isFilterSticky && isDimmed && isWaterfall && isEvaluationBadge;
+        const isAllEnabled = isSyntaxFilter && isFilterSticky && isDimmed && isWaterfall && isEvaluationBadge;
         const targetState = !isAllEnabled;
+
+        // 0. 搜索语法过滤
+        if (isSyntaxFilter !== targetState) {
+            toggleSyntaxFilter();
+        }
 
         // 1. 搜索筛选常驻
         if (isFilterSticky !== targetState) {
@@ -634,7 +658,7 @@
             gap: 6px;
         }
         #bili-waterfall-badge:hover {
-            transform: translateY(-2px);
+            transform: translateY(-1px);
             box-shadow: 0 6px 18px rgba(0, 174, 236, 0.25);
             border-color: #00aeec;
         }
@@ -836,7 +860,7 @@
  
         const isSearchReq = urlStr.includes('/wbi/search') || urlStr.includes('/search/type') || urlStr.includes('/search/all');
  
-        if (isSearchReq) {
+        if (isSearchReq && isSyntaxFilter) {
             const apiKeyword = getCleanApiKeyword();
             if (apiKeyword) {
                 urlStr = urlStr.replace(/([?&]keyword=)[^&]+/, `$1${encodeURIComponent(apiKeyword)}`);
@@ -2100,7 +2124,7 @@
                     platform: 'pc',
                     highlight: 1,
                     single_column: 0,
-                    keyword: getCleanApiKeyword() || decodeURIComponent(rawKeyword.replace(/\+/g, ' ')),
+                    keyword: (isSyntaxFilter ? getCleanApiKeyword() : '') || decodeURIComponent(rawKeyword.replace(/\+/g, ' ')),
                     source_tag: 3,
                     gaia_vtoken: '',
                     web_location: 1430654,
