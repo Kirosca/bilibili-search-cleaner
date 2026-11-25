@@ -69,6 +69,7 @@
             }
             if (dimmedMenuId !== null) {
                 try { GM_unregisterMenuCommand(dimmedMenuId); } catch (e) {}
+                dimmedMenuId = null;
             }
             if (waterfallMenuId !== null) {
                 try { GM_unregisterMenuCommand(waterfallMenuId); } catch (e) {}
@@ -88,17 +89,20 @@
         const toggleAllLabel = `⚡ 一键全开/全关: ${toggleAllStatus}`;
         toggleAllMenuId = GM_registerMenuCommand(toggleAllLabel, toggleAllFeatures);
 
-        const syntaxFilterLabel = `🗝️ 搜索语法过滤 (Alt+Q): ${isSyntaxFilter ? '✅ 已开启' : '❌ 已关闭'}`;
-        syntaxFilterMenuId = GM_registerMenuCommand(syntaxFilterLabel, toggleSyntaxFilter);
-
         const filterStickyLabel = `⚓ 搜索筛选常驻: ${isFilterSticky ? '✅ 已开启' : '❌ 已关闭'}`;
         filterStickyMenuId = GM_registerMenuCommand(filterStickyLabel, toggleFilterSticky);
 
-        const dimmedLabel = `🌫️ 虚化显示模糊内容: ${isDimmed ? '✅ 已开启' : '❌ 已关闭'}`;
-        dimmedMenuId = GM_registerMenuCommand(dimmedLabel, toggleDimmed);
-
         const waterfallLabel = `🌊 无缝瀑布流: ${isWaterfall ? '✅ 已开启' : '❌ 已关闭'}`;
         waterfallMenuId = GM_registerMenuCommand(waterfallLabel, toggleWaterfall);
+
+        const syntaxFilterLabel = `🗝️ 搜索语法过滤 (Alt+Q): ${isSyntaxFilter ? '✅ 已开启' : '❌ 已关闭'}`;
+        syntaxFilterMenuId = GM_registerMenuCommand(syntaxFilterLabel, toggleSyntaxFilter);
+
+        // 二级级联子菜单：仅在搜索语法过滤开启时展示虚化显示开关
+        if (isSyntaxFilter) {
+            const dimmedLabel = `  └─ 虚化显示模糊内容: ${isDimmed ? '✅ 已开启' : '❌ 已关闭'}`;
+            dimmedMenuId = GM_registerMenuCommand(dimmedLabel, toggleDimmed);
+        }
 
         const evalBadgeLabel = `🏷️ 视频品质标签: ${isEvaluationBadge ? '✅ 已开启' : '❌ 已关闭'}`;
         evalBadgeMenuId = GM_registerMenuCommand(evalBadgeLabel, toggleEvaluationBadge);
