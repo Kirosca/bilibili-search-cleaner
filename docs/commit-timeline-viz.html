@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>开发时间分布可视化 · Bilibili 搜索净化 (161 次提交)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .bar-col:hover .bar-fill { filter: brightness(1.15); }
+    .heat-cell { transition: transform 0.12s ease, box-shadow 0.12s ease; }
+    .heat-cell:hover { transform: scale(1.18); z-index: 10; box-shadow: 0 0 0 2px #0ea5e9; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 antialiased min-h-screen py-6 px-4 sm:px-6">
+  <div class="max-w-6xl mx-auto space-y-6">
+
+    <!-- 顶部标题 -->
+    <header class="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950 border border-slate-800 p-5 sm:p-7 shadow-xl">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-indigo-500/15 border border-indigo-400/30 text-indigo-300 text-xs font-semibold">
+            <span>🌙 Git 提交时段画像</span>
+            <span class="text-indigo-400/50">|</span>
+            <span class="font-mono">2026-10-05 ~ 2026-11-26</span>
+          </div>
+          <h1 class="text-xl sm:text-3xl font-extrabold tracking-tight text-white mt-2">
+            Bilibili 搜索净化 · 更新时间分布雷达
+          </h1>
+          <p class="text-xs sm:text-sm text-slate-400 mt-1">
+            基于仓库真实 <code class="font-mono text-sky-300">161</code> 次 Git 提交记录生成 · 点击柱状图或热力图格子可查看对应时段的提交明细
+          </p>
+        </div>
+        <div class="shrink-0 px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-slate-300 font-mono">
+          夜间提交占比：<span class="text-indigo-300 font-bold text-sm">83.2%</span> (18:00–05:59)
+        </div>
+      </div>
+
+      <!-- 4 项核心指标 -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
+        <div class="rounded-xl bg-white/5 border border-white/10 p-3.5 sm:p-4">
+          <div class="text-xs text-slate-400">累计提交 / 活跃日</div>
+          <div class="text-xl sm:text-2xl font-bold text-white mt-1">161 次 · 12 天</div>
+          <div class="text-[11px] text-sky-300 mt-1">11-18 起连续 9 天日均 17.2 次</div>
+        </div>
+        <div class="rounded-xl bg-indigo-500/10 border border-indigo-400/25 p-3.5 sm:p-4">
+          <div class="text-xs text-indigo-200">凌晨主力 (00:00–05:59)</div>
+          <div class="text-xl sm:text-2xl font-bold text-indigo-300 mt-1">77 次 (47.8%)</div>
+          <div class="text-[11px] text-indigo-200/80 mt-1">峰值：02 点 &amp; 04 点（各 18 次）</div>
+        </div>
+        <div class="rounded-xl bg-sky-500/10 border border-sky-400/25 p-3.5 sm:p-4">
+          <div class="text-xs text-sky-200">晚间时段 (18:00–23:59)</div>
+          <div class="text-xl sm:text-2xl font-bold text-sky-300 mt-1">57 次 (35.4%)</div>
+          <div class="text-[11px] text-sky-200/80 mt-1">峰值：21 点 &amp; 23 点（各 16 次）</div>
+        </div>
+        <div class="rounded-xl bg-amber-500/10 border border-amber-400/25 p-3.5 sm:p-4">
+          <div class="text-xs text-amber-200">白天时段 (06:00–17:59)</div>
+          <div class="text-xl sm:text-2xl font-bold text-amber-300 mt-1">27 次 (16.8%)</div>
+          <div class="text-[11px] text-amber-200/80 mt-1">11 点 / 14 点 / 16 点均为 0 次</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- 24 小时分布柱状图 -->
+    <section class="rounded-2xl bg-slate-900 border border-slate-800 p-5 sm:p-6 shadow-lg space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-white">一、24 小时提交分布（点击任意柱子筛选明细）</h2>
+          <p class="text-xs text-slate-400 mt-0.5">颜色区分时段：🟣 凌晨 00–05 · 🟢 上午 06–11 · 🟡 下午 12–17 · 🔵 晚间 18–23</p>
+        </div>
+        <div class="flex flex-wrap gap-2 text-[11px]">
+          <span class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">凌晨 47.8%</span>
+          <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">上午 11.2%</span>
+          <span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">下午 5.6%</span>
+          <span class="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30">晚间 35.4%</span>
+        </div>
+      </div>
+
+      <div id="hour-chart" class="h-52 sm:h-60 pt-6 flex items-end gap-1 sm:gap-1.5 border-b border-slate-800 pb-2 overflow-x-auto no-scrollbar"></div>
+    </section>
+
+    <!-- 日期 × 小时 打卡热力图 + 每日趋势 -->
+    <div class="grid lg:grid-cols-3 gap-6">
+      <!-- 热力图 -->
+      <section class="lg:col-span-2 rounded-2xl bg-slate-900 border border-slate-800 p-5 sm:p-6 shadow-lg space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <h2 class="text-base sm:text-lg font-bold text-white">二、日期 × 小时打卡热力图</h2>
+          <span class="text-xs text-slate-400">颜色越亮代表该小时提交越密集 · 点击格子查看提交</span>
+        </div>
+        <div class="overflow-x-auto no-scrollbar">
+          <div id="heatmap-container" class="min-w-[600px] space-y-1.5"></div>
+        </div>
+      </section>
+
+      <!-- 每日提交量 -->
+      <section class="rounded-2xl bg-slate-900 border border-slate-800 p-5 sm:p-6 shadow-lg space-y-4">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-white">三、每日提交量（12 天）</h2>
+          <p class="text-xs text-slate-400 mt-0.5">11 月 23 日单日峰值高达 39 次</p>
+        </div>
+        <div id="daily-chart" class="space-y-2"></div>
+      </section>
+    </div>
+
+    <!-- 交互式提交明细列表 -->
+    <section class="rounded-2xl bg-slate-900 border border-slate-800 p-5 sm:p-6 shadow-lg space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+        <div>
+          <h2 id="detail-title" class="text-base sm:text-lg font-bold text-white">四、提交明细（全部 161 次）</h2>
+          <p class="text-xs text-slate-400 mt-0.5">点击上方任意小时柱、热力图格子或日期条即可过滤</p>
+        </div>
+        <button id="reset-filter" class="hidden px-3 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-400/30 text-xs font-semibold transition w-fit cursor-pointer">
+          重置查看全部
+        </button>
+      </div>
+      <div id="commit-list" class="max-h-96 overflow-y-auto space-y-2 pr-1"></div>
+    </section>
+
+  </div>
+
+  <script>
+    const COMMITS = [{"date":"2026-10-05","hour":21,"time":"21:48","hash":"5f2123e","msg":"feat: 初始化 Bilibili 去掉搜索无关视频 v2.1.0 基础版本"},{"date":"2026-10-07","hour":22,"time":"22:26","hash":"2a3439a","msg":"feat: 支持 | 条件或者匹配、精确标签、精确UP主及多级排除高级筛选语法"},{"date":"2026-10-07","hour":23,"time":"23:21","hash":"09e151e","msg":"fix: 修复2.2.0版本的4个边界缺陷（本地记录）"},{"date":"2026-10-07","hour":23,"time":"23:27","hash":"87a025d","msg":"test: 补充筛选语法全覆盖测试矩阵（28项测试用例100%通过）"},{"date":"2026-10-29","hour":15,"time":"15:17","hash":"56df4c0","msg":"feat: 同分支多 UP主条件调整为 OR 逻辑（兼容 2.1 筛选习惯）"},{"date":"2026-10-29","hour":15,"time":"15:40","hash":"ec2058c","msg":"refactor: 采纳方案1，收紧引号解析为严格成对精确匹配，单侧引号平滑退化为模糊匹配"},{"date":"2026-11-18","hour":18,"time":"18:41","hash":"5203291","msg":"feat: 提交工作区全量脚本、历史演进版本、测试套件与技术备忘录"},{"date":"2026-11-18","hour":19,"time":"19:58","hash":"51e2abf","msg":"chore: 更新聚光灯设计规范文档，精简工作区版本并新增手搓实现版本"},{"date":"2026-11-18","hour":20,"time":"20:04","hash":"dfddcc7","msg":"feat: 为手搓版脚本增加油猴扩展菜单即时切换聚光灯与物理隐藏选项"},{"date":"2026-11-18","hour":21,"time":"21:45","hash":"10d6821","msg":"fix: 修复手搓版标签(Tag)筛选失效及沙箱隔离、时序竞态问题"},{"date":"2026-11-18","hour":21,"time":"21:55","hash":"501f31c","msg":"fix: 支持从首屏 Pinia 状态树提取 Tag 数据，解决页面刷新后标签筛选失效问题"},{"date":"2026-11-18","hour":23,"time":"23:05","hash":"640cbc8","msg":"feat: 为手搓版脚本增加按 '/' 快捷键聚焦搜索框功能"},{"date":"2026-11-18","hour":23,"time":"23:47","hash":"c62a836","msg":"feat: 合并搜索筛选常驻功能至手搓版脚本并支持油猴菜单开关"},{"date":"2026-11-19","hour":0,"time":"00:00","hash":"db1f3c8","msg":"fix: 过滤活动、游戏与付费课程横幅容器，避免非视频内容被误匹配高亮"},{"date":"2026-11-19","hour":0,"time":"00:14","hash":"6ca9afb","msg":"perf: 替换 opencc-js 为 52KB 轻量化 t2cn 单向包并优化环境适配"},{"date":"2026-11-19","hour":2,"time":"02:17","hash":"13eefc5","msg":"feat: 增加无缝瀑布流功能，支持视口交叠触发、左下角悬浮控制按钮与油猴菜单开关"},{"date":"2026-11-19","hour":2,"time":"02:43","hash":"840c4d9","msg":"revert: 回退无缝瀑布流功能代码，恢复至瀑布流引入前的稳定版本"},{"date":"2026-11-19","hour":4,"time":"04:08","hash":"3c8a78e","msg":"feat: 基于 B 站 Wbi 签名接口重构无缝瀑布流加载方案"},{"date":"2026-11-19","hour":4,"time":"04:28","hash":"8ace653","msg":"style: 调整油猴扩展菜单项顺序并统一瀑布流悬浮徽标图标"},{"date":"2026-11-19","hour":5,"time":"05:08","hash":"2eb273a","msg":"fix: 兼容非第一页视频容器定位并支持瀑布流菜单切换时自动刷新"},{"date":"2026-11-19","hour":5,"time":"05:17","hash":"e521843","msg":"style: 为油猴扩展菜单项增加 Emoji 前缀标识"},{"date":"2026-11-19","hour":17,"time":"17:54","hash":"b74061b","msg":"fix: 严格排查并提纯瀑布流克隆母本，防止首个卡片为直播时污染后续所有视频"},{"date":"2026-11-19","hour":18,"time":"18:32","hash":"7b5dcac","msg":"refactor: 重构瀑布流无母本时的兜底卡片结构，对齐最新自适应响应式布局与统计字段"},{"date":"2026-11-19","hour":20,"time":"20:20","hash":"afd291f","msg":"fix(waterfall): resolve state freeze on secondary search and improve observer resilience"},{"date":"2026-11-19","hour":21,"time":"21:26","hash":"2db8d28","msg":"优化(瀑布流): 提前量阈值提升至 1000px 实现无感静默预加载"},{"date":"2026-11-19","hour":21,"time":"21:29","hash":"4dce15b","msg":"样式(瀑布流): 移除加载指示器外边距 padding 优化静默排版"},{"date":"2026-11-19","hour":22,"time":"22:49","hash":"3721de1","msg":"优化(瀑布流): 落地终态方案BC融合文案并实现相对水平居中"},{"date":"2026-11-19","hour":23,"time":"23:15","hash":"d0d4637","msg":"优化(瀑布流): toggleWaterfall 切换时增加延时缓冲避免截断切页事件"},{"date":"2026-11-19","hour":23,"time":"23:21","hash":"faa344c","msg":"优化(瀑布流): 调整切页与重载延迟时间至 50ms"},{"date":"2026-11-19","hour":23,"time":"23:45","hash":"16f43a7","msg":"fix(waterfall): 解决滚动到尾页后刷新白屏问题，保持单页流式 URL 并增加冷启动保护"},{"date":"2026-11-19","hour":23,"time":"23:47","hash":"7bff8cf","msg":"优化(瀑布流): 对齐官方原生翻页接口参数，单页步长修正为 42 条并补充上下文参数"},{"date":"2026-11-20","hour":0,"time":"00:02","hash":"6714c45","msg":"feat(waterfall): 支持发布时间区间(pubtime)与分类筛选透传，并纳入搜索签名感知"},{"date":"2026-11-20","hour":0,"time":"00:52","hash":"1638374","msg":"feat(waterfall): 支持动态从分页组件解析实际最大页数，并优化终态判定与文案展示"},{"date":"2026-11-20","hour":1,"time":"01:07","hash":"7d0dcb7","msg":"fix(waterfall): 清理废弃分页器类名并增加单页无分页器时的挂载兜底"},{"date":"2026-11-20","hour":1,"time":"01:21","hash":"f11bcce","msg":"fix(waterfall): 统一终态提示页码与实际加载页数一致，修复自然到底时的页码偏差"},{"date":"2026-11-20","hour":2,"time":"02:25","hash":"fd055eb","msg":"fix(waterfall): 清洗分类页偏移量o避免无限重载循环，并将翻页步长调整为30"},{"date":"2026-11-20","hour":2,"time":"02:30","hash":"f2a76d1","msg":"fix(waterfall): 增加视频卡片时长formatDuration补零格式化，修复1:6时间显示问题"},{"date":"2026-11-20","hour":2,"time":"02:36","hash":"15ca950","msg":"fix(waterfall): 重构卡片封面替换逻辑，使用全新img节点杜绝母卡旧位图闪烁"},{"date":"2026-11-20","hour":3,"time":"03:08","hash":"46b49b3","msg":"feat(config): 调整功能默认初始化策略，新用户默认关闭三大扩展菜单"},{"date":"2026-11-20","hour":3,"time":"03:21","hash":"6153c84","msg":"perf(waterfall): 重构分页触底状态流转，视口仍满足加载条件时保持loader active连贯态"},{"date":"2026-11-20","hour":3,"time":"03:30","hash":"664540a","msg":"refactor(waterfall): 提取showEndedLoader专属终态函数，清除无效死参数"},{"date":"2026-11-20","hour":4,"time":"04:02","hash":"fd7178a","msg":"feat(waterfall): 自适应屏幕栅格列宽的四档系统检索上限(24/28/34/42)，精准归因终态文案"},{"date":"2026-11-20","hour":4,"time":"04:14","hash":"9239132","msg":"feat(waterfall): 支持窗口resize自适应重采最大页与page_size，并补充详细状态机注释"},{"date":"2026-11-20","hour":17,"time":"17:35","hash":"86a4dd1","msg":"feat(waterfall): 双行offsetTop物理测量对比取最大列数，彻底提升page_size与终态归因的自适应健壮性"},{"date":"2026-11-20","hour":17,"time":"17:43","hash":"fed4e12","msg":"fix(waterfall): loader包含ended终态类时禁止resize触发状态校准，防止意外解除到底锁定"},{"date":"2026-11-20","hour":18,"time":"18:02","hash":"55af355","msg":"feat: log visible video count upon showing ended loader tip"},{"date":"2026-11-20","hour":21,"time":"21:27","hash":"aa203b6","msg":"docs: 为所有函数补充规范中文注释"},{"date":"2026-11-20","hour":21,"time":"21:55","hash":"ef78e33","msg":"feat: 接入国内镜像 CDN 加速 OpenCC 加载，并提供运行时动态保底容灾"},{"date":"2026-11-20","hour":23,"time":"23:25","hash":"55b9788","msg":"perf: 缓存卡片模板骨架并提取纯净DOM槽位，大幅降低批量克隆与选择器开销"},{"date":"2026-11-21","hour":0,"time":"00:31","hash":"10b1df6","msg":"fix: 单页无分页器场景在 mainSection 末尾新建 flex_center 容器并挂载 loader"},{"date":"2026-11-21","hour":1,"time":"01:37","hash":"e4940cb","msg":"fix: 瀑布流加载下一页增加单例互斥锁与请求取消保护，并默认隐藏微标"},{"date":"2026-11-21","hour":2,"time":"02:29","hash":"76068f6","msg":"feat: badge 仅展示可视窗口当前所在页，基于首卡片与有效首卡片打标，支持多页重叠取最大页数与聚光灯暗化识别"},{"date":"2026-11-21","hour":2,"time":"02:49","hash":"a468255","msg":"refactor: badge 改为无标记物理几何行计算，每6行为一页"},{"date":"2026-11-21","hour":3,"time":"03:08","hash":"7fff456","msg":"feat: 终态提示展示可见视频总数，加载状态条采用通用文案"},{"date":"2026-11-21","hour":3,"time":"03:24","hash":"99635b0","msg":"chore: 调整终态提示文案为目标视频数量"},{"date":"2026-11-21","hour":3,"time":"03:35","hash":"798668e","msg":"feat: 简化终态提示并调整加载文案为正在筛选下一页视频"},{"date":"2026-11-21","hour":3,"time":"03:58","hash":"613a8c6","msg":"style: 优化终态提示字号与字重，移除回到顶部冗余功能"},{"date":"2026-11-21","hour":4,"time":"04:11","hash":"d3560ab","msg":"feat: 终态提示展示已抓取全部视频与目标视频统计数量"},{"date":"2026-11-21","hour":4,"time":"04:38","hash":"5161f12","msg":"chore: 调整加载与终态提示文案为正在加载与已无更多"},{"date":"2026-11-21","hour":4,"time":"04:41","hash":"fe3035d","msg":"chore: 调整加载提示为正在筛选，终态提示调整为没有更多了"},{"date":"2026-11-21","hour":17,"time":"17:58","hash":"0d1a98d","msg":"perf: 优化千级卡片下视口计算与列数测量性能，改由CSS原生居中消除Resize卡顿"},{"date":"2026-11-21","hour":21,"time":"21:46","hash":"41780df","msg":"perf: 引入content-visibility离屏渲染优化、增量卡片净化及加载失败重试机制"},{"date":"2026-11-21","hour":22,"time":"22:45","hash":"be4b64e","msg":"fix: 修复瀑布流长视频时长未进位导致显示异常(如403:22)的问题"},{"date":"2026-11-21","hour":23,"time":"23:55","hash":"d96108c","msg":"feat: 引入瀑布流封面雪碧图动态预览模块，支持pvdata/index/时长三级真实帧数截断与防黑屏"},{"date":"2026-11-22","hour":0,"time":"00:07","hash":"545226e","msg":"feat: 升级封面预览为10帧理性剧情提纲模式，加设油猴独立开关并修复末尾黑屏问题"},{"date":"2026-11-22","hour":0,"time":"00:50","hash":"aaa4773","msg":"perf: 关闭雪碧图悬停自动播放，改为纯手动左右滑动寻帧"},{"date":"2026-11-22","hour":0,"time":"00:56","hash":"780b850","msg":"revert: 移除瀑布流封面雪碧图动态预览模块"},{"date":"2026-11-22","hour":1,"time":"01:52","hash":"01accc6","msg":"feat(waterfall): 支持动态显示已检索视频总数，优化终态提示样式"},{"date":"2026-11-22","hour":2,"time":"02:09","hash":"65fd76c","msg":"release: 发布 v3.0.0 版本"},{"date":"2026-11-22","hour":3,"time":"03:47","hash":"fc95463","msg":"fix(spotlight): 优化聚光灯高亮边框贴合度，修复栅格列缝隙错位并支持暗色模式自适应"},{"date":"2026-11-22","hour":4,"time":"04:23","hash":"dc8b10d","msg":"feat(menu): 将聚光灯高亮与虚化模糊解耦为独立菜单开关"},{"date":"2026-11-22","hour":4,"time":"04:39","hash":"2764567","msg":"chore(menu): 将聚光灯高亮模式菜单文案优化为目标匹配标识"},{"date":"2026-11-22","hour":4,"time":"04:48","hash":"a33ab85","msg":"style: 精简目标匹配卡片样式，移除外边框及冗余容器限制"},{"date":"2026-11-22","hour":21,"time":"21:56","hash":"9636330","msg":"style(waterfall): 使用 Win11 Fluent 矢量图标统一跨设备海浪微标呈现"},{"date":"2026-11-22","hour":22,"time":"22:04","hash":"5ca3157","msg":"feat(menu): 移除聚光灯高亮模式及对应菜单配置"},{"date":"2026-11-23","hour":2,"time":"02:59","hash":"05e31a9","msg":"feat(badge): 引入视频封面三维评价勋章体系（右侧竖列）"},{"date":"2026-11-23","hour":3,"time":"03:32","hash":"7a5b7ff","msg":"feat(badge): 细化三维评价勋章为四阶段位体系（Lv.0-Lv.3）"},{"date":"2026-11-23","hour":3,"time":"03:38","hash":"d7e6017","msg":"style(badge): 将封面三维评价勋章调整为右上角横向排列"},{"date":"2026-11-23","hour":3,"time":"03:44","hash":"4919e25","msg":"style(badge): 使用高质感灵动岛毛玻璃胶囊包裹封面评价勋章"},{"date":"2026-11-23","hour":3,"time":"03:57","hash":"adb40c6","msg":"style(badge): 将封面评价勋章重构为不透明无磨砂的极简扁平风格"},{"date":"2026-11-23","hour":4,"time":"04:21","hash":"a606cbe","msg":"style(badge): 修复评价勋章层级数字水平垂直居中与光学对齐"},{"date":"2026-11-23","hour":4,"time":"04:41","hash":"2bd2c10","msg":"style: 将评价勋章重构为扁平纯色胶囊托盘样式 (无毛玻璃/无渐变/无阴影)"},{"date":"2026-11-23","hour":4,"time":"04:48","hash":"f6ebab8","msg":"style: 移除评价勋章及其胶囊底座的所有边框 (纯扁平无边框设计)"},{"date":"2026-11-23","hour":5,"time":"05:01","hash":"191b92a","msg":"feat: 将评价勋章移入底部信息行并绝对定位居中覆盖 (顺应阅读动线)"},{"date":"2026-11-23","hour":6,"time":"06:10","hash":"9b69a3f","msg":"feat: 优化评价勋章仅在鼠标移入视频卡片时显现"},{"date":"2026-11-23","hour":6,"time":"06:23","hash":"33f8199","msg":"feat: 评价体系全面升级为 8 大象限一句话胶囊展示"},{"date":"2026-11-23","hour":6,"time":"06:29","hash":"fdd7e51","msg":"feat: 评价体系标签简化为常驻精炼微标展示"},{"date":"2026-11-23","hour":6,"time":"06:40","hash":"dbefb19","msg":"feat: 引入冷门置信度保护机制，规避低播放小样本误判"},{"date":"2026-11-23","hour":7,"time":"07:04","hash":"63ae307","msg":"feat: 增加评价体系油猴菜单开关(默认关闭)、徽标靠左展示并将平稳图标更换为🍀"},{"date":"2026-11-23","hour":7,"time":"07:22","hash":"096e9d9","msg":"style: 表现平稳徽标改用深林墨玉绿渐变配色"},{"date":"2026-11-23","hour":7,"time":"07:59","hash":"071a381","msg":"feat: 增加评价标签范围二级子菜单(精选高光/全部显示)，中规中矩常态留白"},{"date":"2026-11-23","hour":8,"time":"08:19","hash":"3618c00","msg":"style: 将常规综合均衡标签正式定名为 稳健良作"},{"date":"2026-11-23","hour":8,"time":"08:43","hash":"991e941","msg":"feat: 菜单更名为视频品质标签、更新短视频标签并在精选模式下对短视频留白"},{"date":"2026-11-23","hour":8,"time":"08:57","hash":"fa2c450","msg":"feat: 增加深度长片、飙升新星、珍藏专精与历久弥新特色品质标签"},{"date":"2026-11-23","hour":9,"time":"09:32","hash":"d3f024f","msg":"feat: 重构视频品质体系，增加综合标杆、激辩热议与舆论风暴标签"},{"date":"2026-11-23","hour":9,"time":"09:37","hash":"ec4b358","msg":"fix: 瀑布流克隆母卡片时彻底剔除sponsorThumbnailLabel赞助商角标"},{"date":"2026-11-23","hour":9,"time":"09:55","hash":"1c66df0","msg":"feat: 在原生更多筛选面板中集成视频品质多选药丸筛选栏"},{"date":"2026-11-23","hour":10,"time":"10:01","hash":"b2b6a13","msg":"fix: 修复排除避坑与品质多选叠加时的筛选冲突BUG"},{"date":"2026-11-23","hour":10,"time":"10:15","hash":"2250e7e","msg":"feat: 在原生筛选面板中加入虚化过滤模式与筛选语法过滤控制行"},{"date":"2026-11-23","hour":10,"time":"10:17","hash":"4480f08","msg":"Revert \"feat: 在原生筛选面板中加入虚化过滤模式与筛选语法过滤控制行\""},{"date":"2026-11-23","hour":10,"time":"10:20","hash":"353b8f2","msg":"feat: 在更多筛选面板中增加过滤模式(虚化/隐藏)药丸切换行"},{"date":"2026-11-23","hour":10,"time":"10:27","hash":"3bfcd2e","msg":"feat: 在品质药丸筛选栏中将稳健良作调整至冷门宝藏后"},{"date":"2026-11-23","hour":12,"time":"12:11","hash":"f0b582a","msg":"feat: 在过滤模式下方增加筛选语法过滤控制行与菜单项"},{"date":"2026-11-23","hour":13,"time":"13:10","hash":"9f7ab18","msg":"fix: 优化视频品质筛选判定，非目标品质彻底隐藏且保留命中卡片原有虚化态"},{"date":"2026-11-23","hour":13,"time":"13:30","hash":"4e6b981","msg":"refactor: 移除网页端筛选语法与过滤模式注入行，并移除油猴菜单中的语法过滤项"},{"date":"2026-11-23","hour":19,"time":"19:01","hash":"dc5a9e0","msg":"chore: 更新脚本文件"},{"date":"2026-11-23","hour":19,"time":"19:58","hash":"3f817a6","msg":"style: 优化品质筛选栏【全部】药丸高亮样式，统一为 B 站主题天蓝色"},{"date":"2026-11-23","hour":20,"time":"20:26","hash":"72c497d","msg":"fix: 为卡片栅格列容器增加 padding-bottom: 1px，彻底解决 110%/120% 缩放下直播标签被裁剪的问题"},{"date":"2026-11-23","hour":21,"time":"21:08","hash":"5041c7a","msg":"fix(quality): 优化论战特征判定逻辑并将'舆论风暴'重命名为'话题焦点'"},{"date":"2026-11-23","hour":21,"time":"21:31","hash":"0a14d0a","msg":"feat(filter): 视频品质筛选支持文件夹式单选/多选/范围连选，并重命名为'弹幕刷屏'"},{"date":"2026-11-23","hour":22,"time":"22:40","hash":"d269823","msg":"fix(quality): 修复首屏未就绪数据导致的误判问题，并将'弹幕刷屏'重命名为'弹幕密集'"},{"date":"2026-11-23","hour":23,"time":"23:01","hash":"f8adaa1","msg":"feat(filter): 为视频品质筛选栏各选项增加详细指标筛选标准与操作指引的 title 提示"},{"date":"2026-11-23","hour":23,"time":"23:34","hash":"d4e8dcd","msg":"fix(filter): 封堵品质筛选下无评级卡片(如课堂/直播)的漏网漏洞"},{"date":"2026-11-23","hour":23,"time":"23:54","hash":"bb4874f","msg":"docs: 增加视频详情页品质展示扩展与 DOM 精细化隔离备忘"},{"date":"2026-11-24","hour":0,"time":"00:38","hash":"216c0e6","msg":"docs: 增加产品演进可行性方向与商业化战略备忘"},{"date":"2026-11-24","hour":1,"time":"01:02","hash":"ffbfcf8","msg":"feat: add >=90s threshold, viral short category and duration weighting model"},{"date":"2026-11-24","hour":2,"time":"02:21","hash":"1b451af","msg":"refactor(quality): 将【视频品级】解耦至瀑布流模块下方"},{"date":"2026-11-24","hour":2,"time":"02:46","hash":"f049caa","msg":"fix(waterfall): optimize network resilience, add credentials, prevent memory leak, and refine input focus"},{"date":"2026-11-24","hour":3,"time":"03:34","hash":"f867d46","msg":"revert: 回滚上一版改动（上一版改延迟导致瀑布流加载不出来下一页）"},{"date":"2026-11-24","hour":4,"time":"04:18","hash":"f9ec233","msg":"feat(sort): 实现基于 CSS Flex order 的命中卡片置顶吸附排列 (方案 A)"},{"date":"2026-11-24","hour":4,"time":"04:41","hash":"6bc58d5","msg":"revert(sort): 回滚基础置顶排序（使用排序感觉会经常使用排序，或许后面再按标签+播放量双重排序）"},{"date":"2026-11-24","hour":21,"time":"21:46","hash":"075f2e9","msg":"style: 优化品质药丸过渡动画并适配深浅主题变量"},{"date":"2026-11-24","hour":22,"time":"22:14","hash":"1a908a7","msg":"feat(menu): 油猴菜单新增一键全开全关总控选项并显示实时状态"},{"date":"2026-11-24","hour":23,"time":"23:04","hash":"b53bcf7","msg":"style(badge): 优化品质标签悬停流光动效 (仅移入标签触发且放慢一倍)"},{"date":"2026-11-24","hour":23,"time":"23:29","hash":"c604444","msg":"fix(badge): 修复卡片悬停高光反复重播问题，增加DOM幂等性保护与瀑布流缓存隔离"},{"date":"2026-11-24","hour":23,"time":"23:42","hash":"37f468d","msg":"feat(badge): 统一高光流光图层为单一图层，实现25%定格与全扫光恒速两阶段无缝接力"},{"date":"2026-11-25","hour":0,"time":"00:00","hash":"750a9c5","msg":"revert(badge): 移除品质胶囊流光动效，恢复纯净常驻微标质感"},{"date":"2026-11-25","hour":0,"time":"00:26","hash":"e54b7fa","msg":"style(badge): 移入卡片触发品质胶囊柔和提亮 (brightness 1.2)"},{"date":"2026-11-25","hour":0,"time":"00:38","hash":"142f19e","msg":"style(badge): 移除品质胶囊的所有悬停与动画效果，回归纯静态微标"},{"date":"2026-11-25","hour":1,"time":"01:38","hash":"7f319d0","msg":"style(menu): 精简品质标签二级子菜单文案为【全部展示 / 仅精选】"},{"date":"2026-11-25","hour":2,"time":"02:06","hash":"8f88f3d","msg":"feat: 移除【排除避坑】功能并归档全维防踩雷规划备忘"},{"date":"2026-11-25","hour":2,"time":"02:09","hash":"6f16dc7","msg":"style: 将油猴子菜单文案调整为【标签可见范围】"},{"date":"2026-11-25","hour":2,"time":"02:23","hash":"6d3a4d5","msg":"fix: 修复关闭视频品质菜单时残留子选项筛选导致的卡片隐藏问题"},{"date":"2026-11-25","hour":4,"time":"04:10","hash":"9c04799","msg":"feat(next): 新增 Vite + vite-plugin-monkey 模块化架构工程"},{"date":"2026-11-25","hour":4,"time":"04:18","hash":"b898451","msg":"fix: 同步手搓版瀑布流补屏与风控识别并更新 Vite 配置"},{"date":"2026-11-25","hour":4,"time":"04:33","hash":"b5c0b85","msg":"docs(memo): 归档视频品质分区感知与场景预设规划"},{"date":"2026-11-25","hour":18,"time":"18:29","hash":"d88823f","msg":"docs: 新增视频品级判定体系说明页 video-quality-tiers.html"},{"date":"2026-11-25","hour":19,"time":"19:24","hash":"268c273","msg":"fix: 默认开启筛选常驻与品质标签并修复直播卡误标样本较少"},{"date":"2026-11-25","hour":19,"time":"19:42","hash":"d739832","msg":"feat: 品级标签按钮实时显示(非灰色/总数)并排除外部隐藏卡片"},{"date":"2026-11-25","hour":19,"time":"19:52","hash":"595baf1","msg":"feat: 根据虚化开关动态切换品级标签计数格式"},{"date":"2026-11-25","hour":20,"time":"20:09","hash":"1eb5d22","msg":"fix: 持久化记录外部隐藏卡片标记，避免切换品级筛选时总数跳变"},{"date":"2026-11-25","hour":20,"time":"20:18","hash":"2daca04","msg":"feat: 瀑布流悬浮徽标按可见视频行数动态显示 当前页/总页"},{"date":"2026-11-25","hour":20,"time":"20:40","hash":"bd13850","msg":"feat: 在视频品质筛选行末新增【虚化模糊】快捷开关"},{"date":"2026-11-25","hour":20,"time":"20:49","hash":"792ccf9","msg":"perf: 将虚化模糊开关优化为 O(1) 根类名 CSS 瞬时切换，消除千卡重算卡顿"},{"date":"2026-11-25","hour":20,"time":"20:54","hash":"b281436","msg":"refactor: 移除页面上的【虚化模糊】快捷按钮，保留油猴菜单与 O(1) 切换"},{"date":"2026-11-25","hour":21,"time":"21:24","hash":"2f32d4e","msg":"feat: 油猴菜单新增【🗝️ 搜索语法过滤】开关并并入一键总控"},{"date":"2026-11-25","hour":21,"time":"21:29","hash":"3f27985","msg":"feat: 关闭搜索语法过滤时隐藏品级标签总数分母"},{"date":"2026-11-25","hour":21,"time":"21:44","hash":"63325e1","msg":"feat: 新增 Alt+Q 快捷切换搜索语法过滤及左下角轻量 Toast 提示"},{"date":"2026-11-25","hour":21,"time":"21:49","hash":"6273c49","msg":"style: 修复 Alt+Q 关闭语法过滤时虚化卡片恢复缺少过渡动画的问题"},{"date":"2026-11-25","hour":22,"time":"22:51","hash":"b5e3a8a","msg":"feat: 爆款短片补充破圈大样本兜底分支并同步更新品级说明页"},{"date":"2026-11-26","hour":0,"time":"00:12","hash":"e755dcd","msg":"style(menu): 将【虚化显示模糊内容】收归为【搜索语法过滤】级联子菜单并调整菜单排序"},{"date":"2026-11-26","hour":1,"time":"01:02","hash":"6e96dd7","msg":"chore(release): 同步 v3.0.0 正式发版脚本"},{"date":"2026-11-26","hour":1,"time":"01:55","hash":"5129a37","msg":"docs: 新增 v2.1→v3.0 Tailwind 升级说明书并完善双文档移动端适配"},{"date":"2026-11-26","hour":1,"time":"01:58","hash":"ceb64bb","msg":"docs: 将视频品级表整合进 v2.1→v3.0 唯一说明书并移除冗余文件"},{"date":"2026-11-26","hour":2,"time":"02:13","hash":"69744ce","msg":"docs: 补充视频品级分类说明、功能速览、吸顶锚点导航及移动端适配"},{"date":"2026-11-26","hour":2,"time":"02:18","hash":"a318d3c","msg":"docs: 更新 v2.1-to-v3.0-guide.html 内容"},{"date":"2026-11-26","hour":2,"time":"02:23","hash":"173e720","msg":"style: 优化页脚在移动端的 3 行换行显示"},{"date":"2026-11-26","hour":2,"time":"02:40","hash":"aad83df","msg":"docs: 新增 12 维视频品质标签独立截图展示页"},{"date":"2026-11-26","hour":3,"time":"03:06","hash":"a58b2ee","msg":"chore: 同步手搓版脚本最新改动"},{"date":"2026-11-26","hour":3,"time":"03:34","hash":"78bfffd","msg":"docs: 优化脚本 @description 元数据描述"},{"date":"2026-11-26","hour":3,"time":"03:34","hash":"71204a7","msg":"chore: 同步 v3.0.0 脚本菜单文案更新"}];
+
+    const dates = [...new Set(COMMITS.map(c => c.date))];
+    const hourCounts = Array.from({ length: 24 }, (_, h) => COMMITS.filter(c => c.hour === h).length);
+    const maxHour = Math.max(...hourCounts);
+
+    function getSlotColor(h) {
+      if (h <= 5) return { bar: 'bg-indigo-500', text: 'text-indigo-300' };
+      if (h <= 11) return { bar: 'bg-emerald-500', text: 'text-emerald-300' };
+      if (h <= 17) return { bar: 'bg-amber-500', text: 'text-amber-300' };
+      return { bar: 'bg-sky-500', text: 'text-sky-300' };
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    }
+
+    // 1. 渲染 24 小时柱状图
+    const hourChart = document.getElementById('hour-chart');
+    hourCounts.forEach((count, h) => {
+      const pct = maxHour ? Math.round((count / maxHour) * 100) : 0;
+      const { bar, text } = getSlotColor(h);
+      const col = document.createElement('button');
+      col.type = 'button';
+      col.className = 'bar-col flex-1 min-w-[18px] h-full flex flex-col items-center justify-end gap-1 group cursor-pointer focus:outline-none';
+      col.title = `${String(h).padStart(2, '0')}:00–${String(h).padStart(2, '0')}:59 · ${count} 次提交`;
+      col.innerHTML = `
+        <span class="text-[10px] font-mono ${count ? text : 'text-slate-600'}">${count || ''}</span>
+        <div class="w-full max-w-[26px] rounded-t-md ${count ? bar + ' bar-fill' : 'bg-slate-800/60'} transition-all" style="height: ${count ? Math.max(pct, 6) : 2}%"></div>
+        <span class="text-[10px] font-mono text-slate-400 group-hover:text-white">${String(h).padStart(2, '0')}</span>
+      `;
+      col.addEventListener('click', () => renderCommits({ hour: h }));
+      hourChart.appendChild(col);
+    });
+
+    // 2. 渲染日期 × 小时热力图
+    const heatmap = document.getElementById('heatmap-container');
+    const headerRow = document.createElement('div');
+    headerRow.className = 'grid grid-cols-[86px_repeat(24,minmax(0,1fr))] gap-1 items-center text-[10px] font-mono text-slate-500 pb-1';
+    headerRow.innerHTML = '<div>日期</div>' + Array.from({ length: 24 }, (_, h) => `<div class="text-center">${String(h).padStart(2, '0')}</div>`).join('');
+    heatmap.appendChild(headerRow);
+
+    dates.forEach(d => {
+      const row = document.createElement('div');
+      row.className = 'grid grid-cols-[86px_repeat(24,minmax(0,1fr))] gap-1 items-center';
+      const label = document.createElement('button');
+      label.type = 'button';
+      label.className = 'text-left text-[11px] font-mono text-slate-300 hover:text-sky-300 truncate cursor-pointer';
+      label.textContent = d.slice(5);
+      label.addEventListener('click', () => renderCommits({ date: d }));
+      row.appendChild(label);
+
+      for (let h = 0; h < 24; h++) {
+        const cnt = COMMITS.filter(c => c.date === d && c.hour === h).length;
+        const cell = document.createElement('button');
+        cell.type = 'button';
+        let cls = 'bg-slate-800/60 border-slate-800';
+        if (cnt === 1) cls = 'bg-indigo-900/80 border-indigo-700/50 text-indigo-200';
+        else if (cnt <= 3) cls = 'bg-indigo-600/85 border-indigo-400/50 text-white';
+        else if (cnt <= 5) cls = 'bg-sky-500 border-sky-300/60 text-white';
+        else if (cnt > 5) cls = 'bg-amber-400 border-amber-200 text-slate-950 font-bold';
+        cell.className = `heat-cell h-6 rounded border text-[10px] font-mono flex items-center justify-center ${cls} ${cnt ? 'cursor-pointer' : 'cursor-default'}`;
+        cell.textContent = cnt || '';
+        cell.title = `${d} ${String(h).padStart(2, '0')}:00 · ${cnt} 次提交`;
+        if (cnt) cell.addEventListener('click', () => renderCommits({ date: d, hour: h }));
+        row.appendChild(cell);
+      }
+      heatmap.appendChild(row);
+    });
+
+    // 3. 渲染每日提交量
+    const dailyChart = document.getElementById('daily-chart');
+    const dailyCounts = dates.map(d => ({ date: d, count: COMMITS.filter(c => c.date === d).length }));
+    const maxDay = Math.max(...dailyCounts.map(x => x.count));
+    dailyCounts.forEach(({ date, count }) => {
+      const pct = Math.round((count / maxDay) * 100);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'w-full flex items-center gap-2.5 text-xs group cursor-pointer';
+      btn.innerHTML = `
+        <span class="w-12 shrink-0 font-mono text-slate-400 group-hover:text-white text-left">${date.slice(5)}</span>
+        <div class="flex-1 h-4 bg-slate-800 rounded-full overflow-hidden">
+          <div class="h-full rounded-full ${count >= 20 ? 'bg-gradient-to-r from-indigo-500 to-sky-400' : 'bg-sky-600/80'} group-hover:brightness-110 transition-all" style="width: ${pct}%"></div>
+        </div>
+        <span class="w-8 shrink-0 text-right font-mono text-slate-300">${count}</span>
+      `;
+      btn.addEventListener('click', () => renderCommits({ date }));
+      dailyChart.appendChild(btn);
+    });
+
+    // 4. 渲染提交明细
+    const detailTitle = document.getElementById('detail-title');
+    const resetBtn = document.getElementById('reset-filter');
+    const commitList = document.getElementById('commit-list');
+
+    function renderCommits(filter = {}) {
+      const list = COMMITS.filter(c =>
+        (filter.date == null || c.date === filter.date) &&
+        (filter.hour == null || c.hour === filter.hour)
+      ).slice().reverse();
+
+      const parts = [];
+      if (filter.date != null) parts.push(filter.date);
+      if (filter.hour != null) parts.push(`${String(filter.hour).padStart(2, '0')}:00–${String(filter.hour).padStart(2, '0')}:59`);
+      detailTitle.textContent = parts.length
+        ? `四、提交明细（${parts.join(' · ')} · 共 ${list.length} 次）`
+        : `四、提交明细（全部 ${list.length} 次）`;
+      resetBtn.classList.toggle('hidden', parts.length === 0);
+
+      commitList.innerHTML = list.map(c => `
+        <div class="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3 text-xs">
+          <div class="flex items-center gap-2 shrink-0 font-mono">
+            <span class="text-slate-400">${c.date}</span>
+            <span class="text-indigo-300 font-semibold">${c.time}</span>
+            <span class="px-1.5 py-0.5 rounded bg-slate-800 text-sky-300">${c.hash}</span>
+          </div>
+          <div class="text-slate-200 leading-relaxed">${escapeHtml(c.msg)}</div>
+        </div>
+      `).join('');
+    }
+
+    resetBtn.addEventListener('click', () => renderCommits());
+    renderCommits();
+  </script>
+</body>
+</html>
