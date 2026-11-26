@@ -9,6 +9,7 @@ const ICON_WAVE_SVG =
 const wfHandlers = {
   filterDOMElements: () => {},
   renderBadgeColumn: () => {},
+  updateQualityFilterCounts: () => {},
 };
 
 export function setWaterfallHandlers(nextHandlers) {
@@ -56,10 +57,10 @@ export function updateBadge() {
   const badge = getOrCreateBadge();
   if (!badge) return;
   if (state.isWaterfallPaused) {
-    badge.innerHTML = `${ICON_WAVE_SVG}<span>已暂停: 第 ${state.currentViewportPage} 页</span>`;
+    badge.innerHTML = `${ICON_WAVE_SVG}<span>已暂停: 第 ${state.currentViewportPage}/${state.totalViewportPages} 页</span>`;
     badge.classList.add('paused');
   } else {
-    badge.innerHTML = `${ICON_WAVE_SVG}<span>瀑布流: 第 ${state.currentViewportPage} 页</span>`;
+    badge.innerHTML = `${ICON_WAVE_SVG}<span>瀑布流: 第 ${state.currentViewportPage}/${state.totalViewportPages} 页</span>`;
     badge.classList.remove('paused');
   }
 }
@@ -105,20 +106,21 @@ export function updateViewportPage() {
       if (cardPage > lastPassedPage) {
         lastPassedPage = cardPage;
       }
-    } else if (rect.top >= viewportHeight + 100) {
-      break;
     }
   }
 
+  const newTotalPages = Math.max(1, Math.ceil(currentRow / 6));
   let newPage = state.currentViewportPage;
   if (inViewPages.length > 0) {
     newPage = Math.max(...inViewPages);
   } else if (currentRow > 0) {
     newPage = lastPassedPage;
   }
+  newPage = Math.min(Math.max(1, newPage), newTotalPages);
 
-  if (newPage !== state.currentViewportPage) {
+  if (newPage !== state.currentViewportPage || newTotalPages !== state.totalViewportPages) {
     state.currentViewportPage = newPage;
+    state.totalViewportPages = newTotalPages;
     updateBadge();
   }
 }
@@ -603,6 +605,9 @@ function appendCards(items) {
   if (addedCount > 0) {
     wfHandlers.filterDOMElements(newCards);
     mainContainer.appendChild(fragment);
+    if (state.isEvaluationBadge) {
+      wfHandlers.updateQualityFilterCounts();
+    }
     updateViewportPage();
   }
   return addedCount;
@@ -717,7 +722,8 @@ export async function triggerLoadNextPage() {
         platform: 'pc',
         highlight: 1,
         single_column: 0,
-        keyword: getCleanApiKeyword() || decodeURIComponent(rawKeyword.replace(/\+/g, ' ')),
+        keyword:
+          (state.isSyntaxFilter ? getCleanApiKeyword() : '') || decodeURIComponent(rawKeyword.replace(/\+/g, ' ')),
         source_tag: 3,
         gaia_vtoken: '',
         web_location: 1430654,
@@ -879,6 +885,7 @@ export function resetWaterfallForNewSearch(isNewSearch = false) {
     abortRunningPaging();
     state.currentRequestedPage = 1;
     state.currentViewportPage = 1;
+    state.totalViewportPages = 1;
     state.cachedCardTemplate = null;
     state.isAllLoaded = false;
     updateDynamicMaxPage();
@@ -934,6 +941,7 @@ export function onOfficialSearchMounted() {
     abortRunningPaging();
     state.currentRequestedPage = 1;
     state.currentViewportPage = 1;
+    state.totalViewportPages = 1;
     state.isAllLoaded = state.maxWaterfallPage <= 1;
   }
   state.cachedCardTemplate = null;
@@ -992,6 +1000,7 @@ export function syncWaterfallLifecycle() {
     updateDynamicMaxPage();
     state.currentRequestedPage = 1;
     state.currentViewportPage = 1;
+    state.totalViewportPages = 1;
     state.isAllLoaded = state.maxWaterfallPage <= 1;
     state.isPaging = false;
 

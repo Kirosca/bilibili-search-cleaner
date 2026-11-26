@@ -2,6 +2,7 @@ import { GM_registerMenuCommand, GM_unregisterMenuCommand } from '$';
 import { state, seenBvidMap, clearPurifiedMarks } from './state.js';
 
 let toggleAllMenuId = null;
+let syntaxFilterMenuId = null;
 let filterStickyMenuId = null;
 let dimmedMenuId = null;
 let waterfallMenuId = null;
@@ -14,6 +15,8 @@ const handlers = {
   bindStickyObserver: () => {},
   resetConditions: () => {},
   syncWaterfallLifecycle: () => {},
+  updateQualityFilterCounts: () => {},
+  updateViewportPage: () => {},
 };
 
 /**
@@ -29,6 +32,15 @@ export function setMenuHandlers(nextHandlers) {
 export function applyEvaluationBadgeState() {
   if (document.documentElement) {
     document.documentElement.classList.toggle('bili-eval-badge-enabled', state.isEvaluationBadge);
+  }
+}
+
+/**
+ * 应用虚化显示模糊内容的 CSS 根类名
+ */
+export function applyDimmedState() {
+  if (document.documentElement) {
+    document.documentElement.classList.toggle('bili-dimmed-enabled', state.isDimmed);
   }
 }
 
@@ -92,15 +104,32 @@ export function toggleEvaluationBadge() {
 }
 
 /**
- * 切换虚化显示模糊内容状态并持久化配置
+ * 切换搜索语法过滤状态并持久化配置（默认开启；关闭后停止接口脱壳并保留广告剔除与品质筛选）
  */
-export function toggleDimmed() {
-  state.isDimmed = !state.isDimmed;
-  localStorage.setItem('bili_cleaner_dimmed', String(state.isDimmed));
+export function toggleSyntaxFilter() {
+  state.isSyntaxFilter = !state.isSyntaxFilter;
+  localStorage.setItem('bili_cleaner_syntax_filter', String(state.isSyntaxFilter));
   registerMenu();
 
   clearPurifiedMarks();
   handlers.filterDOMElements();
+}
+
+/**
+ * 切换虚化显示模糊内容状态并持久化配置（O(1) 根类名切换，1000+ 卡片零重算零卡顿）
+ */
+export function toggleDimmed() {
+  state.isDimmed = !state.isDimmed;
+  localStorage.setItem('bili_cleaner_dimmed', String(state.isDimmed));
+  applyDimmedState();
+  registerMenu();
+
+  if (state.isEvaluationBadge) {
+    handlers.updateQualityFilterCounts();
+  }
+  if (state.isWaterfall) {
+    requestAnimationFrame(handlers.updateViewportPage);
+  }
 }
 
 /**
@@ -155,9 +184,11 @@ export function toggleWaterfall() {
  * 一键全开 / 全关所有功能（最后开关【无缝瀑布流】以安全处理页面重载）
  */
 export function toggleAllFeatures() {
-  const isAllEnabled = state.isFilterSticky && state.isDimmed && state.isWaterfall && state.isEvaluationBadge;
+  const isAllEnabled =
+    state.isSyntaxFilter && state.isFilterSticky && state.isDimmed && state.isWaterfall && state.isEvaluationBadge;
   const targetState = !isAllEnabled;
 
+  if (state.isSyntaxFilter !== targetState) toggleSyntaxFilter();
   if (state.isFilterSticky !== targetState) toggleFilterSticky();
   if (state.isDimmed !== targetState) toggleDimmed();
   if (state.isEvaluationBadge !== targetState) toggleEvaluationBadge();
@@ -176,7 +207,15 @@ export function registerMenu() {
   if (typeof GM_registerMenuCommand !== 'function') return;
 
   if (typeof GM_unregisterMenuCommand === 'function') {
-    const ids = [toggleAllMenuId, filterStickyMenuId, dimmedMenuId, waterfallMenuId, evalBadgeMenuId, evalModeMenuId];
+    const ids = [
+      toggleAllMenuId,
+      syntaxFilterMenuId,
+      filterStickyMenuId,
+      dimmedMenuId,
+      waterfallMenuId,
+      evalBadgeMenuId,
+      evalModeMenuId,
+    ];
     ids.forEach((id) => {
       if (id !== null) {
         try {
@@ -184,11 +223,14 @@ export function registerMenu() {
         } catch {}
       }
     });
+    dimmedMenuId = null;
     evalModeMenuId = null;
   }
 
-  const isAllEnabled = state.isFilterSticky && state.isDimmed && state.isWaterfall && state.isEvaluationBadge;
-  const isAllDisabled = !state.isFilterSticky && !state.isDimmed && !state.isWaterfall && !state.isEvaluationBadge;
+  const isAllEnabled =
+    state.isSyntaxFilter && state.isFilterSticky && state.isDimmed && state.isWaterfall && state.isEvaluationBadge;
+  const isAllDisabled =
+    !state.isSyntaxFilter && !state.isFilterSticky && !state.isDimmed && !state.isWaterfall && !state.isEvaluationBadge;
   const toggleAllStatus = isAllEnabled ? '✅ 已开启' : isAllDisabled ? '❌ 已关闭' : '🌓 部分开启';
   toggleAllMenuId = GM_registerMenuCommand(`⚡ 一键全开/全关: ${toggleAllStatus}`, toggleAllFeatures);
 
@@ -196,14 +238,22 @@ export function registerMenu() {
     `⚓ 搜索筛选常驻: ${state.isFilterSticky ? '✅ 已开启' : '❌ 已关闭'}`,
     toggleFilterSticky
   );
-  dimmedMenuId = GM_registerMenuCommand(
-    `🌫️ 虚化显示模糊内容: ${state.isDimmed ? '✅ 已开启' : '❌ 已关闭'}`,
-    toggleDimmed
-  );
   waterfallMenuId = GM_registerMenuCommand(
     `🌊 无缝瀑布流: ${state.isWaterfall ? '✅ 已开启' : '❌ 已关闭'}`,
     toggleWaterfall
   );
+  syntaxFilterMenuId = GM_registerMenuCommand(
+    `🗝️ 搜索语法过滤 (Alt+Q): ${state.isSyntaxFilter ? '✅ 已开启' : '❌ 已关闭'}`,
+    toggleSyntaxFilter
+  );
+
+  if (state.isSyntaxFilter) {
+    dimmedMenuId = GM_registerMenuCommand(
+      `  └─ 虚化显示模糊内容: ${state.isDimmed ? '✅ 已开启' : '❌ 已关闭'}`,
+      toggleDimmed
+    );
+  }
+
   evalBadgeMenuId = GM_registerMenuCommand(
     `🏷️ 视频品质标签: ${state.isEvaluationBadge ? '✅ 已开启' : '❌ 已关闭'}`,
     toggleEvaluationBadge

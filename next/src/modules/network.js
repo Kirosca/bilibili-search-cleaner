@@ -23,7 +23,7 @@ export function cleanAdsOnly(list) {
     if (v.season_id) videoTagMap.set(String(v.season_id), rawTags);
     if (v.roomid) videoTagMap.set(String(v.roomid), rawTags);
 
-    if (v.bvid || v.aid || v.id) {
+    if ((v.bvid || v.aid || v.id) && v.type !== 'live_room' && !v.roomid) {
       const stat = {
         play: Number(v.play) || 0,
         like: Number(v.like) || 0,
@@ -109,7 +109,7 @@ export function initNetworkHooks({ filterDOMElements, onOfficialSearchMounted })
     const isSearchReq =
       urlStr.includes('/wbi/search') || urlStr.includes('/search/type') || urlStr.includes('/search/all');
 
-    if (isSearchReq) {
+    if (isSearchReq && state.isSyntaxFilter) {
       const apiKeyword = getCleanApiKeyword();
       if (apiKeyword) {
         urlStr = urlStr.replace(/([?&]keyword=)[^&]+/, `$1${encodeURIComponent(apiKeyword)}`);

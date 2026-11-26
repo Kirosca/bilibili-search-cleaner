@@ -10,10 +10,12 @@ const domHandlers = {
   getQualityQuadrant: () => null,
   renderBadgeColumn: () => {},
   injectQualityFilterRow: () => {},
+  updateQualityFilterCounts: () => {},
   updateViewportPage: () => {},
   bindWaterfallObserver: () => {},
   checkSearchChange: () => {},
   getCurrentObservedPager: () => null,
+  toggleSyntaxFilter: () => {},
 };
 
 /**
@@ -45,13 +47,7 @@ export function filterDOMElements(target = document) {
     const currentSearchQuery = window.location.search;
     const qualityFilterKey = Array.from(state.activeQualityFilters).sort().join(',');
     const currentQueryKey =
-      currentSearchQuery +
-      '_' +
-      (state.isDimmed ? 'dim1' : 'dim0') +
-      '_' +
-      (state.isSyntaxFilter ? 'syn1' : 'syn0') +
-      '_' +
-      qualityFilterKey;
+      currentSearchQuery + '_' + (state.isSyntaxFilter ? 'syn1' : 'syn0') + '_' + qualityFilterKey;
 
     let elements = [];
     if (Array.isArray(target)) {
@@ -68,6 +64,8 @@ export function filterDOMElements(target = document) {
       const card = el.closest('[class*="col_"], .video-list-item, .bili-live-card') || el;
 
       if (card.closest('.activity-game-list, .activity-card, .activity-game-list-item')) return;
+      if (card.querySelector('.bili-video-card__info--ad, svg.bili-video-card__info--ad-creative, a[href*="cm.bilibili.com"]'))
+        return;
       if (card.dataset.purifiedQuery === currentQueryKey) return;
 
       const linkEl = card.querySelector(
@@ -114,8 +112,12 @@ export function filterDOMElements(target = document) {
 
       let quadrant = null;
       let hasFullStat = false;
+      const isLiveCard =
+        card.matches('.bili-live-card') ||
+        Boolean(matchLive) ||
+        Boolean(card.querySelector('.bili-video-card__info--living, .v-inline-live-player'));
       const coverEl = card.querySelector('.v-img.bili-video-card__cover, .bili-video-card__cover');
-      if (coverEl && !card.matches('.bili-live-card')) {
+      if (coverEl && !isLiveCard) {
         let stat = id ? videoStatMap.get(id.toLowerCase()) || videoStatMap.get(id) : null;
         if (stat) {
           hasFullStat = true;
@@ -124,12 +126,22 @@ export function filterDOMElements(target = document) {
         }
         quadrant = domHandlers.getQualityQuadrant(stat);
         domHandlers.renderBadgeColumn(coverEl, stat);
-      } else if (card.matches('.bili-live-card')) {
+      } else if (isLiveCard) {
         hasFullStat = true;
+        if (coverEl) {
+          const existingBadge = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
+          if (existingBadge) existingBadge.remove();
+        }
       }
 
       const isTagReady = !tags.length || videoTagMap.size > 0 || !state.isSyntaxFilter;
       const isStatReady = !state.isEvaluationBadge || hasFullStat;
+      if (card.dataset.externalHidden === undefined && card.style.display !== 'none') {
+        card.dataset.externalHidden = getComputedStyle(card).display === 'none' ? '1' : '0';
+      }
+      card.dataset.isLive = isLiveCard ? '1' : '0';
+      card.dataset.syntaxPass = isSyntaxFail ? '0' : '1';
+      card.dataset.qualityClass = quadrant?.className || '';
       if (isTagReady && isStatReady) {
         card.dataset.purifiedQuery = currentQueryKey;
       }
@@ -150,20 +162,13 @@ export function filterDOMElements(target = document) {
         card.style.setProperty('display', 'none', 'important');
       } else {
         card.style.removeProperty('display');
-
-        if (isSyntaxFail) {
-          if (state.isDimmed) {
-            innerCard.classList.add('bili-cleaner-dimmed');
-          } else {
-            innerCard.classList.remove('bili-cleaner-dimmed');
-            card.style.setProperty('display', 'none', 'important');
-          }
-        } else {
-          innerCard.classList.remove('bili-cleaner-dimmed');
-        }
+        innerCard.classList.toggle('bili-cleaner-dimmed', isSyntaxFail);
       }
     });
 
+    if (state.isEvaluationBadge) {
+      domHandlers.updateQualityFilterCounts();
+    }
     if (state.isWaterfall) {
       domHandlers.updateViewportPage();
     }
@@ -255,9 +260,27 @@ export function initDomObserver() {
 }
 
 /**
- * 快捷键支持：在搜索结果页按 '/' 快速聚焦搜索框
+ * 快捷键支持：'/' 快速聚焦搜索框；'Alt+Q' 切换搜索语法过滤并展示轻量 Toast
  */
 export function initSearchShortcut() {
+  let toastTimer = null;
+  function showCleanerToast(msg) {
+    if (!document.body) return;
+    let toast = document.getElementById('bili-cleaner-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'bili-cleaner-toast';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    void toast.offsetWidth;
+    toast.classList.add('show');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toast.classList.remove('show');
+    }, 1500);
+  }
+
   function getSearchInput() {
     return (
       document.querySelector('input.search-input-el') ||
@@ -269,17 +292,32 @@ export function initSearchShortcut() {
   }
 
   document.addEventListener('keydown', function (e) {
-    if ((e.key === '/' || e.code === 'Slash') && !e.ctrlKey && !e.altKey && !e.metaKey) {
-      const active = document.activeElement;
-      const isEditing =
-        active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable);
+    const active = document.activeElement;
+    const isEditing =
+      active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable);
 
+    if ((e.key === '/' || e.code === 'Slash') && !e.ctrlKey && !e.altKey && !e.metaKey) {
       if (!isEditing) {
         const input = getSearchInput();
         if (input) {
           e.preventDefault();
           input.focus();
         }
+      }
+      return;
+    }
+
+    if (
+      e.altKey &&
+      !e.ctrlKey &&
+      !e.metaKey &&
+      !e.shiftKey &&
+      (e.code === 'KeyQ' || (e.key && e.key.toLowerCase() === 'q'))
+    ) {
+      if (!isEditing) {
+        e.preventDefault();
+        domHandlers.toggleSyntaxFilter();
+        showCleanerToast(`🗝️ 搜索语法过滤：${state.isSyntaxFilter ? '已开启' : '已关闭'}`);
       }
     }
   });

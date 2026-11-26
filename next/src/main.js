@@ -3,8 +3,10 @@ import { state, clearPurifiedMarks } from './core/state.js';
 import {
   registerMenu,
   setMenuHandlers,
+  applyDimmedState,
   applyFilterStickyState,
   applyEvaluationBadgeState,
+  toggleSyntaxFilter,
 } from './core/menu.js';
 import { initNetworkHooks, scanInitialState } from './modules/network.js';
 import {
@@ -17,6 +19,7 @@ import {
 } from './modules/domFilter.js';
 import {
   setWaterfallHandlers,
+  getMainListContainer,
   updateViewportPage,
   bindWaterfallObserver,
   checkSearchChange,
@@ -28,6 +31,7 @@ import {
 import {
   setQualityHandlers,
   injectQualityFilterRow,
+  updateQualityFilterCounts,
   extractStatFromCard,
   getQualityQuadrant,
   renderBadgeColumn,
@@ -50,6 +54,8 @@ function bootstrap() {
     bindStickyObserver,
     resetConditions,
     syncWaterfallLifecycle,
+    updateQualityFilterCounts,
+    updateViewportPage,
   });
 
   setDomFilterHandlers({
@@ -57,24 +63,29 @@ function bootstrap() {
     getQualityQuadrant,
     renderBadgeColumn,
     injectQualityFilterRow,
+    updateQualityFilterCounts,
     updateViewportPage,
     bindWaterfallObserver,
     checkSearchChange,
     getCurrentObservedPager: () => state.currentObservedPager,
+    toggleSyntaxFilter,
   });
 
   setWaterfallHandlers({
     filterDOMElements,
     renderBadgeColumn,
+    updateQualityFilterCounts,
   });
 
   setQualityHandlers({
     filterDOMElements,
     checkWaterfallFillScreen,
+    getMainListContainer,
   });
 
   // 3. 初始化菜单、全局状态、网络劫持与监听器
   registerMenu();
+  applyDimmedState();
   applyFilterStickyState();
   applyEvaluationBadgeState();
 

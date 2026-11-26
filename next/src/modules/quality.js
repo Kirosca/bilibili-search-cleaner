@@ -66,7 +66,7 @@ export const QUALITY_FILTER_OPTIONS = [
     key: 'q-viral-short',
     label: '⚡ 爆款短片',
     criteria:
-      '时长 < 90秒，且 (播放 ≥ 2万 且 赞 ≥ 1500，赞播比 ≥ 6% 或 藏播比 ≥ 3%) 或 (播放 ≥ 1万 且 赞播比 ≥ 8%)\n【特点】高能快节奏短片，完播互动极高，爆款短视频精选',
+      '时长 < 90秒，且 (播放 ≥ 2万 且 赞 ≥ 1500，赞播比 ≥ 6% 或 藏播比 ≥ 3%) 或 (播放 ≥ 1万 且 赞 ≥ 1000 且 赞播比 ≥ 8%) 或 (赞 ≥ 3万 且 (赞播比 ≥ 3% 或 藏播比 ≥ 1.5%))\n【特点】高能快节奏短片，完播互动极高，爆款短视频精选',
   },
 ];
 
@@ -86,6 +86,7 @@ export const QUALITY_CATEGORY_KEYS = [
 const qualityHandlers = {
   filterDOMElements: () => {},
   checkWaterfallFillScreen: () => {},
+  getMainListContainer: () => null,
 };
 
 export function setQualityHandlers(nextHandlers) {
@@ -197,7 +198,7 @@ export function injectQualityFilterRow(container) {
       btn.className = 'bili-cleaner-filter-pill-btn';
       if (opt.isAll) btn.classList.add('pill-all');
       btn.dataset.key = opt.key;
-      btn.textContent = opt.label;
+      btn.innerHTML = `<span class="bili-cleaner-pill-text">${opt.label}</span><span class="bili-cleaner-pill-count"></span>`;
       if (opt.criteria) {
         const actionTip = opt.isAll
           ? '点击重置为全部'
@@ -213,6 +214,57 @@ export function injectQualityFilterRow(container) {
   }
 
   updateQualityFilterButtons(filterRow);
+  updateQualityFilterCounts();
+}
+
+/**
+ * 统计当前已加载视频卡片在各品级下的数量（非灰色卡片 / 总数）并更新按钮展示
+ */
+export function updateQualityFilterCounts() {
+  if (!state.isEvaluationBadge) return;
+  const rows = document.querySelectorAll('.bili-cleaner-quality-filter-row');
+  if (!rows.length) return;
+
+  const container = qualityHandlers.getMainListContainer(document) || document;
+  const cards = container.querySelectorAll('[data-syntax-pass]');
+  const counts = { all: { clear: 0, total: 0 } };
+  QUALITY_CATEGORY_KEYS.forEach((k) => {
+    counts[k] = { clear: 0, total: 0 };
+  });
+
+  const seenCards = new Set();
+  cards.forEach((el) => {
+    const card = el.closest('[class*="col_"], .video-list-item, .bili-live-card') || el;
+    if (seenCards.has(card)) return;
+    seenCards.add(card);
+    if (!card.isConnected) return;
+    if (card.dataset.isLive === '1') return;
+    if (card.dataset.externalHidden === '1') return;
+
+    const isClear = card.dataset.syntaxPass === '1';
+    const qClass = card.dataset.qualityClass || '';
+
+    counts.all.total++;
+    if (isClear) counts.all.clear++;
+
+    if (qClass && counts[qClass]) {
+      counts[qClass].total++;
+      if (isClear) counts[qClass].clear++;
+    }
+  });
+
+  const showTotal = state.isSyntaxFilter && state.isDimmed;
+  rows.forEach((row) => {
+    row.querySelectorAll('.bili-cleaner-filter-pill-btn').forEach((btn) => {
+      const key = btn.dataset.key;
+      const stat = counts[key];
+      const countEl = btn.querySelector('.bili-cleaner-pill-count');
+      if (stat && countEl) {
+        countEl.textContent = showTotal ? `(${stat.clear}/${stat.total})` : `(${stat.clear})`;
+        btn.classList.toggle('is-empty', key !== 'all' && (showTotal ? stat.total === 0 : stat.clear === 0));
+      }
+    });
+  });
 }
 
 /**
@@ -313,7 +365,8 @@ export function getQualityQuadrant(stat) {
     durationMinutes > 0 &&
     durationMinutes < 1.5 &&
     ((play >= 20000 && like >= 1500 && (likeRatio >= 0.06 || favRatio >= 0.03)) ||
-      (play >= 10000 && like >= 1000 && likeRatio >= 0.08))
+      (play >= 10000 && like >= 1000 && likeRatio >= 0.08) ||
+      (like >= 30000 && (likeRatio >= 0.03 || favRatio >= 0.015)))
   ) {
     return {
       className: 'q-viral-short',

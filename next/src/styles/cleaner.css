@@ -11,11 +11,19 @@ div[class*="col_"]:has(.bili-video-card__info--ad, svg.bili-video-card__info--ad
     padding-bottom: 1px !important;
 }
 
-/* 1. 未匹配卡片常态暗化：深度半透明 + 灰度去色 + 占位保留 */
-.bili-cleaner-dimmed {
+/* 关闭虚化时：直接物理隐藏未通过语法的卡片 */
+html:not(.bili-dimmed-enabled) [data-syntax-pass="0"] {
+    display: none !important;
+}
+
+/* 1. 未匹配卡片常态暗化（仅开启虚化时生效）：深度半透明 + 灰度去色 + 占位保留 */
+html.bili-dimmed-enabled .bili-video-card,
+html.bili-dimmed-enabled .bili-live-card {
+    transition: opacity 0.25s ease, filter 0.25s ease, transform 0.25s ease !important;
+}
+html.bili-dimmed-enabled .bili-cleaner-dimmed {
     opacity: 0.16 !important;
     filter: grayscale(85%) contrast(85%) !important;
-    transition: opacity 0.25s ease, filter 0.25s ease, transform 0.25s ease !important;
 }
 
 /* 1.1 视频卡片封面评价勋章（左上角常驻胶囊标签，直接常驻展示） */
@@ -147,7 +155,7 @@ html:not(.bili-eval-badge-enabled) .bili-cleaner-badge-col {
 }
 
 /* 3. 暗化卡片悬停临时查验 */
-.bili-cleaner-dimmed:hover {
+html.bili-dimmed-enabled .bili-cleaner-dimmed:hover {
     opacity: 0.95 !important;
     filter: none !important;
     transform: translateY(-2px);
@@ -219,6 +227,17 @@ html.bili-filter-sticky-enabled button.vui_button.vui_button--active-shrink.i_bu
     font-weight: 600;
     box-shadow: 0 2px 8px rgba(0, 174, 236, 0.35);
 }
+.bili-cleaner-filter-pill-btn.is-empty:not(.active) {
+    opacity: 0.55;
+}
+.bili-cleaner-pill-count {
+    font-size: 11px;
+    opacity: 0.78;
+    font-weight: 400;
+}
+.bili-cleaner-filter-pill-btn.active .bili-cleaner-pill-count {
+    opacity: 0.92;
+}
 
 /* 5. 瀑布流相关样式 */
 html.bili-waterfall-enabled .vui_pagenation,
@@ -266,6 +285,32 @@ html.bili-waterfall-enabled .vui_pagenation--btns {
 @keyframes bili-wf-spin {
     to { transform: rotate(360deg); }
 }
+#bili-cleaner-toast {
+    position: fixed;
+    left: 24px;
+    bottom: 24px;
+    background: var(--bg1_float, rgba(255, 255, 255, 0.95));
+    border: 1px solid rgba(0, 174, 236, 0.45);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
+    color: var(--v_text1, #18191c);
+    padding: 8px 14px;
+    border-radius: 18px;
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 100000;
+    backdrop-filter: blur(8px);
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+#bili-cleaner-toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+html.bili-waterfall-enabled #bili-cleaner-toast {
+    bottom: 72px;
+}
 #bili-waterfall-badge {
     position: fixed;
     left: 24px;
@@ -288,7 +333,7 @@ html.bili-waterfall-enabled .vui_pagenation--btns {
     gap: 6px;
 }
 #bili-waterfall-badge:hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
     box-shadow: 0 6px 18px rgba(0, 174, 236, 0.25);
     border-color: #00aeec;
 }

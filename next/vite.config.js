@@ -10,7 +10,7 @@ export default defineConfig({
         namespace: 'http://tampermonkey.net/',
         version: '3.0.0',
         description:
-          '自动隐藏 Bilibili 搜索结果中不包含关键词的无关视频，支持 @UP主 定向筛选、-排除词 与 #Tag 专项筛选，内置 WBI 签名协议栈与无缝瀑布流，彻底净化搜索体验。（支持简繁归一化）',
+          '去掉搜索无关视频/12维视频品质分类/自动翻页：1.支持用【标题、-标题排除、#标签和@UP主】筛选视频 2.视频品质（神作/干货/宝藏/避坑等） 3.无缝瀑布流与筛选常驻（支持简繁）。',
         author: 'Kirosca',
         match: ['*://search.bilibili.com/*'],
         icon: 'https://www.bilibili.com/favicon.ico',
