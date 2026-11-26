@@ -508,3 +508,22 @@ const IS_VIDEO_DETAIL_PAGE = location.hostname.endsWith('bilibili.com') && locat
 - **收益**：在保持封面清爽留白的同时，让用户从顶部一排按钮即可一眼掌握当前页各品级的整体分布。
 
 
+---
+
+## 二十五、 瀑布流本地二次筛选与排序工具规划（待定方案）
+
+### 1. 背景痛点
+瀑布流加载至末尾时页面可达上千个视频，浏览器的 `Ctrl + F` 无法过滤隐藏无关卡片，也无法检索综合参考分、视频 Tag 或分区；而修改顶部搜索框会触发重新请求并清空已加载的瀑布流。因此需要一组**零网络请求、毫秒级本地响应**的二次工具。
+
+### 2. 核心功能与 UI 设计（挂载于 `.more-conditions` 底部 `.bili-cleaner-local-tools-row`）
+1. **本地二次关键词框**：支持 `关键词 -排除 #Tag @UP` 语法，带 `150ms` 防抖与一键清空，直接在已加载结果中即时过滤隐藏。
+2. **最低参考分快捷药丸**：`不限` / `60+` / `75+` / `85+`（单选，复用 `.bili-cleaner-filter-pill-btn` 样式），快速筛选高含金量视频。
+3. **评分排序切换开关**：`⇅ 默认顺序` ↔ `🏆 按评分降序`，一键把高分视频顶到前排，切回默认时按初始入场顺序还原。
+
+### 3. 技术实现要点与防坑细节
+- **数据缓存**：在 `filterDOMElements()` 首次处理卡片时顺手记录 `card.dataset.healthScore`、`card.dataset.origIdx`（递增入场序号，只写一次）以及 JS 属性 `card._searchMeta = { title, author, tags }`（已做繁简归一）。
+- **本地统一过滤 `applyLocalFilters()`**：不清除 `purifiedQuery`，直接读取缓存属性联合判定「品质白名单 + 最低分门槛 + 本地二次关键词」，过滤后调用 `updateQualityFilterCounts()` 与 `updateViewportPage(true)`。
+- **评分重排 `sortCardsByScore()` 保护**：
+  - 仅收集卡片节点排序，以尾部第一个非卡片节点（如 `#bili-waterfall-loader`、`.flex_center`）为锚点用 `DocumentFragment` + `insertBefore` 批量重排，绝不打乱底部加载条位置；
+  - 重排期间临时屏蔽 `MutationObserver` 避免触发无意义重扫；重排后调用 `updateViewportPage(true)` 更新二分查找缓存。
+- **瀑布流翻页联动**：在 `appendCards()` 追加新卡片后，自动补调 `applyLocalFilters()` 及（若处于降序模式）`sortCardsByScore()`。
