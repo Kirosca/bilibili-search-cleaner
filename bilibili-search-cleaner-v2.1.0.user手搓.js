@@ -2842,6 +2842,11 @@
             key: 'q-viral-short',
             label: '⚡ 爆款短片',
             criteria: '时长 < 90秒，且 (播放 ≥ 2万 且 赞 ≥ 1500，赞播比 ≥ 6% 或 藏播比 ≥ 3%) 或 (播放 ≥ 1万 且 赞 ≥ 1000 且 赞播比 ≥ 8%) 或 (赞 ≥ 3万 且 (赞播比 ≥ 3% 或 藏播比 ≥ 1.5%))\n【特点】高能快节奏短片，完播互动极高，爆款短视频精选'
+        },
+        {
+            key: 'q-low-sample',
+            label: '🌱 样本较少',
+            criteria: '播放量 < 3000（未触发极小样本破格冷门宝藏）\n【特点】早期冷门或新发视频，样本量较少暂不作定性评级'
         }
     ];
 
@@ -2856,7 +2861,8 @@
         'q-opinion-storm',
         'q-heated-debate',
         'q-danmaku-carnival',
-        'q-viral-short'
+        'q-viral-short',
+        'q-low-sample'
     ];
     let lastQualityAnchorKey = null;
 
