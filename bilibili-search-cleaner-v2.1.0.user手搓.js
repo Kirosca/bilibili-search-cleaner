@@ -3191,10 +3191,29 @@
     const ENTERTAINMENT_ZONE_RE = /宅舞|舞蹈|颜值|服饰|时尚|明星|鬼畜|搞笑|日常|运动|萌宠|动物|美食|演奏|翻唱|MAD|MMD|手书/i;
     const TUTORIAL_INTENT_RE = /教程|教学|攻略|指南|测评|避坑|原理|入门|实操|解析|源码|配置|安装|拆解|复习|考前|笔记|干货/;
 
-    // 按命中品级所在赛道计算 0~100% 综合参考分（含轻微先验平滑防小样本虚高，及分区轻量偏置）
-    function computeHealthScore(metrics, qualityClass, typename = '') {
-        if (!metrics || metrics.play <= 0) return 0;
+    // 杀戮尖塔式品级稀有度底分与区间锚定表（严格控制高分稀缺度，80+ 为顶尖，90+ 凤毛麟角）
+    const SCORE_TIER_BANDS = {
+        'q-warning':              { base: 6,  floatMax: 14, min: 0,  max: 20 },
+        'q-low-sample':           { base: 24, floatMax: 20, min: 12, max: 48 },
+        'q-routine':              { base: 22, floatMax: 26, min: 22, max: 54 },
+        'q-danmaku-carnival':     { base: 46, floatMax: 18, min: 46, max: 72 },
+        'q-heated-debate':        { base: 48, floatMax: 18, min: 48, max: 74 },
+        'q-opinion-storm':        { base: 52, floatMax: 18, min: 52, max: 78 },
+        'q-hidden-gem':           { base: 56, floatMax: 16, min: 56, max: 80 },
+        'q-high-reputation':      { base: 56, floatMax: 16, min: 56, max: 80 },
+        'q-hardcore':             { base: 56, floatMax: 16, min: 56, max: 80 },
+        'q-balanced-masterpiece': { base: 60, floatMax: 16, min: 60, max: 84 },
+        'q-viral-short':          { base: 56, floatMax: 16, min: 56, max: 80 },
+        'q-hall-of-fame':         { base: 72, floatMax: 14, min: 72, max: 98 }
+    };
+
+    // 按杀戮尖塔式三层模型（品级底分 + 赛道表现浮动 + 明码词条加减）计算完整评分明细
+    function computeScoreBreakdown(metrics, qualityClass, typename = '') {
+        if (!metrics || metrics.play <= 0) {
+            return { score: 0, base: 0, floatScore: 0, bonusTotal: 0, bonuses: [] };
+        }
         let track = HEALTH_SCORE_TRACKS[qualityClass] || DEFAULT_HEALTH_TRACK;
+        const band = SCORE_TIER_BANDS[qualityClass] || SCORE_TIER_BANDS['q-routine'];
         const isHardcoreZone = Boolean(typename && HARDCORE_BOOST_ZONE_RE.test(typename));
         const isEntZone = !isHardcoreZone && Boolean(typename && ENTERTAINMENT_ZONE_RE.test(typename));
 
@@ -3214,20 +3233,51 @@
         const dmScore = 100 * (1 - Math.exp(-metrics.danmakuDensity / 18));
         const reviewScore = 100 * (1 - Math.exp(-metrics.reviewRatio / 0.006));
 
-        let rawScore =
+        const perfRatio = Math.min(1, Math.max(0, (
             likeScore * track.like +
             favScore * track.fav +
             dmScore * track.dm +
-            reviewScore * track.review;
+            reviewScore * track.review
+        ) / 100));
+        const floatScore = Math.round(perfRatio * band.floatMax);
 
-        // 分区轻量加减分（高分段渐进收敛，避免扎堆 100 满分；避坑标签不参与加分）
-        if (!track.noBonus) {
-            if (isHardcoreZone) rawScore += (100 - rawScore) * 0.05;
-            else if (isEntZone) rawScore *= 0.95;
+        const bonuses = [];
+        if (!track.noBonus && qualityClass !== 'q-low-sample') {
+            if (metrics.likeRatio >= 0.10 && metrics.favRatio >= 0.05) {
+                bonuses.push({ label: '🔥 三连拉满', delta: 3 });
+            }
+            if (metrics.favLikeRatio >= 0.90 && metrics.favorites >= 300) {
+                bonuses.push({ label: '💎 纯度极高', delta: 3 });
+            }
+            if (metrics.play >= 1000000 && metrics.likeRatio >= 0.05) {
+                bonuses.push({ label: '🌊 百万不稀释', delta: 3 });
+            }
+            if (metrics.durationMinutes >= 20 && metrics.normLikeRatio >= 0.05) {
+                bonuses.push({ label: '⏱️ 长篇硬核', delta: 2 });
+            }
+            if (metrics.danmakuDensity >= 30 && metrics.danmaku >= 500) {
+                bonuses.push({ label: '💬 满屏名场面', delta: 2 });
+            }
+            if (isHardcoreZone) {
+                bonuses.push({ label: '📂 干货分区', delta: 1 });
+            } else if (isEntZone) {
+                bonuses.push({ label: '🎈 娱乐微调', delta: -2 });
+            }
+            if (qualityClass === 'q-routine' && metrics.likeRatio < 0.02 && metrics.favRatio < 0.01) {
+                bonuses.push({ label: '📉 互动平淡', delta: -4 });
+            }
         }
 
-        const cap = track.maxScore !== undefined ? track.maxScore : 100;
-        return Math.min(cap, Math.round(rawScore));
+        const bonusTotal = bonuses.reduce((sum, b) => sum + b.delta, 0);
+        const rawTotal = band.base + floatScore + bonusTotal;
+        const score = Math.min(band.max, Math.max(band.min, rawTotal));
+
+        return { score, base: band.base, floatScore, bonusTotal, bonuses };
+    }
+
+    // 按命中品级所在赛道计算 0~100% 综合参考分
+    function computeHealthScore(metrics, qualityClass, typename = '') {
+        return computeScoreBreakdown(metrics, qualityClass, typename).score;
     }
 
     // 纯视频品质象限判定函数（返回命中象限对象）
@@ -3430,7 +3480,8 @@
             durFactor,
             playFactor
         } = metrics;
-        const healthScore = computeHealthScore(metrics, quadrant.className, stat?.typename || '');
+        const scoreDetail = computeScoreBreakdown(metrics, quadrant.className, stat?.typename || '');
+        const healthScore = scoreDetail.score;
 
         let badgeCol = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
         if (!badgeCol) {
@@ -3448,7 +3499,13 @@
             tipLines.push(`📂 分区: ${stat.typename}`);
         }
         if (play > 0) {
-            tipLines.push(`📊 综合参考分: ${healthScore}%`);
+            const bonusPart = scoreDetail.bonusTotal !== 0
+                ? (scoreDetail.bonusTotal > 0 ? ` + 词条${scoreDetail.bonusTotal}` : ` - 词条${Math.abs(scoreDetail.bonusTotal)}`)
+                : '';
+            tipLines.push(`📊 综合参考分: ${healthScore}% (基础${scoreDetail.base} + 表现${scoreDetail.floatScore}${bonusPart})`);
+            if (scoreDetail.bonuses.length > 0) {
+                tipLines.push(`✨ 结算词条: ${scoreDetail.bonuses.map(b => `${b.label}(${b.delta > 0 ? '+' : ''}${b.delta})`).join(' · ')}`);
+            }
         }
         if (like > 0) {
             tipLines.push(`👍 赞播比: ${(likeRatio * 100).toFixed(1)}% (${formatStat(like)})`);
