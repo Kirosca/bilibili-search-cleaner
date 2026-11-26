@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bilibili 搜索净化 — 视频品级体系演进对比 (0bbbe40 vs 9bd249c)</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --card: #ffffff;
+      --card-muted: #f9fafb;
+      --text: #18191c;
+      --text-sub: #61666d;
+      --border: #e3e5e7;
+      --accent: #00aeec;
+      --accent-soft: rgba(0, 174, 236, 0.1);
+      --pink: #fb7299;
+      --green: #10b981;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #111317;
+        --card: #1a1d24;
+        --card-muted: #222630;
+        --text: #f1f3f5;
+        --text-sub: #9ca3af;
+        --border: #2e3340;
+        --accent-soft: rgba(0, 174, 236, 0.15);
+        --shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      padding: 32px 20px 64px;
+    }
+
+    .container {
+      max-width: 1080px;
+      margin: 0 auto;
+    }
+
+    header.hero {
+      background: linear-gradient(135deg, rgba(0, 174, 236, 0.14), rgba(251, 114, 153, 0.12));
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 28px 32px;
+      margin-bottom: 28px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero-top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.2px;
+    }
+
+    .meta-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .meta-pill {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text-sub);
+    }
+
+    .meta-pill code {
+      color: var(--accent);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .hero-desc {
+      color: var(--text-sub);
+      font-size: 14px;
+    }
+
+    section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px 28px;
+      margin-bottom: 22px;
+      box-shadow: var(--shadow);
+    }
+
+    h2 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    h2 .num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 8px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .preview-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin: 14px 0 6px;
+      align-items: center;
+    }
+
+    .preview-box {
+      background: var(--card-muted);
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1 1 280px;
+    }
+
+    .preview-label {
+      font-size: 12px;
+      color: var(--text-sub);
+      font-weight: 600;
+      min-width: 56px;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+    }
+
+    .badge-pill.gold {
+      background: linear-gradient(135deg, #ffaa00, #ff6600);
+    }
+
+    .badge-pill.hardcore {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+    }
+
+    .badge-pill.warn {
+      background: linear-gradient(135deg, #dc2626, #991b1b);
+    }
+
+    .badge-score {
+      font-size: 11px;
+      font-weight: 600;
+      opacity: 0.92;
+      font-variant-numeric: tabular-nums;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+      margin-top: 6px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--card-muted);
+      font-weight: 600;
+      color: var(--text-sub);
+      font-size: 12.5px;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      background: var(--card-muted);
+      border: 1px solid var(--border);
+      margin-right: 4px;
+    }
+
+    .tag.changed {
+      background: rgba(0, 174, 236, 0.12);
+      border-color: rgba(0, 174, 236, 0.35);
+      color: var(--accent);
+    }
+
+    .tag.keep {
+      background: rgba(16, 185, 129, 0.12);
+      border-color: rgba(16, 185, 129, 0.35);
+      color: var(--green);
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12.5px;
+      padding: 1px 5px;
+      border-radius: 5px;
+      background: var(--card-muted);
+      border: 1px solid var(--border);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 14px;
+      margin-top: 8px;
+    }
+
+    .mini-card {
+      background: var(--card-muted);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .mini-card h3 {
+      font-size: 14.5px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mini-card ul {
+      padding-left: 18px;
+      font-size: 13px;
+      color: var(--text-sub);
+    }
+
+    .mini-card li {
+      margin-bottom: 5px;
+    }
+
+    .mini-card li strong {
+      color: var(--text);
+    }
+
+    footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-sub);
+      margin-top: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="hero">
+      <div class="hero-top">
+        <h1>Bilibili 搜索净化 — 视频品级体系演进对比</h1>
+        <div class="meta-badges">
+          <span class="meta-pill">基线版本 <code>0bbbe40</code></span>
+          <span class="meta-pill">当前版本 <code>9bd249c</code></span>
+          <span class="meta-pill">生成时间 2026-11-27 02:43:45</span>
+        </div>
+      </div>
+      <p class="hero-desc">
+        目标文件：<code>bilibili-search-cleaner-v2.1.0.user手搓.js</code>。本报告对比了从 <code>0bbbe40</code> 到当前版本在 UI 展示、品级判定规则、综合参考分模型及底层运行性能上的完整差异。
+      </p>
+    </header>
+
+    <section>
+      <h2><span class="num">1</span>UI 展示与信息透明度</h2>
+      <div class="preview-row">
+        <div class="preview-box">
+          <span class="preview-label">旧版样式</span>
+          <span class="badge-pill gold">🏆 殿堂神作</span>
+          <span style="font-size:12px;color:var(--text-sub);">分数隐藏在悬停 Tooltip 中</span>
+        </div>
+        <div class="preview-box">
+          <span class="preview-label">当前样式</span>
+          <span class="badge-pill gold">🏆 殿堂神作 <span class="badge-score">· 92</span></span>
+          <span style="font-size:12px;color:var(--text-sub);">胶囊右侧内联显性展示（<code>🌱 样本较少</code> 除外）</span>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:20%">对比项</th>
+            <th style="width:38%">0bbbe40 旧版</th>
+            <th style="width:42%">当前版本 (9bd249c)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>封面胶囊展示</strong></td>
+            <td>仅显示品级名称（如 <code>🏆 殿堂神作</code>）。</td>
+            <td>胶囊右侧内联显示等宽参考分（如 <code>🏆 殿堂神作 · 92</code>），<code>🌱 样本较少</code> 不露分避免误导。</td>
+          </tr>
+          <tr>
+            <td><strong>悬停 Tooltip</strong></td>
+            <td>展示品级说明、综合分、赞藏播弹评与时长权重。</td>
+            <td>新增 <code>📂 分区: xxx</code> 展示，并同步更新顶部品质筛选药丸的规则文案。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2><span class="num">2</span>品级判定规则对比</h2>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:20%">品级</th>
+            <th style="width:14%">变更状态</th>
+            <th style="width:31%">0bbbe40 旧版规则</th>
+            <th style="width:35%">当前版本规则 (9bd249c)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>⚠️ 谨慎观看</strong></td>
+            <td><span class="tag changed">大幅强化</span></td>
+            <td>仅拦截 <code>play &gt;= 20000</code> 且 <code>时长 &lt;= 15分</code>，导致 3,000~19,999 播放与 &gt;15 分钟低质视频漏进「稳健良作」。</td>
+            <td>播放门槛降至 <code>play &gt;= 3000</code>（消除真空区）；新增 <code>&gt;15分钟</code> 长视频底线（<code>赞播比 &lt; 0.5% &amp;&amp; 藏播比 &lt; 0.2%</code>）。</td>
+          </tr>
+          <tr>
+            <td><strong>💡 硬核干货</strong></td>
+            <td><span class="tag changed">规则升级</span></td>
+            <td>仅看归一化藏播比（<code>&gt;= 4%</code> 且藏 <code>&gt;= 250</code>，或藏 <code>&gt;= 2000</code> 且藏播比 <code>&gt;= 2.5%</code>），无藏赞比与分区调节。</td>
+            <td>
+              <strong>藏赞比为主 + 分区轻量微调：</strong><br />
+              1. 常规路线新增 <code>藏赞比 &gt;= 40%</code>（干货区 <code>30%</code> / 娱乐区 <code>55%</code>）；<br />
+              2. 新增绿通：<code>play &gt;= 3000 &amp;&amp; 藏 &gt;= 120 &amp;&amp; 藏赞比 &gt;= 75%</code>；<br />
+              3. 分区门槛：干货/教程向 <code>0.85x</code>，纯娱乐区 <code>1.15x</code>。
+            </td>
+          </tr>
+          <tr>
+            <td><strong>🔥 弹幕密集</strong></td>
+            <td><span class="tag changed">分区微调</span></td>
+            <td>全站统一：<code>密度 &gt;= 15条/分 &amp;&amp; 弹幕 &gt;= 300</code>，或 <code>弹幕 &gt;= 3000 &amp;&amp; 密度 &gt;= 8</code>。</td>
+            <td>纯娱乐倾向分区密度门槛上调 <code>15%</code>（<code>17.25</code> / <code>9.2</code> 条/分），防止娱乐区满屏标签。</td>
+          </tr>
+          <tr>
+            <td><strong>💬 激辩热议</strong></td>
+            <td><span class="tag changed">分区微调</span></td>
+            <td>全站统一：<code>评赞比 &gt;= 10%</code> 且满足评论绝对量/评播比。</td>
+            <td>干货区/教程意图下评赞比门槛提高至 <code>18%</code>，减少求资源、问报错被误判为对线。</td>
+          </tr>
+          <tr>
+            <td><strong>其余 6 个品级</strong><br /><span style="font-size:12px;color:var(--text-sub);">神作 / 短片 / 宝藏 / 口碑 / 标杆 / 样本较少</span></td>
+            <td><span class="tag keep">保持不变</span></td>
+            <td colspan="2">判定阈值与优先顺序完全保持不变（<code>💎 冷门宝藏</code> 依然优先于 <code>💡 硬核干货</code> 保护 <code>&lt; 2万</code> 播放的高纯度遗珠）。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2><span class="num">3</span>综合参考分模型 (computeHealthScore)</h2>
+      <div class="grid-2">
+        <div class="mini-card">
+          <h3>🛡️ 避坑赛道隔离与封顶</h3>
+          <ul>
+            <li><strong>旧版：</strong><code>q-warning</code> 共用默认赛道（含 15% 弹幕分且吃时长/播放放大），曾出现谨慎观看 35 分高于稳健良作 29 分的倒挂。</li>
+            <li><strong>当前：</strong>新增 <code>q-warning</code> 专属赛道（<code>赞60% · 藏40% · 弹幕0%</code>），关闭时长与播放放大加成（<code>noBonus: true</code>），且最高封顶 <strong>25 分</strong>。</li>
+          </ul>
+        </div>
+        <div class="mini-card">
+          <h3>⚖️ 分区权重与轻度偏置</h3>
+          <ul>
+            <li><strong>干货倾向分区：</strong>默认赛道将 10% 弹幕权重让渡给收藏（<code>赞45% · 藏50% · 弹幕5%</code>），并在算分后给予高分段渐进加分 <code>+(100 - score) × 5%</code>。</li>
+            <li><strong>纯娱乐倾向分区：</strong>算分后应用 <code>× 0.95</code> 轻度回调；混合/未知分区维持 <code>1.0x</code>。</li>
+          </ul>
+        </div>
+        <div class="mini-card">
+          <h3>📈 饱和曲线基准上调</h3>
+          <ul>
+            <li><strong>点赞率分母：</strong><code>0.045</code> → <strong><code>0.06</code></strong></li>
+            <li><strong>收藏率分母：</strong><code>0.025</code> → <strong><code>0.035</code></strong></li>
+            <li><strong>弹幕密度分母：</strong><code>12</code> → <strong><code>18</code></strong> 条/分；<strong>评论率分母：</strong><code>0.005</code> → <strong><code>0.006</code></strong></li>
+            <li>有效拉开头部神作在 <code>85 ~ 99</code> 区间的区分度，避免扎堆 <code>100</code> 满分。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2><span class="num">4</span>底层运行与渲染性能</h2>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:24%">执行环节</th>
+            <th style="width:38%">0bbbe40 旧版</th>
+            <th style="width:38%">当前版本 (9bd249c)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>指标与象限计算</strong></td>
+            <td>每张卡片在 <code>filterDOMElements</code> 与 <code>renderBadgeColumn</code> 间重复计算 <code>computeQualityMetrics</code> 3 次、<code>getQualityQuadrant</code> 2 次。</td>
+            <td>指标与象限合并为 <strong>1 次计算透传</strong>；精选模式下提前跳过不展示标签的计算。</td>
+          </tr>
+          <tr>
+            <td><strong>切换品质筛选药丸</strong></td>
+            <td>清空所有卡片的 <code>purifiedQuery</code>，重跑全量文本清洗、OpenCC 繁简转换与评分计算。</td>
+            <td>直接读取已缓存的 <code>dataset.qualityClass</code> 与 <code>dataset.syntaxPass</code> 切换显隐，<code>O(N)</code> 轻量完成。</td>
+          </tr>
+          <tr>
+            <td><strong>瀑布流滚动画帧与监听</strong></td>
+            <td>每帧全量遍历 <code>children</code> 触发离屏回流，<code>MutationObserver</code> 触发全量重扫与双倍计数。</td>
+            <td>二分查找视口行号、<code>MutationObserver</code> 增量收集新增卡片、移除冗余计数与无广告 JSON 重序列化。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <footer>
+      Generated for bilibili-search-cleaner · Commit 0bbbe40 → 9bd249c
+    </footer>
+  </div>
+</body>
+</html>
