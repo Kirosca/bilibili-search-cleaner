@@ -3164,7 +3164,8 @@
         'q-viral-short': { like: 0.55, fav: 0.25, dm: 0.20, review: 0, noDurPenalty: true },
         'q-danmaku-carnival': { like: 0.30, fav: 0.15, dm: 0.55, review: 0, noDurPenalty: false },
         'q-heated-debate': { like: 0.30, fav: 0.15, dm: 0, review: 0.55, noDurPenalty: false },
-        'q-opinion-storm': { like: 0.30, fav: 0.15, dm: 0.30, review: 0.25, noDurPenalty: false }
+        'q-opinion-storm': { like: 0.30, fav: 0.15, dm: 0.30, review: 0.25, noDurPenalty: false },
+        'q-warning': { like: 0.60, fav: 0.40, dm: 0, review: 0, noBonus: true, maxScore: 25 }
     };
     const DEFAULT_HEALTH_TRACK = { like: 0.50, fav: 0.35, dm: 0.15, review: 0, noDurPenalty: false };
 
@@ -3184,11 +3185,12 @@
     function computeHealthScore(metrics, qualityClass) {
         if (!metrics || metrics.play <= 0) return 0;
         const track = HEALTH_SCORE_TRACKS[qualityClass] || DEFAULT_HEALTH_TRACK;
-        const effectiveDur = track.noDurPenalty ? 1.0 : metrics.durFactor;
+        const effectiveDur = (track.noDurPenalty || track.noBonus) ? 1.0 : metrics.durFactor;
+        const effectivePlay = track.noBonus ? 1.0 : metrics.playFactor;
 
         const smoothPlay = metrics.play + 2000;
-        const smoothLikeRatio = ((metrics.like + 40) / smoothPlay) * effectiveDur * metrics.playFactor;
-        const smoothFavRatio = ((metrics.favorites + 20) / smoothPlay) * effectiveDur * metrics.playFactor;
+        const smoothLikeRatio = ((metrics.like + 40) / smoothPlay) * effectiveDur * effectivePlay;
+        const smoothFavRatio = ((metrics.favorites + 20) / smoothPlay) * effectiveDur * effectivePlay;
 
         const likeScore = 100 * (1 - Math.exp(-smoothLikeRatio / 0.045));
         const favScore = 100 * (1 - Math.exp(-smoothFavRatio / 0.025));
@@ -3201,7 +3203,8 @@
             dmScore * track.dm +
             reviewScore * track.review;
 
-        return Math.min(100, Math.round(rawScore));
+        const cap = track.maxScore !== undefined ? track.maxScore : 100;
+        return Math.min(cap, Math.round(rawScore));
     }
 
     // 纯视频品质象限判定函数（返回命中象限对象）
@@ -3249,8 +3252,11 @@
                     desc: '数据样本量较少（播放量 < 3000），暂不作定性评级'
                 };
             }
-        } else if (play >= 20000 && like > 0 && likeRatio < 0.012 && favRatio < 0.005 && (durationMinutes <= 15 || durationMinutes === 0)) {
-            // 【风控防线：低质劣作避坑】大样本且极低转化（限制时长 <= 15分钟，排除歌单/长录像误判）
+        } else if (play >= 3000 && like > 0 && (
+            ((durationMinutes <= 15 || durationMinutes === 0) && likeRatio < 0.012 && favRatio < 0.005) ||
+            (durationMinutes > 15 && likeRatio < 0.005 && favRatio < 0.002)
+        )) {
+            // 【风控防线：低质劣作避坑】补齐 3000+ 样本区间低转化预警（长视频 > 15 分钟使用更严苛的底线防误判）
             return {
                 className: 'q-warning',
                 tag: '⚠️ 谨慎观看',
