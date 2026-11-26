@@ -33,6 +33,7 @@
     let isWaterfall = localStorage.getItem('bili_cleaner_waterfall') === 'true';
     let isEvaluationBadge = localStorage.getItem('bili_cleaner_eval_badge') !== 'false';
     let isEvalFullMode = localStorage.getItem('bili_cleaner_eval_full_mode') === 'true';
+    let isEvalScoreEnabled = localStorage.getItem('bili_cleaner_eval_score') !== 'false';
     let isSyntaxFilter = localStorage.getItem('bili_cleaner_syntax_filter') !== 'false';
     // 选中的品质标签筛选集合（多选，空集合代表全部/不限）
     let activeQualityFilters = new Set();
@@ -51,6 +52,7 @@
     let waterfallMenuId = null;
     let evalBadgeMenuId = null;
     let evalModeMenuId = null;
+    let evalScoreMenuId = null;
 
     // 注册与更新油猴菜单命令
     function registerMenu() {
@@ -81,6 +83,10 @@
                 try { GM_unregisterMenuCommand(evalModeMenuId); } catch (e) {}
                 evalModeMenuId = null;
             }
+            if (evalScoreMenuId !== null) {
+                try { GM_unregisterMenuCommand(evalScoreMenuId); } catch (e) {}
+                evalScoreMenuId = null;
+            }
         }
 
         const isAllEnabled = isSyntaxFilter && isFilterSticky && isDimmed && isWaterfall && isEvaluationBadge;
@@ -107,10 +113,13 @@
         const evalBadgeLabel = `🏷️ 视频品质标签: ${isEvaluationBadge ? '✅ 已开启' : '❌ 已关闭'}`;
         evalBadgeMenuId = GM_registerMenuCommand(evalBadgeLabel, toggleEvaluationBadge);
 
-        // 二级级联子菜单：仅在品质标签开启时展示显示范围切换
+        // 二级级联子菜单：仅在品质标签开启时展示显示范围与显性评分开关
         if (isEvaluationBadge) {
-            const evalModeLabel = `  └─ 标签可见范围: ${isEvalFullMode ? '📑 全部展示' : '✨ 仅精选'}`;
+            const evalModeLabel = `  ├─ 标签可见范围: ${isEvalFullMode ? '📑 全部展示' : '✨ 仅精选'}`;
             evalModeMenuId = GM_registerMenuCommand(evalModeLabel, toggleEvalMode);
+
+            const evalScoreLabel = `  └─ 封面显性评分: ${isEvalScoreEnabled ? '✅ 已开启' : '❌ 已关闭'}`;
+            evalScoreMenuId = GM_registerMenuCommand(evalScoreLabel, toggleEvalScore);
         }
     }
 
@@ -214,6 +223,21 @@
         }
     }
 
+    // 应用封面显性评分的 CSS 根类名
+    function applyEvalScoreState() {
+        if (document.documentElement) {
+            document.documentElement.classList.toggle('bili-eval-score-enabled', isEvalScoreEnabled);
+        }
+    }
+
+    // 切换封面显性评分显示状态并持久化配置（O(1) 根类名切换，1000+ 卡片零重算）
+    function toggleEvalScore() {
+        isEvalScoreEnabled = !isEvalScoreEnabled;
+        localStorage.setItem('bili_cleaner_eval_score', String(isEvalScoreEnabled));
+        applyEvalScoreState();
+        registerMenu();
+    }
+
     // 应用虚化显示模糊内容的 CSS 根类名
     function applyDimmedState() {
         if (document.documentElement) {
@@ -307,6 +331,7 @@
     applyDimmedState();
     applyFilterStickyState();
     applyEvaluationBadgeState();
+    applyEvalScoreState();
  
     // 0. 接入 OpenCC 单例转换器（由 @require 本地持久化驱动）
     let sConverter = null;
@@ -432,6 +457,9 @@
             opacity: 0.9 !important;
             font-variant-numeric: tabular-nums !important;
             flex-shrink: 0 !important;
+        }
+        html:not(.bili-eval-score-enabled) .bili-cleaner-badge-score {
+            display: none !important;
         }
 
         /* --- 纯品质金字塔胶囊配色体系 --- */
