@@ -51,6 +51,7 @@
     .bili-pill.q-danmaku-carnival { background: linear-gradient(135deg, rgba(255, 68, 102, 0.94), rgba(255, 120, 40, 0.94)); border: 1px solid rgba(255, 200, 210, 0.5); }
     .bili-pill.q-warning { background: linear-gradient(135deg, rgba(220, 38, 38, 0.94), rgba(153, 27, 27, 0.94)); border: 1px solid rgba(254, 202, 202, 0.5); }
     .bili-pill.q-routine { background: linear-gradient(135deg, rgba(16, 110, 75, 0.92), rgba(10, 70, 50, 0.95)); border: 1px solid rgba(74, 222, 128, 0.35); }
+    .bili-pill.q-mediocre { background: rgba(71, 85, 105, 0.88); color: #e2e8f0; border: 1px solid rgba(203, 213, 225, 0.35); }
     .bili-pill.q-low-sample { background: rgba(30, 41, 59, 0.88); color: rgba(203, 213, 225, 0.95); border: 1px solid rgba(148, 163, 184, 0.3); }
   </style>
 </head>
@@ -95,7 +96,7 @@
         </div>
       </div>
       <p class="text-sm text-slate-600 mb-6">
-        下图按 <code>0~100</code> 绝对刻度对齐展示各品级区间：<strong>避坑区 (0~20) 与稳健区 (22~54) 严格物理隔离</strong>；<strong>四档佳作均守住 60 及格线</strong>；中高品级采用<strong>阶梯交叉包裹</strong>（顶级蓝卡 <code>80~90</code> 可反超擦线金卡 <code>68~76</code>，而 <code>91~98</code> 为殿堂神作独享天花板）。
+        下图按 <code>0~100</code> 绝对刻度对齐展示各品级区间：<strong>避坑区 (0~20) 与普通/稳健区 (22~58) 严格物理隔离</strong>；<strong>四档佳作均守住 60 及格线</strong>；中高品级采用<strong>阶梯交叉包裹</strong>（顶级蓝卡 <code>80~90</code> 可反超擦线金卡 <code>68~76</code>，而 <code>91~98</code> 为殿堂神作独享天花板）。
       </p>
 
       <!-- Scale Axis -->
@@ -120,8 +121,8 @@
       <!-- Overlap Insights -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-5 border-t border-slate-100 text-xs">
         <div class="rounded-xl bg-rose-500/5 border border-rose-500/20 p-3.5">
-          <div class="font-bold text-rose-600 mb-1">🛡️ 诅咒硬隔离（0~20 vs 22~54）</div>
-          <p class="text-slate-600"><code>⚠️ 谨慎观看</code> 封顶 20 分，<code>🍀 稳健良作</code> 保底 22 分，两者之间存在不可跨越的防线，杜绝低质视频反超良作。</p>
+          <div class="font-bold text-rose-600 mb-1">🛡️ 诅咒硬隔离（0~20 vs 22~58）</div>
+          <p class="text-slate-600"><code>⚠️ 谨慎观看</code> 封顶 20 分，<code>⚪ 表现平平</code> 与 <code>🍀 稳健良作</code> 保底 22 分，杜绝低质视频反超普通/良作。</p>
         </div>
         <div class="rounded-xl bg-sky-500/5 border border-sky-500/20 p-3.5">
           <div class="font-bold text-sky-600 mb-1">🃏 蓝卡与金卡的交叉包裹（60~90 vs 68~98）</div>
@@ -161,7 +162,8 @@
                   <option value="q-opinion-storm">💥 话题焦点 (base 50 · float 28 · floor 0.30)</option>
                   <option value="q-heated-debate">💬 激辩热议 (base 46 · float 28 · floor 0.25)</option>
                   <option value="q-danmaku-carnival">🔥 弹幕密集 (base 44 · float 28 · floor 0.25)</option>
-                  <option value="q-routine">🍀 稳健良作 (base 22 · float 32 · floor 0.08)</option>
+                  <option value="q-routine">🍀 稳健良作 (base 36 · float 22 · floor 0.16)</option>
+                  <option value="q-mediocre">⚪ 表现平平 (base 22 · float 14 · floor 0.04)</option>
                   <option value="q-warning">⚠️ 谨慎观看 (base 4 · float 16 · floor 0.00)</option>
                 </select>
               </div>
@@ -303,8 +305,14 @@
             <tr>
               <td class="py-2.5 px-3 font-mono text-slate-400">13</td>
               <td class="py-2.5 px-3 whitespace-nowrap"><span class="bili-pill q-routine">🍀 稳健良作</span></td>
-              <td class="py-2.5 px-3"><code>播≥3000</code> 且未触碰上述条件</td>
+              <td class="py-2.5 px-3"><code>播≥3000</code> 且 <code>加权赞播≥2.5% 或 加权藏播≥1.2%</code></td>
               <td class="py-2.5 px-3 text-slate-500">精选模式默认隐藏。</td>
+            </tr>
+            <tr>
+              <td class="py-2.5 px-3 font-mono text-slate-400">14</td>
+              <td class="py-2.5 px-3 whitespace-nowrap"><span class="bili-pill q-mediocre">⚪ 表现平平</span></td>
+              <td class="py-2.5 px-3"><code>播≥3000</code> 且未触碰避坑线，但转化平淡</td>
+              <td class="py-2.5 px-3 text-slate-500">精选模式默认隐藏；与稳健良作明确分化。</td>
             </tr>
           </tbody>
         </table>
@@ -360,7 +368,8 @@
     const TIERS = [
       { key: 'q-warning',              name: '⚠️ 谨慎观看', base: 4,  floatMax: 16, min: 0,  max: 20, perfFloor: 0.00, barColor: 'bg-rose-500',    note: '诅咒隔离 · 封顶20' },
       { key: 'q-low-sample',           name: '🌱 样本较少', base: 20, floatMax: 24, min: 12, max: 48, perfFloor: 0.05, barColor: 'bg-slate-400',   note: '胶囊不露分' },
-      { key: 'q-routine',              name: '🍀 稳健良作', base: 22, floatMax: 32, min: 22, max: 54, perfFloor: 0.08, barColor: 'bg-emerald-500', note: '保底22 · 跨度32' },
+      { key: 'q-mediocre',             name: '⚪ 表现平平', base: 22, floatMax: 14, min: 22, max: 36, perfFloor: 0.04, barColor: 'bg-slate-500',   note: '擦线普通 · 22~36' },
+      { key: 'q-routine',              name: '🍀 稳健良作', base: 36, floatMax: 22, min: 36, max: 58, perfFloor: 0.16, barColor: 'bg-emerald-500', note: '扎实良品 · 36~58' },
       { key: 'q-danmaku-carnival',     name: '🔥 弹幕密集', base: 44, floatMax: 28, min: 44, max: 76, perfFloor: 0.25, barColor: 'bg-orange-500',  note: '偏弹幕55%' },
       { key: 'q-heated-debate',        name: '💬 激辩热议', base: 46, floatMax: 28, min: 46, max: 78, perfFloor: 0.25, barColor: 'bg-blue-500',    note: '偏评论55%' },
       { key: 'q-opinion-storm',        name: '💥 话题焦点', base: 50, floatMax: 28, min: 50, max: 82, perfFloor: 0.30, barColor: 'bg-pink-500',    note: '双热交汇' },

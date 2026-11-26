@@ -512,6 +512,13 @@
             border: 1px solid rgba(74, 222, 128, 0.35) !important;
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
         }
+        /* 9.5. ⚪ 表现平平（常规过渡）：低调中性石板灰 */
+        .bili-cleaner-badge-pill.q-mediocre {
+            background: rgba(71, 85, 105, 0.85) !important;
+            color: #e2e8f0 !important;
+            border: 1px solid rgba(203, 213, 225, 0.35) !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+        }
         /* 10. 🌱 样本较少（冷门置信度保护）：低调雾霾蓝灰 */
         .bili-cleaner-badge-pill.q-low-sample {
             background: rgba(30, 41, 59, 0.82) !important;
@@ -2820,7 +2827,7 @@
         {
             key: 'q-routine',
             label: '🍀 稳健良作',
-            criteria: '播放 ≥ 3000，且未触碰避坑线 (≤15分需赞播比≥1.2%或藏播比≥0.5%；>15分需赞播比≥0.5%或藏播比≥0.2%)，各项数据平稳均衡\n【特点】品质可靠健康，内容扎实的中流砥柱良品'
+            criteria: '播放 ≥ 3000，且加权赞播比 ≥ 2.5% 或 加权藏播比 ≥ 1.2%，各项数据平稳均衡\n【特点】品质可靠健康，内容扎实的中流砥柱良品'
         },
         {
             key: 'q-opinion-storm',
@@ -3199,7 +3206,8 @@
     const SCORE_TIER_BANDS = {
         'q-warning':              { base: 4,  floatMax: 16, min: 0,  max: 20, perfFloor: 0.00 },
         'q-low-sample':           { base: 20, floatMax: 24, min: 12, max: 48, perfFloor: 0.05 },
-        'q-routine':              { base: 22, floatMax: 32, min: 22, max: 54, perfFloor: 0.08 },
+        'q-mediocre':             { base: 22, floatMax: 14, min: 22, max: 36, perfFloor: 0.04 },
+        'q-routine':              { base: 36, floatMax: 22, min: 36, max: 58, perfFloor: 0.16 },
         'q-danmaku-carnival':     { base: 44, floatMax: 28, min: 44, max: 76, perfFloor: 0.25 },
         'q-heated-debate':        { base: 46, floatMax: 28, min: 46, max: 78, perfFloor: 0.25 },
         'q-opinion-storm':        { base: 50, floatMax: 28, min: 50, max: 82, perfFloor: 0.30 },
@@ -3299,7 +3307,7 @@
             } else if (isEntZone && qualityClass !== 'q-hall-of-fame' && !isPhenomenal) {
                 bonuses.push({ label: '🎈 娱乐微调', delta: -2 });
             }
-            if (qualityClass === 'q-routine' && metrics.likeRatio < 0.02 && metrics.favRatio < 0.01) {
+            if ((qualityClass === 'q-routine' || qualityClass === 'q-mediocre') && metrics.likeRatio < 0.02 && metrics.favRatio < 0.01) {
                 bonuses.push({ label: '📉 互动平淡', delta: -4 });
             }
         }
@@ -3468,12 +3476,19 @@
                 tag: '🔥 弹幕密集',
                 desc: '弹幕密集高频，高能互动、乐子或热议焦点'
             };
-        } else {
-            // 【T3 基准良作】：各项指标均衡扎实
+        } else if (normLikeRatio >= 0.025 || normFavRatio >= 0.012) {
+            // 【T3 基准良作】：有一定赞藏转化基础的中流砥柱良品
             return {
                 className: 'q-routine',
                 tag: '🍀 稳健良作',
                 desc: '各项数据均衡扎实，品质稳健可靠'
+            };
+        } else {
+            // 【T4 常规过渡】：未触及避坑线，但互动转化平淡的普通视频
+            return {
+                className: 'q-mediocre',
+                tag: '⚪ 表现平平',
+                desc: '未触及避坑线，但互动转化较为平淡的常规视频'
             };
         }
     }
@@ -3496,8 +3511,8 @@
             return;
         }
 
-        // 精选高光减负策略：未开启“全部显示”时，稳健良作 (q-routine) 与 样本较少 (q-low-sample) 默认留白不显示
-        if (!isEvalFullMode && (quadrant.className === 'q-routine' || quadrant.className === 'q-low-sample')) {
+        // 精选高光减负策略：未开启“全部显示”时，稳健良作 (q-routine)、表现平平 (q-mediocre) 与 样本较少 (q-low-sample) 默认留白不显示
+        if (!isEvalFullMode && (quadrant.className === 'q-routine' || quadrant.className === 'q-mediocre' || quadrant.className === 'q-low-sample')) {
             const existing = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
             if (existing) existing.remove();
             return;
