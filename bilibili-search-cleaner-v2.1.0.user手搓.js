@@ -255,7 +255,7 @@
             const firstPageBtn = document.querySelector('button.vui_pagenation--btn-num[aria-label^="第 1 页"]');
             if (firstPageBtn) {
                 firstPageBtn.click();
-                
+                // 通知 B 站内部路由与 Pinia 状态回到首页，为后续强制重置预留渲染时间
             }
         } catch (e) {}
 
@@ -497,14 +497,14 @@
             border: 1px solid rgba(254, 202, 202, 0.5) !important;
             box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4) !important;
         }
-        /* 6. 🍀 稳健良作：深林墨玉绿渐变（典雅沉稳，有分量感） */
+        /* 9. 🍀 稳健良作：深林墨玉绿渐变（典雅沉稳，有分量感） */
         .bili-cleaner-badge-pill.q-routine {
             background: linear-gradient(135deg, rgba(16, 110, 75, 0.88), rgba(10, 70, 50, 0.92)) !important;
             color: #ffffff !important;
             border: 1px solid rgba(74, 222, 128, 0.35) !important;
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
         }
-        /* 7. 🌱 样本较少（冷门置信度保护）：低调雾霾蓝灰 */
+        /* 10. 🌱 样本较少（冷门置信度保护）：低调雾霾蓝灰 */
         .bili-cleaner-badge-pill.q-low-sample {
             background: rgba(30, 41, 59, 0.82) !important;
             color: rgba(148, 163, 184, 0.95) !important;
@@ -3253,11 +3253,14 @@
             return;
         }
 
+        // 先用占位空 title 注入结构，再通过 DOM property 写入含换行的完整提示文本（避免 innerHTML 中引号截断 title 属性）
         badgeCol.innerHTML = `
-            <div class="bili-cleaner-badge-pill ${quadrant.className}" title="${tip}">
+            <div class="bili-cleaner-badge-pill ${quadrant.className}">
                 <span class="bili-cleaner-badge-tag">${quadrant.tag}</span>
             </div>
         `;
+        const newPill = badgeCol.querySelector('.bili-cleaner-badge-pill');
+        if (newPill) newPill.title = tip;
     }
 
     console.log('[Bilibili 搜索净化] 3.0.0 已启动。');
