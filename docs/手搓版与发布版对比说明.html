@@ -24,27 +24,34 @@
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      padding: 2px 9px;
-      border-radius: 9999px;
-      font-size: 12px;
+      padding: 2.5px 8px;
+      border-radius: 10px;
+      font-size: 11.5px;
       font-weight: 700;
-      color: #fff;
-      line-height: 1.4;
+      color: #ffffff;
+      line-height: 1.25;
       white-space: nowrap;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+      user-select: none;
     }
-    .q-hall-of-fame { background: linear-gradient(135deg, #d97706, #b45309); }
-    .q-viral-short { background: linear-gradient(135deg, #ea580c, #c2410c); }
-    .q-hardcore { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
-    .q-high-reputation { background: linear-gradient(135deg, #db2777, #be185d); }
-    .q-hidden-gem { background: linear-gradient(135deg, #0d9488, #0f766e); }
-    .q-balanced-masterpiece { background: linear-gradient(135deg, #7c3aed, #6d28d9); }
-    .q-opinion-storm { background: linear-gradient(135deg, #6366f1, #4338ca); }
-    .q-heated-debate { background: linear-gradient(135deg, #e11d48, #be123c); }
-    .q-danmaku-carnival { background: linear-gradient(135deg, #0891b2, #0e7490); }
-    .q-warning { background: linear-gradient(135deg, #4b5563, #374151); }
-    .q-routine { background: linear-gradient(135deg, #64748b, #475569); }
-    .q-low-sample { background: linear-gradient(135deg, #94a3b8, #64748b); }
+    .bili-pill-score {
+      font-size: 10.5px;
+      font-weight: 600;
+      opacity: 0.9;
+      font-variant-numeric: tabular-nums;
+    }
+    .bili-pill.q-hall-of-fame { background: linear-gradient(135deg, rgba(255, 170, 0, 0.95), rgba(255, 102, 0, 0.95)); border: 1px solid rgba(255, 235, 180, 0.7); box-shadow: 0 0 10px rgba(255, 170, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3); }
+    .bili-pill.q-viral-short { background: linear-gradient(135deg, rgba(6, 182, 212, 0.95), rgba(16, 185, 129, 0.95)); border: 1px solid rgba(165, 243, 252, 0.7); box-shadow: 0 0 10px rgba(6, 182, 212, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3); }
+    .bili-pill.q-hardcore { background: linear-gradient(135deg, rgba(245, 158, 11, 0.92), rgba(217, 119, 6, 0.92)); border: 1px solid rgba(255, 215, 0, 0.5); box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4); }
+    .bili-pill.q-high-reputation { background: linear-gradient(135deg, rgba(0, 174, 236, 0.92), rgba(0, 120, 215, 0.92)); border: 1px solid rgba(180, 230, 255, 0.5); box-shadow: 0 2px 8px rgba(0, 174, 236, 0.4); }
+    .bili-pill.q-hidden-gem { background: linear-gradient(135deg, rgba(147, 51, 234, 0.92), rgba(99, 102, 241, 0.92)); border: 1px solid rgba(220, 180, 255, 0.5); box-shadow: 0 2px 8px rgba(147, 51, 234, 0.4); }
+    .bili-pill.q-balanced-masterpiece { background: linear-gradient(135deg, rgba(71, 85, 105, 0.95), rgba(30, 41, 59, 0.98)); color: #f8fafc; border: 1px solid rgba(226, 232, 240, 0.75); box-shadow: 0 0 10px rgba(148, 163, 184, 0.35), 0 2px 8px rgba(0, 0, 0, 0.3); }
+    .bili-pill.q-opinion-storm { background: linear-gradient(135deg, rgba(236, 72, 153, 0.95), rgba(168, 85, 247, 0.95)); border: 1px solid rgba(251, 207, 232, 0.7); box-shadow: 0 0 10px rgba(236, 72, 153, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3); }
+    .bili-pill.q-heated-debate { background: linear-gradient(135deg, rgba(37, 99, 235, 0.95), rgba(79, 70, 229, 0.95)); border: 1px solid rgba(191, 219, 254, 0.7); box-shadow: 0 2px 8px rgba(37, 99, 235, 0.45); }
+    .bili-pill.q-danmaku-carnival { background: linear-gradient(135deg, rgba(255, 68, 102, 0.92), rgba(255, 120, 40, 0.92)); border: 1px solid rgba(255, 200, 210, 0.5); box-shadow: 0 2px 8px rgba(255, 68, 102, 0.4); }
+    .bili-pill.q-warning { background: linear-gradient(135deg, rgba(220, 38, 38, 0.92), rgba(153, 27, 27, 0.92)); border: 1px solid rgba(254, 202, 202, 0.5); box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4); }
+    .bili-pill.q-routine { background: linear-gradient(135deg, rgba(16, 110, 75, 0.88), rgba(10, 70, 50, 0.92)); border: 1px solid rgba(74, 222, 128, 0.35); }
+    .bili-pill.q-low-sample { background: rgba(30, 41, 59, 0.88); color: rgba(203, 213, 225, 0.95); border: 1px solid rgba(148, 163, 184, 0.3); }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased">
@@ -117,8 +124,8 @@
             </p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <span class="bili-pill q-hall-of-fame">🏆 镇站之宝 · 95</span>
-            <span class="bili-pill q-hardcore">💡 硬核干货 · 84</span>
+            <span class="bili-pill q-hall-of-fame">🏆 殿堂神作<span class="bili-pill-score">· 95</span></span>
+            <span class="bili-pill q-hardcore">💡 硬核干货<span class="bili-pill-score">· 84</span></span>
             <span class="bili-pill q-low-sample">🌱 样本较少</span>
           </div>
         </div>
@@ -191,7 +198,7 @@
               <span class="px-2 py-1 rounded-md bg-white border border-rose-200 text-rose-800">📉 互动平淡 (-4)</span>
             </div>
             <p class="text-slate-600 pt-1 leading-relaxed">
-              注：<code class="font-mono">🎈 娱乐微调(-2)</code> 对 <code class="font-mono">🏆 镇站之宝</code> 与 <code class="font-mono">👑 现象级破圈</code> 自动豁免，避免误伤顶尖大爆款。
+              注：<code class="font-mono">🎈 娱乐微调(-2)</code> 对 <code class="font-mono">🏆 殿堂神作</code> 与 <code class="font-mono">👑 现象级破圈</code> 自动豁免，避免误伤顶尖大爆款。
             </p>
           </div>
         </div>
