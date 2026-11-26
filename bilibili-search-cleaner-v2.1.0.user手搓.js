@@ -822,7 +822,8 @@
                     danmaku: Number(v.danmaku !== undefined ? v.danmaku : v.video_review) || 0,
                     duration: v.duration,
                     review: Number(v.review) || 0,
-                    pubdate: Number(v.pubdate) || 0
+                    pubdate: Number(v.pubdate) || 0,
+                    typename: v.typename ? String(v.typename).trim() : ''
                 };
                 if (v.bvid) setBoundedMap(videoStatMap, String(v.bvid).toLowerCase(), stat);
                 if (v.aid) setBoundedMap(videoStatMap, String(v.aid), stat);
@@ -1106,8 +1107,9 @@
                         stat = extractStatFromCard(card);
                     }
                     if (!stat.isPartial) {
+                        const evalCtx = { title, tags: videoTags };
                         metrics = computeQualityMetrics(stat);
-                        quadrant = getQualityQuadrant(stat, metrics);
+                        quadrant = getQualityQuadrant(stat, metrics, evalCtx);
                     }
                     renderBadgeColumn(coverEl, stat, quadrant, metrics);
                 } else if (isLiveCard) {
@@ -2218,7 +2220,8 @@
                     danmaku: Number(item.danmaku !== undefined ? item.danmaku : item.video_review) || 0,
                     duration: item.duration,
                     review: Number(item.review) || 0,
-                    pubdate: Number(item.pubdate) || 0
+                    pubdate: Number(item.pubdate) || 0,
+                    typename: item.typename ? String(item.typename).trim() : ''
                 };
                 setBoundedMap(videoStatMap, item.bvid.toLowerCase(), stat);
                 if (item.aid) setBoundedMap(videoStatMap, String(item.aid), stat);
@@ -3126,6 +3129,7 @@
 
         const likeRatio = play > 0 ? (like / play) : 0;
         const favRatio = play > 0 ? (favorites / play) : 0;
+        const favLikeRatio = like > 0 ? (favorites / like) : (favorites > 0 ? 1 : 0);
         const reviewRatio = play > 0 ? (review / play) : 0;
         const reviewLikeRatio = like > 0 ? (review / like) : (review > 0 ? 1 : 0);
         const danmakuDensity = durationMinutes > 0 ? (danmaku / durationMinutes) : 0;
@@ -3148,6 +3152,7 @@
             durationMinutes,
             likeRatio,
             favRatio,
+            favLikeRatio,
             reviewRatio,
             reviewLikeRatio,
             danmakuDensity,
@@ -3181,10 +3186,22 @@
         return `${parts.join(' · ')}${suffix}`;
     }
 
-    // 按命中品级所在赛道计算 0~100% 综合参考分（含轻微先验平滑防小样本虚高）
-    function computeHealthScore(metrics, qualityClass) {
+    // 分区轻量微调规则（干货倾向分区 vs 纯娱乐倾向分区，仅作 ±15% 门槛微调与 ±5% 评分偏置，不做一刀切禁入）
+    const HARDCORE_BOOST_ZONE_RE = /科普|技术|软件|编程|开发|数码|教程|财经|社科|心理|法律|职场|学习|机械|极客|设计|摄影|人文|历史/;
+    const ENTERTAINMENT_ZONE_RE = /宅舞|舞蹈|颜值|服饰|时尚|明星|鬼畜|搞笑|日常|运动|萌宠|动物|美食|演奏|翻唱|MAD|MMD|手书/i;
+    const TUTORIAL_INTENT_RE = /教程|教学|攻略|指南|测评|避坑|原理|入门|实操|解析|源码|配置|安装|拆解|复习|考前|笔记|干货/;
+
+    // 按命中品级所在赛道计算 0~100% 综合参考分（含轻微先验平滑防小样本虚高，及分区轻量偏置）
+    function computeHealthScore(metrics, qualityClass, typename = '') {
         if (!metrics || metrics.play <= 0) return 0;
-        const track = HEALTH_SCORE_TRACKS[qualityClass] || DEFAULT_HEALTH_TRACK;
+        let track = HEALTH_SCORE_TRACKS[qualityClass] || DEFAULT_HEALTH_TRACK;
+        const isHardcoreZone = Boolean(typename && HARDCORE_BOOST_ZONE_RE.test(typename));
+        const isEntZone = !isHardcoreZone && Boolean(typename && ENTERTAINMENT_ZONE_RE.test(typename));
+
+        // 干货倾向分区在使用默认赛道时，将 10% 弹幕权重让渡给收藏，避免教程/知识视频因弹幕少吃亏
+        if (track === DEFAULT_HEALTH_TRACK && isHardcoreZone) {
+            track = { like: 0.45, fav: 0.50, dm: 0.05, review: 0, noDurPenalty: false };
+        }
         const effectiveDur = (track.noDurPenalty || track.noBonus) ? 1.0 : metrics.durFactor;
         const effectivePlay = track.noBonus ? 1.0 : metrics.playFactor;
 
@@ -3192,23 +3209,29 @@
         const smoothLikeRatio = ((metrics.like + 40) / smoothPlay) * effectiveDur * effectivePlay;
         const smoothFavRatio = ((metrics.favorites + 20) / smoothPlay) * effectiveDur * effectivePlay;
 
-        const likeScore = 100 * (1 - Math.exp(-smoothLikeRatio / 0.045));
-        const favScore = 100 * (1 - Math.exp(-smoothFavRatio / 0.025));
-        const dmScore = 100 * (1 - Math.exp(-metrics.danmakuDensity / 12));
-        const reviewScore = 100 * (1 - Math.exp(-metrics.reviewRatio / 0.005));
+        const likeScore = 100 * (1 - Math.exp(-smoothLikeRatio / 0.06));
+        const favScore = 100 * (1 - Math.exp(-smoothFavRatio / 0.035));
+        const dmScore = 100 * (1 - Math.exp(-metrics.danmakuDensity / 18));
+        const reviewScore = 100 * (1 - Math.exp(-metrics.reviewRatio / 0.006));
 
-        const rawScore =
+        let rawScore =
             likeScore * track.like +
             favScore * track.fav +
             dmScore * track.dm +
             reviewScore * track.review;
+
+        // 分区轻量加减分（高分段渐进收敛，避免扎堆 100 满分；避坑标签不参与加分）
+        if (!track.noBonus) {
+            if (isHardcoreZone) rawScore += (100 - rawScore) * 0.05;
+            else if (isEntZone) rawScore *= 0.95;
+        }
 
         const cap = track.maxScore !== undefined ? track.maxScore : 100;
         return Math.min(cap, Math.round(rawScore));
     }
 
     // 纯视频品质象限判定函数（返回命中象限对象）
-    function getQualityQuadrant(stat, precomputedMetrics = null) {
+    function getQualityQuadrant(stat, precomputedMetrics = null, evalContext = null) {
         if (!stat) return null;
         // 方案 1：数据尚未就绪（仅卡片 DOM 提取的粗略部分数据，无真实点赞/收藏）时，一开始不评级
         if (stat.isPartial) return null;
@@ -3221,6 +3244,7 @@
             durationMinutes,
             likeRatio,
             favRatio,
+            favLikeRatio,
             reviewRatio,
             reviewLikeRatio,
             danmakuDensity,
@@ -3228,13 +3252,41 @@
             normFavRatio
         } = precomputedMetrics || computeQualityMetrics(stat);
 
+        const typename = stat.typename || '';
+        const combinedText = `${evalContext?.title || ''} ${evalContext?.tags || ''} ${typename}`;
+        const hasTutorialIntent = TUTORIAL_INTENT_RE.test(combinedText);
+        const isHardcoreZone = Boolean(typename && HARDCORE_BOOST_ZONE_RE.test(typename));
+        const isEntZone = !isHardcoreZone && Boolean(typename && ENTERTAINMENT_ZONE_RE.test(typename));
+
+        // 干货门槛微调系数：干货区/教程意图放宽 15% (0.85x)，纯娱乐区收紧 15% (1.15x)，其余维持 1.0x
+        let hardcoreMult = 1.0;
+        let minFavLikeForNorm = 0.40;
+        if (isHardcoreZone || hasTutorialIntent) {
+            hardcoreMult = 0.85;
+            minFavLikeForNorm = 0.30;
+        } else if (isEntZone) {
+            hardcoreMult = 1.15;
+            minFavLikeForNorm = 0.55;
+        }
+
         // 弹幕与评论热度特征分析
         // 争议/论战特征校验：真实网络对线与争议事件的核心特征是“观众不愿点赞，集中在评论区写小作文互撕”，评赞比异常高（>= 10%）
-        // 若点赞极高而评论仅占很小比例（如 4.5万赞 vs 2659评，评赞比仅 5.9%），表明观众一边倒热情好评，属于高能互动而非争议对线
-        const isDanmakuHigh = (danmakuDensity >= 15 && danmaku >= 300) || (danmaku >= 3000 && danmakuDensity >= 8);
-        const isReviewDebated = (reviewLikeRatio >= 0.10) && (
+        // 若属干货/教程向内容，适度提高阈值至 18% 以减少评论区求资源/问报错的误判
+        const debateRatioThreshold = (isHardcoreZone || hasTutorialIntent) ? 0.18 : 0.10;
+        const dmDensityMult = isEntZone ? 1.15 : 1.0;
+        const isDanmakuHigh = (danmakuDensity >= 15 * dmDensityMult && danmaku >= 300) || (danmaku >= 3000 && danmakuDensity >= 8 * dmDensityMult);
+        const isReviewDebated = (reviewLikeRatio >= debateRatioThreshold) && (
             (review >= 300 && reviewRatio >= 0.0035) || 
             (review >= 1500 && reviewRatio >= 0.002)
+        );
+
+        // 干货判定：以「藏赞比」与「藏播比」为主轴，配合分区轻量微调，不做硬性黑名单封禁
+        const isHardcoreMatch = durationMinutes >= 1.5 && (
+            (favLikeRatio >= minFavLikeForNorm && (
+                (play >= 5000 && normFavRatio >= 0.04 * hardcoreMult && favorites >= 250) ||
+                (favorites >= 2000 && normFavRatio >= 0.025 * hardcoreMult)
+            )) ||
+            (play >= 3000 && favorites >= 120 && favLikeRatio >= 0.75 && normFavRatio >= 0.025 * hardcoreMult)
         );
 
         // 【第一层：冷门置信度保护】播放量不足 3000 时，不作随意定性（极少数纯度极高者破格授予冷门宝藏）
@@ -3287,8 +3339,8 @@
                 tag: '💎 冷门宝藏',
                 desc: '小众冷门宝藏，播放虽少但纯度极高'
             };
-        } else if (durationMinutes >= 1.5 && ((play >= 5000 && normFavRatio >= 0.04 && favorites >= 250) || (favorites >= 2000 && normFavRatio >= 0.025))) {
-            // 【T1 一流干货】：样本充足、时长门槛 >= 90秒且收藏转化极高（加权）
+        } else if (isHardcoreMatch) {
+            // 【T1 一流干货】：样本充足、时长门槛 >= 90秒且收藏转化/藏赞比达标（含分区与擦边隔离）
             return {
                 className: 'q-hardcore',
                 tag: '💡 硬核干货',
@@ -3378,7 +3430,7 @@
             durFactor,
             playFactor
         } = metrics;
-        const healthScore = computeHealthScore(metrics, quadrant.className);
+        const healthScore = computeHealthScore(metrics, quadrant.className, stat?.typename || '');
 
         let badgeCol = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
         if (!badgeCol) {
@@ -3392,6 +3444,9 @@
             `【${quadrant.tag}】${quadrant.desc}`,
             '────────────────────'
         ];
+        if (stat?.typename) {
+            tipLines.push(`📂 分区: ${stat.typename}`);
+        }
         if (play > 0) {
             tipLines.push(`📊 综合参考分: ${healthScore}%`);
         }
