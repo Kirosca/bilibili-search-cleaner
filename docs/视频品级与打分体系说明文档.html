@@ -76,9 +76,75 @@
         </div>
       </div>
       <p class="text-sm text-slate-600 leading-relaxed max-w-4xl">
-        本体系在搜索页零额外请求的前提下，基于播放、点赞、收藏、弹幕、评论、时长、分区与发布时间，完成 <strong>12 维定性品级判定</strong> 与 <strong>0~100 综合参考分</strong> 计算。通过「低底分 + <code>perfFloor</code> 区间拉伸 + 明码词条加减」，实现<strong>防倒挂隔离</strong>、<strong>60 分佳作及格线</strong>与<strong>同品级大跨度区分</strong>。
+        本体系在搜索页零额外请求的前提下，基于播放、点赞、收藏、弹幕、评论、时长、分区与发布时间，完成 <strong>12 维定性品级判定</strong> 与 <strong>0~100 综合参考分</strong> 计算。通过「低底分 + <code>[perfFloor, perfCeil]</code> 双端区间拉伸 + 明码词条加减」，实现<strong>防倒挂隔离</strong>、<strong>60 分佳作及格线</strong>与<strong>同品级大跨度区分</strong>。
       </p>
     </header>
+
+    <!-- Overview: Three-Layer Scoring Architecture -->
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
+      <h2 class="text-lg sm:text-xl font-bold flex items-center gap-2.5 mb-3">
+        <span class="w-7 h-7 rounded-lg bg-bili/15 text-bili text-sm font-bold inline-flex items-center justify-center">0</span>
+        打分体系总览：先定性分级，再三层算分
+      </h2>
+      <div class="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3 mb-5 flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm">
+        <div>
+          <span class="font-bold text-slate-800">总分公式：</span>
+          <code class="text-bili font-semibold">综合参考分 = clamp( 品级基础底分 + 赛道表现浮动分 + 结算词条净加分, min, max )</code>
+        </div>
+        <span class="text-xs text-slate-500">悬停封面胶囊即可查看完整拆解明细</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+        <div class="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+          <div class="flex items-center gap-2 font-bold text-sm text-slate-800 mb-2">
+            <span class="px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-600 text-xs">第一层</span>
+            品级稀有度底分 (base)
+          </div>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            先经 12 维瀑布流判定品级并锚定区间：<strong>⚠️ 谨慎观看</strong> 封顶 20、<strong>🍀 稳健良作</strong> 保底 22（防倒挂）；四档佳作守住 <strong>60</strong> 及格线；<strong>🏆 殿堂神作</strong> 独享 <code>91~98</code> 天花板。
+          </p>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+          <div class="flex items-center gap-2 font-bold text-sm text-slate-800 mb-2">
+            <span class="px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-600 text-xs">第二层</span>
+            赛道表现浮动 (floatScore)
+          </div>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            按赛道加权（如干货偏藏 55%、弹幕偏弹 55%）与平滑饱和曲线算出全站表现率 <code>perfRatio</code>，再按各品级有效区间 <code>[perfFloor, perfCeil]</code> 拉伸与非对称曲率映射，将同品级内部差距铺满 <code>0~floatMax</code>。
+          </p>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+          <div class="flex items-center gap-2 font-bold text-sm text-slate-800 mb-2">
+            <span class="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 text-xs">第三层</span>
+            明码结算词条 (bonuses)
+          </div>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            正向净加分封顶 <strong>+12</strong>。覆盖三连爆发、藏赞纯度、百万/破圈体量、超长/短精篇幅、三年/跨年时间检验、深度共鸣与分区/风险微调（同维度严格互斥）。
+          </p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+        <div class="rounded-lg bg-rose-500/5 border border-rose-500/20 px-3 py-2.5">
+          <div class="font-bold text-rose-600 mb-0.5">✅ 绝不倒挂</div>
+          <div class="text-slate-600">避坑封顶 20，稳健保底 22</div>
+        </div>
+        <div class="rounded-lg bg-emerald-500/5 border border-emerald-500/20 px-3 py-2.5">
+          <div class="font-bold text-emerald-600 mb-0.5">✅ 同级拉得开</div>
+          <div class="text-slate-600">双端拉伸吃满 22~36 分跨度</div>
+        </div>
+        <div class="rounded-lg bg-sky-500/5 border border-sky-500/20 px-3 py-2.5">
+          <div class="font-bold text-sky-600 mb-0.5">✅ 跨级有协同</div>
+          <div class="text-slate-600">满词条蓝卡可反超擦线金卡</div>
+        </div>
+        <div class="rounded-lg bg-amber-500/5 border border-amber-500/20 px-3 py-2.5">
+          <div class="font-bold text-amber-600 mb-0.5">✅ 完全可解释</div>
+          <div class="text-slate-600">Tooltip 透明列出每分来源</div>
+        </div>
+      </div>
+    </section>
 
     <!-- Section 1: Range & Overlap Visualization -->
     <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
