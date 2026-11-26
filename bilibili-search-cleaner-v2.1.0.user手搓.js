@@ -3220,7 +3220,7 @@
             '────────────────────'
         ];
         if (play > 0) {
-            tipLines.push(`📊 综合参考分: ${healthScore}% (${formatTrackWeights(quadrant.className)})`);
+            tipLines.push(`📊 综合参考分: ${healthScore}%`);
         }
         if (like > 0) {
             tipLines.push(`👍 赞播比: ${(likeRatio * 100).toFixed(1)}% (${formatStat(like)})`);
