@@ -2667,17 +2667,17 @@
         {
             key: 'q-high-reputation',
             label: '⭐ 高口碑佳作',
-            criteria: '(播放 ≥ 5000 且 赞播比*权重 ≥ 7%，赞 ≥ 400) 或 (赞 ≥ 5000 且 赞播比*权重 ≥ 4.5%)\n【特点】观众清一色好评点赞，高认可度优质佳作（时长加权）'
+            criteria: '(播放 ≥ 5000 且 赞播比*权重 ≥ 7%，赞 ≥ 400) 或 (赞 ≥ 5000 且 赞播比*权重 ≥ 4.5%)\n【特点】观众清一色好评点赞，高认可度优质佳作（时长/播放加权）'
         },
         {
             key: 'q-balanced-masterpiece',
             label: '🏅 综合标杆',
-            criteria: '播放 ≥ 1万 且 赞播比*权重 ≥ 4.5%，藏播比*权重 ≥ 2.2%，赞 ≥ 600，藏 ≥ 300\n【特点】赞藏双优全面扎实，六边形无短板水准（时长加权）'
+            criteria: '播放 ≥ 1万 且 赞播比*权重 ≥ 4.5%，藏播比*权重 ≥ 2.2%，赞 ≥ 600，藏 ≥ 300\n【特点】赞藏双优全面扎实，六边形无短板水准（时长/播放加权）'
         },
         {
             key: 'q-hidden-gem',
             label: '💎 冷门宝藏',
-            criteria: '播放 < 2万，赞 ≥ 200，藏 ≥ 80，且 (赞播比*权重 ≥ 8% 或 藏播比*权重 ≥ 4.5%)\n【特点】中小样本下的极高纯度遗珠，小众高分佳作（时长加权）'
+            criteria: '播放 < 2万，赞 ≥ 200，藏 ≥ 80，且 (赞播比*权重 ≥ 8% 或 藏播比*权重 ≥ 4.5%)\n【特点】中小样本下的极高纯度遗珠，小众高分佳作（时长/播放加权）'
         },
         {
             key: 'q-routine',
@@ -2754,7 +2754,8 @@
                     const actionTip = opt.isAll 
                         ? '点击重置为全部' 
                         : '点击单选 | 按住 Ctrl 点击多选 | 按住 Shift 点击范围连选';
-                    btn.title = `【${opt.label}】筛选标准：\n${opt.criteria}\n────────────────────\n💡 ${actionTip}`;
+                    const weightLine = opt.isAll ? '' : `\n【参考分权重】${formatTrackWeights(opt.key)}`;
+                    btn.title = `【${opt.label}】筛选标准：\n${opt.criteria}${weightLine}\n────────────────────\n💡 ${actionTip}`;
                 }
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -3000,6 +3001,18 @@
     };
     const DEFAULT_HEALTH_TRACK = { like: 0.50, fav: 0.35, dm: 0.15, review: 0, noDurPenalty: false };
 
+    // 格式化输出当前品级赛道的权重配比文案（供筛选栏与封面胶囊 title 复用）
+    function formatTrackWeights(qualityClass) {
+        const track = HEALTH_SCORE_TRACKS[qualityClass] || DEFAULT_HEALTH_TRACK;
+        const parts = [];
+        if (track.like > 0) parts.push(`赞${Math.round(track.like * 100)}%`);
+        if (track.fav > 0) parts.push(`藏${Math.round(track.fav * 100)}%`);
+        if (track.dm > 0) parts.push(`弹幕${Math.round(track.dm * 100)}%`);
+        if (track.review > 0) parts.push(`评${Math.round(track.review * 100)}%`);
+        const suffix = track.noDurPenalty ? '，无时长惩罚' : '';
+        return `${parts.join(' · ')}${suffix}`;
+    }
+
     // 按命中品级所在赛道计算 0~100% 综合参考分（含轻微先验平滑防小样本虚高）
     function computeHealthScore(metrics, qualityClass) {
         if (!metrics || metrics.play <= 0) return 0;
@@ -3207,7 +3220,7 @@
             '────────────────────'
         ];
         if (play > 0) {
-            tipLines.push(`📊 综合参考分: ${healthScore}%`);
+            tipLines.push(`📊 综合参考分: ${healthScore}% (${formatTrackWeights(quadrant.className)})`);
         }
         if (like > 0) {
             tipLines.push(`👍 赞播比: ${(likeRatio * 100).toFixed(1)}% (${formatStat(like)})`);
