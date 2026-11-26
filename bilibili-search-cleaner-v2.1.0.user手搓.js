@@ -1106,12 +1106,13 @@
                     } else {
                         stat = extractStatFromCard(card);
                     }
+                    let evalCtx = null;
                     if (!stat.isPartial) {
-                        const evalCtx = { title, tags: videoTags };
+                        evalCtx = { title, tags: videoTags };
                         metrics = computeQualityMetrics(stat);
                         quadrant = getQualityQuadrant(stat, metrics, evalCtx);
                     }
-                    renderBadgeColumn(coverEl, stat, quadrant, metrics);
+                    renderBadgeColumn(coverEl, stat, quadrant, metrics, evalCtx);
                 } else if (isLiveCard) {
                     hasFullStat = true;
                     if (coverEl) {
@@ -3194,6 +3195,7 @@
     const HARDCORE_BOOST_ZONE_RE = /科普|技术|软件|编程|开发|数码|教程|财经|社科|心理|法律|职场|学习|机械|极客|设计|摄影|人文|历史/;
     const ENTERTAINMENT_ZONE_RE = /宅舞|舞蹈|颜值|服饰|时尚|明星|鬼畜|搞笑|日常|运动|萌宠|动物|美食|演奏|翻唱|MAD|MMD|手书/i;
     const TUTORIAL_INTENT_RE = /教程|教学|攻略|指南|测评|避坑|原理|入门|实操|解析|源码|配置|安装|拆解|复习|考前|笔记|干货/;
+    const SERIES_INTENT_RE = /合集|全集|全套|保姆级|完整版|从零|一小时/;
 
     // 杀戮尖塔式品级稀有度底分与区间锚定表（通过 perfFloor ~ perfCeil 拉伸同品级内部跨度，避免扎堆）
     const SCORE_TIER_BANDS = {
@@ -3212,7 +3214,7 @@
     };
 
     // 按杀戮尖塔式三层模型（品级底分 + 赛道表现浮动 + 明码词条加减）计算完整评分明细
-    function computeScoreBreakdown(metrics, qualityClass, typename = '') {
+    function computeScoreBreakdown(metrics, qualityClass, typename = '', evalContext = null) {
         if (!metrics || metrics.play <= 0) {
             return { score: 0, base: 0, floatScore: 0, bonusTotal: 0, bonuses: [] };
         }
@@ -3256,6 +3258,12 @@
             if (metrics.likeRatio >= 0.10 && metrics.favRatio >= 0.05) {
                 bonuses.push({ label: '🔥 三连拉满', delta: 3 });
             }
+            if (metrics.likeRatio >= 0.15 && metrics.like >= 1000) {
+                bonuses.push({ label: '🌟 极致口碑', delta: 3 });
+            }
+            if (metrics.favRatio >= 0.08 && metrics.favorites >= 300) {
+                bonuses.push({ label: '📌 极高藏播', delta: 3 });
+            }
             if (metrics.favLikeRatio >= 1.20 && metrics.favorites >= 500) {
                 bonuses.push({ label: '📚 压箱宝典', delta: 4 });
             } else if (metrics.favLikeRatio >= 0.90 && metrics.favorites >= 300) {
@@ -3274,13 +3282,20 @@
             } else if (metrics.durationMinutes > 0 && metrics.durationMinutes <= 2 && metrics.likeRatio >= 0.10 && metrics.favRatio >= 0.04) {
                 bonuses.push({ label: '⚡ 短小精悍', delta: 2 });
             }
+            if (metrics.durationMinutes >= 15 && metrics.favLikeRatio >= 0.5 && SERIES_INTENT_RE.test(evalContext?.title || '')) {
+                bonuses.push({ label: '📑 系统合集', delta: 1 });
+            }
             if (metrics.likeRatio >= 0.05 && metrics.favRatio >= 0.025 && metrics.danmakuDensity >= 8 && metrics.reviewRatio >= 0.002) {
                 bonuses.push({ label: '⚖️ 六边形平衡', delta: 2 });
             }
             if (metrics.danmakuDensity >= 30 && metrics.danmaku >= 500) {
                 bonuses.push({ label: '💬 满屏名场面', delta: 2 });
+            } else if (metrics.durationMinutes >= 3 && metrics.danmakuDensity < 0.5 && metrics.likeRatio >= 0.06) {
+                bonuses.push({ label: '🔇 静默纯享', delta: 1 });
             }
-            if (metrics.review >= 500 && metrics.likeRatio >= 0.05 && metrics.reviewLikeRatio >= 0.02 && metrics.reviewLikeRatio <= 0.12) {
+            if (metrics.review >= 2000 && metrics.likeRatio >= 0.04 && metrics.reviewLikeRatio >= 0.02 && metrics.reviewLikeRatio <= 0.15) {
+                bonuses.push({ label: '💬 热评如潮', delta: 3 });
+            } else if (metrics.review >= 500 && metrics.likeRatio >= 0.05 && metrics.reviewLikeRatio >= 0.02 && metrics.reviewLikeRatio <= 0.12) {
                 bonuses.push({ label: '🗣️ 深度共鸣', delta: 2 });
             }
             if (metrics.ageDays >= 1095 && (metrics.likeRatio >= 0.05 || metrics.favRatio >= 0.03)) {
@@ -3289,6 +3304,9 @@
                 bonuses.push({ label: '🏛️ 跨年长青', delta: 2 });
             } else if (metrics.ageDays >= 0 && metrics.ageDays < 2 && band.base >= 50) {
                 bonuses.push({ label: '⏳ 新片冷静', delta: -3 });
+            }
+            if (metrics.play >= 100000 && metrics.likeRatio < 0.015 && metrics.favRatio < 0.008) {
+                bonuses.push({ label: '🕳️ 标题党预警', delta: -3 });
             }
             if (!isHardcoreZone && metrics.reviewLikeRatio >= 0.20 && metrics.review >= 300) {
                 bonuses.push({ label: '⚔️ 争议高发', delta: -2 });
@@ -3481,7 +3499,7 @@
     }
 
     // 在视频封面 .v-img.bili-video-card__cover 内挂载/更新评价勋章列
-    function renderBadgeColumn(coverEl, stat, precomputedQuadrant = undefined, precomputedMetrics = null) {
+    function renderBadgeColumn(coverEl, stat, precomputedQuadrant = undefined, precomputedMetrics = null, evalContext = null) {
         if (!coverEl) return;
         if (!isEvaluationBadge) {
             const existing = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
@@ -3490,7 +3508,7 @@
         }
 
         const metrics = precomputedMetrics || (stat && !stat.isPartial ? computeQualityMetrics(stat) : null);
-        const quadrant = precomputedQuadrant !== undefined ? precomputedQuadrant : getQualityQuadrant(stat, metrics);
+        const quadrant = precomputedQuadrant !== undefined ? precomputedQuadrant : getQualityQuadrant(stat, metrics, evalContext);
         // 数据未就绪或未命中评级时，清空原有勋章并留白
         if (!quadrant) {
             const existing = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
@@ -3519,7 +3537,7 @@
             durFactor,
             playFactor
         } = metrics;
-        const scoreDetail = computeScoreBreakdown(metrics, quadrant.className, stat?.typename || '');
+        const scoreDetail = computeScoreBreakdown(metrics, quadrant.className, stat?.typename || '', evalContext);
         const healthScore = scoreDetail.score;
 
         let badgeCol = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
