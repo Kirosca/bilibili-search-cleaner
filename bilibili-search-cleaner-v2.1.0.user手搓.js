@@ -3125,6 +3125,8 @@
         const favorites = stat?.favorites || 0;
         const danmaku = stat?.danmaku || 0;
         const review = stat?.review || 0;
+        const pubdate = Number(stat?.pubdate) || 0;
+        const ageDays = pubdate > 0 ? Math.max(0, (Date.now() / 1000 - pubdate) / 86400) : -1;
         const durationMinutes = parseDurationMinutes(stat?.duration);
 
         const likeRatio = play > 0 ? (like / play) : 0;
@@ -3149,6 +3151,8 @@
             favorites,
             danmaku,
             review,
+            pubdate,
+            ageDays,
             durationMinutes,
             likeRatio,
             favRatio,
@@ -3195,7 +3199,7 @@
     const SCORE_TIER_BANDS = {
         'q-warning':              { base: 6,  floatMax: 14, min: 0,  max: 20 },
         'q-low-sample':           { base: 24, floatMax: 20, min: 12, max: 48 },
-        'q-routine':              { base: 22, floatMax: 26, min: 22, max: 54 },
+        'q-routine':              { base: 26, floatMax: 28, min: 22, max: 54 },
         'q-danmaku-carnival':     { base: 46, floatMax: 18, min: 46, max: 72 },
         'q-heated-debate':        { base: 48, floatMax: 18, min: 48, max: 74 },
         'q-opinion-storm':        { base: 52, floatMax: 18, min: 52, max: 78 },
@@ -3239,7 +3243,9 @@
             dmScore * track.dm +
             reviewScore * track.review
         ) / 100));
-        const floatScore = Math.round(perfRatio * band.floatMax);
+        // 中高品级采用 1.6 次幂凹曲线防高分扎堆；基础品级采用 0.85 次幂展开中游区分度
+        const curvedPerf = band.base >= 50 ? Math.pow(perfRatio, 1.6) : Math.pow(perfRatio, 0.85);
+        const floatScore = Math.round(curvedPerf * band.floatMax);
 
         const bonuses = [];
         if (!track.noBonus && qualityClass !== 'q-low-sample') {
@@ -3249,7 +3255,9 @@
             if (metrics.favLikeRatio >= 0.90 && metrics.favorites >= 300) {
                 bonuses.push({ label: '💎 纯度极高', delta: 3 });
             }
-            if (metrics.play >= 1000000 && metrics.likeRatio >= 0.05) {
+            if (metrics.play >= 3000000 && metrics.likeRatio >= 0.05 && metrics.favRatio >= 0.025) {
+                bonuses.push({ label: '👑 现象级破圈', delta: 4 });
+            } else if (metrics.play >= 1000000 && metrics.likeRatio >= 0.05) {
                 bonuses.push({ label: '🌊 百万不稀释', delta: 3 });
             }
             if (metrics.durationMinutes >= 20 && metrics.normLikeRatio >= 0.05) {
@@ -3257,6 +3265,14 @@
             }
             if (metrics.danmakuDensity >= 30 && metrics.danmaku >= 500) {
                 bonuses.push({ label: '💬 满屏名场面', delta: 2 });
+            }
+            if (metrics.review >= 500 && metrics.likeRatio >= 0.05 && metrics.reviewLikeRatio >= 0.02 && metrics.reviewLikeRatio <= 0.12) {
+                bonuses.push({ label: '🗣️ 深度共鸣', delta: 2 });
+            }
+            if (metrics.ageDays >= 365 && (metrics.likeRatio >= 0.05 || metrics.favRatio >= 0.03)) {
+                bonuses.push({ label: '🏛️ 跨年长青', delta: 3 });
+            } else if (metrics.ageDays >= 0 && metrics.ageDays < 2 && band.base >= 50) {
+                bonuses.push({ label: '⏳ 新片冷静', delta: -3 });
             }
             if (isHardcoreZone) {
                 bonuses.push({ label: '📂 干货分区', delta: 1 });
@@ -3527,6 +3543,14 @@
         if (stat?.duration) {
             const factorText = (durationMinutes > 0 && Math.abs(durFactor - 1.0) >= 0.05) ? ` (时长权重 ${durFactor.toFixed(2)}x)` : '';
             tipLines.push(`⏱️ 视频时长: ${formatDuration(stat.duration)}${factorText}`);
+        }
+        if (metrics.pubdate > 0) {
+            const pd = new Date(metrics.pubdate * 1000);
+            const yyyy = pd.getFullYear();
+            const mm = String(pd.getMonth() + 1).padStart(2, '0');
+            const dd = String(pd.getDate()).padStart(2, '0');
+            const daysText = metrics.ageDays >= 0 ? ` (${Math.floor(metrics.ageDays)}天前)` : '';
+            tipLines.push(`📅 发布时间: ${yyyy}-${mm}-${dd}${daysText}`);
         }
 
         const tip = tipLines.join('\n');
