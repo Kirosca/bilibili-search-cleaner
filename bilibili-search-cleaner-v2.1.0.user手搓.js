@@ -3243,8 +3243,8 @@
             dmScore * track.dm +
             reviewScore * track.review
         ) / 100));
-        // 中高品级采用 1.6 次幂凹曲线防高分扎堆；基础品级采用 0.85 次幂展开中游区分度
-        const curvedPerf = band.base >= 50 ? Math.pow(perfRatio, 1.6) : Math.pow(perfRatio, 0.85);
+        // 中高品级采用 1.25 次幂凹曲线防高分扎堆；基础品级采用 0.85 次幂展开中游区分度
+        const curvedPerf = band.base >= 50 ? Math.pow(perfRatio, 1.25) : Math.pow(perfRatio, 0.85);
         const floatScore = Math.round(curvedPerf * band.floatMax);
 
         const bonuses = [];
@@ -3252,16 +3252,26 @@
             if (metrics.likeRatio >= 0.10 && metrics.favRatio >= 0.05) {
                 bonuses.push({ label: '🔥 三连拉满', delta: 3 });
             }
-            if (metrics.favLikeRatio >= 0.90 && metrics.favorites >= 300) {
-                bonuses.push({ label: '💎 纯度极高', delta: 3 });
+            if (metrics.favLikeRatio >= 1.20 && metrics.favorites >= 500) {
+                bonuses.push({ label: '📚 压箱宝典', delta: 4 });
+            } else if (metrics.favLikeRatio >= 0.90 && metrics.favorites >= 300) {
+                bonuses.push({ label: '💎 纯度极高', delta: 2 });
             }
-            if (metrics.play >= 3000000 && metrics.likeRatio >= 0.05 && metrics.favRatio >= 0.025) {
+            const isPhenomenal = metrics.play >= 3000000 && metrics.likeRatio >= 0.05 && metrics.favRatio >= 0.025;
+            if (isPhenomenal) {
                 bonuses.push({ label: '👑 现象级破圈', delta: 4 });
             } else if (metrics.play >= 1000000 && metrics.likeRatio >= 0.05) {
                 bonuses.push({ label: '🌊 百万不稀释', delta: 3 });
             }
-            if (metrics.durationMinutes >= 20 && metrics.normLikeRatio >= 0.05) {
+            if (metrics.durationMinutes >= 45 && metrics.normLikeRatio >= 0.04) {
+                bonuses.push({ label: '🎬 超长精作', delta: 3 });
+            } else if (metrics.durationMinutes >= 20 && metrics.normLikeRatio >= 0.05) {
                 bonuses.push({ label: '⏱️ 长篇硬核', delta: 2 });
+            } else if (metrics.durationMinutes > 0 && metrics.durationMinutes <= 2 && metrics.likeRatio >= 0.10 && metrics.favRatio >= 0.04) {
+                bonuses.push({ label: '⚡ 短小精悍', delta: 2 });
+            }
+            if (metrics.likeRatio >= 0.05 && metrics.favRatio >= 0.025 && metrics.danmakuDensity >= 8 && metrics.reviewRatio >= 0.002) {
+                bonuses.push({ label: '⚖️ 六边形平衡', delta: 2 });
             }
             if (metrics.danmakuDensity >= 30 && metrics.danmaku >= 500) {
                 bonuses.push({ label: '💬 满屏名场面', delta: 2 });
@@ -3269,14 +3279,22 @@
             if (metrics.review >= 500 && metrics.likeRatio >= 0.05 && metrics.reviewLikeRatio >= 0.02 && metrics.reviewLikeRatio <= 0.12) {
                 bonuses.push({ label: '🗣️ 深度共鸣', delta: 2 });
             }
-            if (metrics.ageDays >= 365 && (metrics.likeRatio >= 0.05 || metrics.favRatio >= 0.03)) {
-                bonuses.push({ label: '🏛️ 跨年长青', delta: 3 });
+            if (metrics.ageDays >= 1095 && (metrics.likeRatio >= 0.05 || metrics.favRatio >= 0.03)) {
+                bonuses.push({ label: '🏛️ 三年经典', delta: 4 });
+            } else if (metrics.ageDays >= 365 && (metrics.likeRatio >= 0.05 || metrics.favRatio >= 0.03)) {
+                bonuses.push({ label: '🏛️ 跨年长青', delta: 2 });
             } else if (metrics.ageDays >= 0 && metrics.ageDays < 2 && band.base >= 50) {
                 bonuses.push({ label: '⏳ 新片冷静', delta: -3 });
             }
+            if (!isHardcoreZone && metrics.reviewLikeRatio >= 0.20 && metrics.review >= 300) {
+                bonuses.push({ label: '⚔️ 争议高发', delta: -2 });
+            }
+            if (!isHardcoreZone && metrics.durationMinutes >= 10 && metrics.danmaku < 10 && metrics.play >= 10000) {
+                bonuses.push({ label: '🤖 长篇冷清', delta: -1 });
+            }
             if (isHardcoreZone) {
                 bonuses.push({ label: '📂 干货分区', delta: 1 });
-            } else if (isEntZone) {
+            } else if (isEntZone && qualityClass !== 'q-hall-of-fame' && !isPhenomenal) {
                 bonuses.push({ label: '🎈 娱乐微调', delta: -2 });
             }
             if (qualityClass === 'q-routine' && metrics.likeRatio < 0.02 && metrics.favRatio < 0.01) {
@@ -3284,7 +3302,8 @@
             }
         }
 
-        const bonusTotal = bonuses.reduce((sum, b) => sum + b.delta, 0);
+        const rawBonusTotal = bonuses.reduce((sum, b) => sum + b.delta, 0);
+        const bonusTotal = Math.min(12, rawBonusTotal);
         const rawTotal = band.base + floatScore + bonusTotal;
         const score = Math.min(band.max, Math.max(band.min, rawTotal));
 
