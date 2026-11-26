@@ -426,6 +426,13 @@
             flex-shrink: 0 !important;
             letter-spacing: 0.2px !important;
         }
+        .bili-cleaner-badge-score {
+            font-size: 10.5px !important;
+            font-weight: 600 !important;
+            opacity: 0.9 !important;
+            font-variant-numeric: tabular-nums !important;
+            flex-shrink: 0 !important;
+        }
 
         /* --- 纯品质金字塔胶囊配色体系 --- */
         /* 1. 🏆 殿堂神作：耀目流金 */
@@ -3406,17 +3413,33 @@
 
         const tip = tipLines.join('\n');
 
-        // 幂等性守卫：若勋章已存在且评级未变，仅更新 title 提示，严禁销毁重建 DOM 节点（避免重置正在播放的 CSS 动画）
+        const showInlineScore = play > 0 && quadrant.className !== 'q-low-sample';
+        const scoreText = showInlineScore ? `· ${healthScore}` : '';
+
+        // 幂等性守卫：若勋章已存在且评级未变，仅更新 title 与分数文本，严禁销毁重建 DOM 节点（避免重置正在播放的 CSS 动画）
         const pill = badgeCol.querySelector('.bili-cleaner-badge-pill');
         if (pill && pill.classList.contains(quadrant.className)) {
             if (pill.title !== tip) pill.title = tip;
+            let scoreEl = pill.querySelector('.bili-cleaner-badge-score');
+            if (showInlineScore) {
+                if (!scoreEl) {
+                    scoreEl = document.createElement('span');
+                    scoreEl.className = 'bili-cleaner-badge-score';
+                    pill.appendChild(scoreEl);
+                }
+                if (scoreEl.textContent !== scoreText) scoreEl.textContent = scoreText;
+            } else if (scoreEl) {
+                scoreEl.remove();
+            }
             return;
         }
 
         // 先用占位空 title 注入结构，再通过 DOM property 写入含换行的完整提示文本（避免 innerHTML 中引号截断 title 属性）
+        const scoreHtml = showInlineScore ? `<span class="bili-cleaner-badge-score">${scoreText}</span>` : '';
         badgeCol.innerHTML = `
             <div class="bili-cleaner-badge-pill ${quadrant.className}">
                 <span class="bili-cleaner-badge-tag">${quadrant.tag}</span>
+                ${scoreHtml}
             </div>
         `;
         const newPill = badgeCol.querySelector('.bili-cleaner-badge-pill');
