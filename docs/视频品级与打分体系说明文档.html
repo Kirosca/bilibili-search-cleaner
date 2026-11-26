@@ -94,7 +94,7 @@
         </div>
       </div>
       <p class="text-sm text-slate-600 dark:text-slate-400 mb-6">
-        下图按 <code>0~100</code> 绝对刻度对齐展示各品级区间：<strong>避坑区 (0~20) 与稳健区 (22~54) 严格物理隔离</strong>；中高品级之间采用<strong>阶梯交叉包裹</strong>（顶级蓝卡 <code>80~88</code> 可反超擦线金卡 <code>70~76</code>，而 <code>91~98</code> 为殿堂神作独享天花板）。
+        下图按 <code>0~100</code> 绝对刻度对齐展示各品级区间：<strong>避坑区 (0~20) 与稳健区 (22~54) 严格物理隔离</strong>；中高品级之间采用<strong>阶梯交叉包裹</strong>（顶级蓝卡 <code>80~88</code> 可反超擦线金卡 <code>68~76</code>，而 <code>91~98</code> 为殿堂神作独享天花板）。
       </p>
 
       <!-- Scale Axis -->
@@ -122,7 +122,7 @@
           <p class="text-slate-600 dark:text-slate-400"><code>⚠️ 谨慎观看</code> 封顶 20 分，<code>🍀 稳健良作</code> 保底 22 分，两者之间存在不可跨越的防线，杜绝低质视频反超良作。</p>
         </div>
         <div class="rounded-xl bg-sky-500/5 border border-sky-500/20 p-3.5">
-          <div class="font-bold text-sky-600 dark:text-sky-400 mb-1">🃏 蓝卡与金卡的交叉包裹（54~90 vs 68~98）</div>
+          <div class="font-bold text-sky-600 dark:text-sky-400 mb-1">🃏 蓝卡与金卡的交叉包裹（60~90 vs 68~98）</div>
           <p class="text-slate-600 dark:text-slate-400">擦线 <code>🏆 殿堂神作</code>（<code>68~76</code>）会被集齐稀有词条的顶级 <code>💡 硬核干货</code>/<code>🏅 综合标杆</code>（<code>82~90</code>）反超，符合杀戮尖塔哲学。</p>
         </div>
         <div class="rounded-xl bg-amber-500/5 border border-amber-500/20 p-3.5">
@@ -151,10 +151,10 @@
                 <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">选择品级 (Rarity Tier)</label>
                 <select id="sim-tier" class="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm font-medium">
                   <option value="q-hall-of-fame">🏆 殿堂神作 (base 68 · float 22 · floor 0.50)</option>
-                  <option value="q-balanced-masterpiece">🏅 综合标杆 (base 58 · float 26 · floor 0.36)</option>
-                  <option value="q-hardcore" selected>💡 硬核干货 (base 54 · float 28 · floor 0.32)</option>
-                  <option value="q-high-reputation">⭐ 高口碑佳作 (base 54 · float 28 · floor 0.32)</option>
-                  <option value="q-hidden-gem">💎 冷门宝藏 (base 54 · float 28 · floor 0.32)</option>
+                  <option value="q-balanced-masterpiece">🏅 综合标杆 (base 62 · float 22 · floor 0.36)</option>
+                  <option value="q-hardcore" selected>💡 硬核干货 (base 60 · float 22 · floor 0.32)</option>
+                  <option value="q-high-reputation">⭐ 高口碑佳作 (base 60 · float 22 · floor 0.32)</option>
+                  <option value="q-hidden-gem">💎 冷门宝藏 (base 60 · float 22 · floor 0.32)</option>
                   <option value="q-opinion-storm">💥 话题焦点 (base 50 · float 28 · floor 0.30)</option>
                   <option value="q-routine">🍀 稳健良作 (base 22 · float 32 · floor 0.08)</option>
                   <option value="q-warning">⚠️ 谨慎观看 (base 4 · float 16 · floor 0.00)</option>
@@ -190,17 +190,17 @@
             <div class="flex items-center justify-between gap-3">
               <div id="sim-pill" class="bili-pill q-hardcore">
                 <span id="sim-pill-tag">💡 硬核干货</span>
-                <span id="sim-pill-score" class="bili-pill-score">· 68</span>
+                <span id="sim-pill-score" class="bili-pill-score">· 72</span>
               </div>
               <div class="text-right">
-                <div class="text-2xl font-extrabold tabular-nums text-slate-900 dark:text-white"><span id="sim-total">68</span><span class="text-sm font-normal text-slate-400"> / 100</span></div>
+                <div class="text-2xl font-extrabold tabular-nums text-slate-900 dark:text-white"><span id="sim-total">72</span><span class="text-sm font-normal text-slate-400"> / 100</span></div>
               </div>
             </div>
             <div class="text-xs text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between tabular-nums">
-              <span>基础 <strong id="sim-out-base" class="text-slate-700 dark:text-slate-200">54</strong></span>
-              <span>+ 表现 <strong id="sim-out-float" class="text-sky-500">10</strong></span>
+              <span>基础 <strong id="sim-out-base" class="text-slate-700 dark:text-slate-200">60</strong></span>
+              <span>+ 表现 <strong id="sim-out-float" class="text-sky-500">8</strong></span>
               <span>+ 词条 <strong id="sim-out-bonus" class="text-amber-500">+4</strong></span>
-              <span>区间 [<span id="sim-out-range">54~88</span>]</span>
+              <span>区间 [<span id="sim-out-range">60~88</span>]</span>
             </div>
           </div>
         </div>
@@ -359,11 +359,11 @@
       { key: 'q-danmaku-carnival',     name: '🔥 弹幕密集', base: 44, floatMax: 28, min: 44, max: 76, perfFloor: 0.25, color: 'from-rose-500 to-orange-500', barColor: 'bg-orange-500', note: '偏弹幕55%' },
       { key: 'q-heated-debate',        name: '💬 激辩热议', base: 46, floatMax: 28, min: 46, max: 78, perfFloor: 0.25, color: 'from-blue-600 to-indigo-600', barColor: 'bg-blue-500',   note: '偏评论55%' },
       { key: 'q-opinion-storm',        name: '💥 话题焦点', base: 50, floatMax: 28, min: 50, max: 82, perfFloor: 0.30, color: 'from-pink-500 to-purple-500', barColor: 'bg-pink-500',   note: '双热交汇' },
-      { key: 'q-hardcore',             name: '💡 硬核干货', base: 54, floatMax: 28, min: 54, max: 88, perfFloor: 0.32, color: 'from-amber-500 to-amber-600', barColor: 'bg-amber-500',  note: '同级跨度34分' },
-      { key: 'q-high-reputation',      name: '⭐ 高口碑佳作', base: 54, floatMax: 28, min: 54, max: 88, perfFloor: 0.32, color: 'from-sky-500 to-blue-600',   barColor: 'bg-sky-500',    note: '同级跨度34分' },
-      { key: 'q-hidden-gem',           name: '💎 冷门宝藏', base: 54, floatMax: 28, min: 54, max: 88, perfFloor: 0.32, color: 'from-purple-600 to-indigo-500', barColor: 'bg-purple-500', note: '同级跨度34分' },
-      { key: 'q-viral-short',          name: '⚡ 爆款短片', base: 54, floatMax: 28, min: 54, max: 88, perfFloor: 0.32, color: 'from-cyan-500 to-emerald-500', barColor: 'bg-cyan-500',  note: '无时长惩罚' },
-      { key: 'q-balanced-masterpiece', name: '🏅 综合标杆', base: 58, floatMax: 26, min: 58, max: 90, perfFloor: 0.36, color: 'from-slate-600 to-slate-800', barColor: 'bg-indigo-500', note: '蓝卡旗舰' },
+      { key: 'q-hardcore',             name: '💡 硬核干货', base: 60, floatMax: 22, min: 60, max: 88, perfFloor: 0.32, color: 'from-amber-500 to-amber-600', barColor: 'bg-amber-500',  note: '同级跨度28分' },
+      { key: 'q-high-reputation',      name: '⭐ 高口碑佳作', base: 60, floatMax: 22, min: 60, max: 88, perfFloor: 0.32, color: 'from-sky-500 to-blue-600',   barColor: 'bg-sky-500',    note: '同级跨度28分' },
+      { key: 'q-hidden-gem',           name: '💎 冷门宝藏', base: 60, floatMax: 22, min: 60, max: 88, perfFloor: 0.32, color: 'from-purple-600 to-indigo-500', barColor: 'bg-purple-500', note: '同级跨度28分' },
+      { key: 'q-viral-short',          name: '⚡ 爆款短片', base: 60, floatMax: 22, min: 60, max: 88, perfFloor: 0.32, color: 'from-cyan-500 to-emerald-500', barColor: 'bg-cyan-500',  note: '无时长惩罚' },
+      { key: 'q-balanced-masterpiece', name: '🏅 综合标杆', base: 62, floatMax: 22, min: 62, max: 90, perfFloor: 0.36, color: 'from-slate-600 to-slate-800', barColor: 'bg-indigo-500', note: '蓝卡旗舰' },
       { key: 'q-hall-of-fame',         name: '🏆 殿堂神作', base: 68, floatMax: 22, min: 68, max: 98, perfFloor: 0.50, color: 'from-amber-400 to-orange-600', barColor: 'bg-amber-400', note: '独享91~98' }
     ];
 

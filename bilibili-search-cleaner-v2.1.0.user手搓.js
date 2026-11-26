@@ -3203,11 +3203,11 @@
         'q-danmaku-carnival':     { base: 44, floatMax: 28, min: 44, max: 76, perfFloor: 0.25 },
         'q-heated-debate':        { base: 46, floatMax: 28, min: 46, max: 78, perfFloor: 0.25 },
         'q-opinion-storm':        { base: 50, floatMax: 28, min: 50, max: 82, perfFloor: 0.30 },
-        'q-hidden-gem':           { base: 54, floatMax: 28, min: 54, max: 88, perfFloor: 0.32 },
-        'q-high-reputation':      { base: 54, floatMax: 28, min: 54, max: 88, perfFloor: 0.32 },
-        'q-hardcore':             { base: 54, floatMax: 28, min: 54, max: 88, perfFloor: 0.32 },
-        'q-balanced-masterpiece': { base: 58, floatMax: 26, min: 58, max: 90, perfFloor: 0.36 },
-        'q-viral-short':          { base: 54, floatMax: 28, min: 54, max: 88, perfFloor: 0.32 },
+        'q-hidden-gem':           { base: 60, floatMax: 22, min: 60, max: 88, perfFloor: 0.32 },
+        'q-high-reputation':      { base: 60, floatMax: 22, min: 60, max: 88, perfFloor: 0.32 },
+        'q-hardcore':             { base: 60, floatMax: 22, min: 60, max: 88, perfFloor: 0.32 },
+        'q-balanced-masterpiece': { base: 62, floatMax: 22, min: 62, max: 90, perfFloor: 0.36 },
+        'q-viral-short':          { base: 60, floatMax: 22, min: 60, max: 88, perfFloor: 0.32 },
         'q-hall-of-fame':         { base: 68, floatMax: 22, min: 68, max: 98, perfFloor: 0.50 }
     };
 
