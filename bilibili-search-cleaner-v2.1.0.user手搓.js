@@ -3195,20 +3195,20 @@
     const ENTERTAINMENT_ZONE_RE = /宅舞|舞蹈|颜值|服饰|时尚|明星|鬼畜|搞笑|日常|运动|萌宠|动物|美食|演奏|翻唱|MAD|MMD|手书/i;
     const TUTORIAL_INTENT_RE = /教程|教学|攻略|指南|测评|避坑|原理|入门|实操|解析|源码|配置|安装|拆解|复习|考前|笔记|干货/;
 
-    // 杀戮尖塔式品级稀有度底分与区间锚定表（严格控制高分稀缺度，80+ 为顶尖，90+ 凤毛麟角）
+    // 杀戮尖塔式品级稀有度底分与区间锚定表（通过 perfFloor 拉伸同品级内部跨度，避免扎堆）
     const SCORE_TIER_BANDS = {
-        'q-warning':              { base: 6,  floatMax: 14, min: 0,  max: 20 },
-        'q-low-sample':           { base: 24, floatMax: 20, min: 12, max: 48 },
-        'q-routine':              { base: 26, floatMax: 28, min: 22, max: 54 },
-        'q-danmaku-carnival':     { base: 46, floatMax: 18, min: 46, max: 72 },
-        'q-heated-debate':        { base: 48, floatMax: 18, min: 48, max: 74 },
-        'q-opinion-storm':        { base: 52, floatMax: 18, min: 52, max: 78 },
-        'q-hidden-gem':           { base: 56, floatMax: 16, min: 56, max: 80 },
-        'q-high-reputation':      { base: 56, floatMax: 16, min: 56, max: 80 },
-        'q-hardcore':             { base: 56, floatMax: 16, min: 56, max: 80 },
-        'q-balanced-masterpiece': { base: 60, floatMax: 16, min: 60, max: 84 },
-        'q-viral-short':          { base: 56, floatMax: 16, min: 56, max: 80 },
-        'q-hall-of-fame':         { base: 72, floatMax: 14, min: 72, max: 98 }
+        'q-warning':              { base: 4,  floatMax: 16, min: 0,  max: 20, perfFloor: 0.00 },
+        'q-low-sample':           { base: 20, floatMax: 24, min: 12, max: 48, perfFloor: 0.05 },
+        'q-routine':              { base: 22, floatMax: 32, min: 22, max: 54, perfFloor: 0.08 },
+        'q-danmaku-carnival':     { base: 44, floatMax: 28, min: 44, max: 76, perfFloor: 0.25 },
+        'q-heated-debate':        { base: 46, floatMax: 28, min: 46, max: 78, perfFloor: 0.25 },
+        'q-opinion-storm':        { base: 50, floatMax: 28, min: 50, max: 82, perfFloor: 0.30 },
+        'q-hidden-gem':           { base: 54, floatMax: 28, min: 54, max: 88, perfFloor: 0.32 },
+        'q-high-reputation':      { base: 54, floatMax: 28, min: 54, max: 88, perfFloor: 0.32 },
+        'q-hardcore':             { base: 54, floatMax: 28, min: 54, max: 88, perfFloor: 0.32 },
+        'q-balanced-masterpiece': { base: 58, floatMax: 26, min: 58, max: 90, perfFloor: 0.36 },
+        'q-viral-short':          { base: 54, floatMax: 28, min: 54, max: 88, perfFloor: 0.32 },
+        'q-hall-of-fame':         { base: 68, floatMax: 22, min: 68, max: 98, perfFloor: 0.50 }
     };
 
     // 按杀戮尖塔式三层模型（品级底分 + 赛道表现浮动 + 明码词条加减）计算完整评分明细
@@ -3243,8 +3243,10 @@
             dmScore * track.dm +
             reviewScore * track.review
         ) / 100));
-        // 中高品级采用 1.25 次幂凹曲线防高分扎堆；基础品级采用 0.85 次幂展开中游区分度
-        const curvedPerf = band.base >= 50 ? Math.pow(perfRatio, 1.25) : Math.pow(perfRatio, 0.85);
+        // 按品级起步线 perfFloor 做区间重映射，将同品级内部表现分拉满至 0~floatMax 全幅跨度
+        const floor = band.perfFloor || 0;
+        const stretchedPerf = floor < 1 ? Math.min(1, Math.max(0, (perfRatio - floor) / (1 - floor))) : perfRatio;
+        const curvedPerf = band.base >= 50 ? Math.pow(stretchedPerf, 1.15) : Math.pow(stretchedPerf, 0.90);
         const floatScore = Math.round(curvedPerf * band.floatMax);
 
         const bonuses = [];
