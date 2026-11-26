@@ -232,7 +232,7 @@
             updateQualityFilterCounts();
         }
         if (isWaterfall && typeof updateViewportPage === 'function') {
-            requestAnimationFrame(updateViewportPage);
+            requestAnimationFrame(() => updateViewportPage(true));
         }
     }
 
@@ -314,6 +314,7 @@
     // 将文本由繁体中文转换为简体中文
     function toSimplified(text) {
         if (!text) return '';
+        if (!/[^\x00-\x7F]/.test(text)) return text;
         try {
             const opencc = typeof OpenCC !== 'undefined' ? OpenCC : (typeof window !== 'undefined' ? window.OpenCC : null);
             if (opencc && typeof opencc.Converter === 'function') {
@@ -707,7 +708,13 @@
     (document.head || document.documentElement).appendChild(styleElement);
  
     // 3. 解析当前 URL 中的关键词分类 (普通词 / -排除词 / #Tag词 / @UP主词)
+    let cachedSearchKwKey = null;
+    let cachedSearchKwResult = null;
     function getSearchKeywords() {
+        const cacheKey = window.location.search + '||' + window.location.hash;
+        if (cachedSearchKwKey === cacheKey && cachedSearchKwResult) {
+            return cachedSearchKwResult;
+        }
         const params = new URLSearchParams(window.location.search);
         let rawParam = params.get('keyword') || '';
         // 兼容处理：若浏览器将未编码的 # 截断至 Hash Fragment，补充拼回
@@ -718,7 +725,11 @@
             }
         }
         const rawKeyword = cleanText(decodeURIComponent(rawParam.replace(/\+/g, ' ')));
-        if (!rawKeyword) return { normal: [], exclude: [], tags: [], ups: [] };
+        if (!rawKeyword) {
+            cachedSearchKwKey = cacheKey;
+            cachedSearchKwResult = { normal: [], exclude: [], tags: [], ups: [] };
+            return cachedSearchKwResult;
+        }
  
         const list = rawKeyword.split(/\s+/);
         const normal = [];
@@ -737,7 +748,9 @@
                 normal.push(k);
             }
         }
-        return { normal, exclude, tags, ups };
+        cachedSearchKwKey = cacheKey;
+        cachedSearchKwResult = { normal, exclude, tags, ups };
+        return cachedSearchKwResult;
     }
  
     // 4. 提取发给 B 站接口的搜索词（智能脱壳与繁简归一化）
@@ -764,6 +777,15 @@
     // 5. 网络层拦截：存储 Tag 字典 + 接口层物理剔除广告
     const videoTagMap = new Map();
     const videoStatMap = new Map();
+    const MAX_CACHE_MAP_SIZE = 5000;
+
+    function setBoundedMap(map, key, value) {
+        if (map.size >= MAX_CACHE_MAP_SIZE && !map.has(key)) {
+            const oldestKey = map.keys().next().value;
+            if (oldestKey !== undefined) map.delete(oldestKey);
+        }
+        map.set(key, value);
+    }
 
     // 物理剔除数据列表中的商业推广与广告卡片，并提取存储标签字典及量化数据
     function cleanAdsOnly(list) {
@@ -775,14 +797,14 @@
             const tagText = [v.tag, v.keywords, v.tags, v.typename].filter(Boolean).join(',');
             const rawTags = cleanText(tagText);
 
-            if (v.bvid) videoTagMap.set(String(v.bvid), rawTags);
+            if (v.bvid) setBoundedMap(videoTagMap, String(v.bvid), rawTags);
             if (v.aid) {
-                videoTagMap.set(String(v.aid), rawTags);
-                videoTagMap.set("av" + v.aid, rawTags);
+                setBoundedMap(videoTagMap, String(v.aid), rawTags);
+                setBoundedMap(videoTagMap, "av" + v.aid, rawTags);
             }
-            if (v.id) videoTagMap.set(String(v.id), rawTags);
-            if (v.season_id) videoTagMap.set(String(v.season_id), rawTags);
-            if (v.roomid) videoTagMap.set(String(v.roomid), rawTags);
+            if (v.id) setBoundedMap(videoTagMap, String(v.id), rawTags);
+            if (v.season_id) setBoundedMap(videoTagMap, String(v.season_id), rawTags);
+            if (v.roomid) setBoundedMap(videoTagMap, String(v.roomid), rawTags);
 
             // 存储量化统计数据（播放、点赞、收藏、弹幕等），供封面评价勋章计算（跳过直播间条目）
             if ((v.bvid || v.aid || v.id) && v.type !== 'live_room' && !v.roomid) {
@@ -795,9 +817,9 @@
                     review: Number(v.review) || 0,
                     pubdate: Number(v.pubdate) || 0
                 };
-                if (v.bvid) videoStatMap.set(String(v.bvid).toLowerCase(), stat);
-                if (v.aid) videoStatMap.set(String(v.aid), stat);
-                if (v.id) videoStatMap.set(String(v.id), stat);
+                if (v.bvid) setBoundedMap(videoStatMap, String(v.bvid).toLowerCase(), stat);
+                if (v.aid) setBoundedMap(videoStatMap, String(v.aid), stat);
+                if (v.id) setBoundedMap(videoStatMap, String(v.id), stat);
             }
 
             if (v.is_ad_loc || v.is_promoted || v.goto === 'ad' || v.type === 'ad') return false;
@@ -912,15 +934,24 @@
             const clone = response.clone();
             const data = await clone.json();
             if (data?.data?.result) {
+                let hasAdRemoved = false;
                 if (Array.isArray(data.data.result)) {
                     if (data.data.result.length > 0 && data.data.result[0].data && Array.isArray(data.data.result[0].data)) {
                         for (const cat of data.data.result) {
                             if (cat.result_type === 'video' || cat.result_type === 'live_room' || !cat.result_type) {
+                                const beforeLen = Array.isArray(cat.data) ? cat.data.length : 0;
                                 cat.data = cleanAdsOnly(cat.data);
+                                if (Array.isArray(cat.data) && cat.data.length !== beforeLen) {
+                                    hasAdRemoved = true;
+                                }
                             }
                         }
                     } else {
+                        const beforeLen = data.data.result.length;
                         data.data.result = cleanAdsOnly(data.data.result);
+                        if (Array.isArray(data.data.result) && data.data.result.length !== beforeLen) {
+                            hasAdRemoved = true;
+                        }
                     }
                 }
  
@@ -942,6 +973,10 @@
                             onOfficialSearchMounted();
                         }
                     }, 120);
+                }
+
+                if (!hasAdRemoved) {
+                    return response;
                 }
 
                 return new Response(JSON.stringify(data), {
@@ -979,15 +1014,28 @@
             if (Array.isArray(target)) {
                 elements = target;
             } else if (target && target.nodeType) {
-                elements = target.querySelectorAll 
-                    ? target.querySelectorAll('.bili-video-card, .video-list-item, div[class*="col_"], .bili-live-card')
-                    : [target];
+                if (target.querySelectorAll) {
+                    elements = target.querySelectorAll('.video-list-item, div[class*="col_"], .bili-live-card');
+                    if (elements.length === 0) {
+                        elements = target.querySelectorAll('.bili-video-card');
+                    }
+                } else {
+                    elements = [target];
+                }
             } else {
-                elements = document.querySelectorAll('.bili-video-card, .video-list-item, div[class*="col_"], .bili-live-card');
+                elements = document.querySelectorAll('.video-list-item, div[class*="col_"], .bili-live-card');
+                if (elements.length === 0) {
+                    elements = document.querySelectorAll('.bili-video-card');
+                }
             }
- 
+
+            let processedCount = 0;
+            const seenBatchCards = new Set();
+
             elements.forEach(el => {
                 const card = el.closest('[class*="col_"], .video-list-item, .bili-live-card') || el;
+                if (seenBatchCards.has(card)) return;
+                seenBatchCards.add(card);
  
                 // 排除活动、游戏、付费课程及商业推广/广告卡片
                 if (card.closest('.activity-game-list, .activity-card, .activity-game-list-item')) return;
@@ -1013,7 +1061,7 @@
                 if (matchVideo) id = matchVideo[1];
                 else if (matchLive) id = matchLive[1];
  
-                const videoTags = cleanText(videoTagMap.get(id) || '');
+                const videoTags = videoTagMap.get(id) || '';
  
                 // 纯净提取作者名字（提取第一署名作者）
                 const authorEl = card.querySelector('a[href*="space.bilibili.com"], .bili-video-card__info--author, .up-name, .bili-live-card__info--uname');
@@ -1037,6 +1085,7 @@
 
                 // 在类 v-img bili-video-card__cover 中追加评价勋章（方案 B：右侧竖向勋章），作为最后一个子元素
                 let quadrant = null;
+                let metrics = null;
                 let hasFullStat = false;
                 const isLiveCard = card.matches('.bili-live-card') ||
                                    Boolean(matchLive) ||
@@ -1049,8 +1098,11 @@
                     } else {
                         stat = extractStatFromCard(card);
                     }
-                    quadrant = getQualityQuadrant(stat);
-                    renderBadgeColumn(coverEl, stat);
+                    if (!stat.isPartial) {
+                        metrics = computeQualityMetrics(stat);
+                        quadrant = getQualityQuadrant(stat, metrics);
+                    }
+                    renderBadgeColumn(coverEl, stat, quadrant, metrics);
                 } else if (isLiveCard) {
                     hasFullStat = true;
                     if (coverEl) {
@@ -1096,25 +1148,76 @@
                     card.style.removeProperty('display');
                     innerCard.classList.toggle('bili-cleaner-dimmed', isSyntaxFail);
                 }
+                processedCount++;
             });
-            if (isEvaluationBadge && typeof updateQualityFilterCounts === 'function') {
-                updateQualityFilterCounts();
-            }
-            if (isWaterfall && typeof updateViewportPage === 'function') {
-                updateViewportPage();
+            if (processedCount > 0) {
+                if (isEvaluationBadge && typeof updateQualityFilterCounts === 'function') {
+                    updateQualityFilterCounts();
+                }
+                if (isWaterfall && typeof updateViewportPage === 'function') {
+                    updateViewportPage(true);
+                }
             }
         } finally {
             isProcessing = false;
         }
     }
  
-    // 7. 帧级节流监听：使用 requestAnimationFrame 防抖
+    // 7. 帧级节流监听：使用 requestAnimationFrame 防抖与增量节点收集
     let rafId = null;
-    const observer = new MutationObserver(() => {
+    let pendingAddedNodes = [];
+    let pendingFullScan = false;
+    let pendingStickyCheck = false;
+
+    function isCleanerOwnNode(node) {
+        if (!node || node.nodeType !== 1) return false;
+        if (node.id === 'bili-cleaner-toast' || node.id === 'bili-waterfall-badge' || node.id === 'bili-waterfall-loader') return true;
+        const cl = node.classList;
+        return Boolean(cl && (cl.contains('bili-cleaner-badge-col') || cl.contains('bili-cleaner-quality-filter-row')));
+    }
+
+    const observer = new MutationObserver((mutations) => {
+        for (const m of mutations) {
+            if (isCleanerOwnNode(m.target)) continue;
+            if (m.addedNodes && m.addedNodes.length > 0) {
+                for (const node of m.addedNodes) {
+                    if (node.nodeType !== 1 || isCleanerOwnNode(node)) continue;
+                    if (node.matches && node.matches('div.more-conditions, .vui_pagenation, .vui_pagenation--btns')) {
+                        pendingStickyCheck = true;
+                        pendingFullScan = true;
+                    } else if (node.matches && node.matches('.video-list-item, div[class*="col_"], .bili-live-card, .bili-video-card')) {
+                        pendingAddedNodes.push(node);
+                    } else if (node.querySelector) {
+                        if (node.querySelector('div.more-conditions')) pendingStickyCheck = true;
+                        const subCards = node.querySelectorAll('.video-list-item, div[class*="col_"], .bili-live-card');
+                        if (subCards.length > 0) {
+                            for (const c of subCards) pendingAddedNodes.push(c);
+                        } else if (node.querySelector('.bili-video-card')) {
+                            pendingFullScan = true;
+                        }
+                    }
+                }
+            }
+        }
+        if (!pendingFullScan && pendingAddedNodes.length === 0 && !pendingStickyCheck) return;
+
         if (rafId) cancelAnimationFrame(rafId);
         rafId = requestAnimationFrame(() => {
-            filterDOMElements();
-            bindStickyObserver();
+            const doFullScan = pendingFullScan;
+            const addedNodes = pendingAddedNodes;
+            const doSticky = pendingStickyCheck;
+            pendingFullScan = false;
+            pendingAddedNodes = [];
+            pendingStickyCheck = false;
+
+            if (doFullScan) {
+                filterDOMElements();
+            } else if (addedNodes.length > 0) {
+                filterDOMElements(addedNodes);
+            }
+            if (doSticky) {
+                bindStickyObserver();
+            }
             // 分页器节点存活与换新自愈检测：
             // B 站 Vue 在单页切换结果时会直接销毁旧分页器并创建新节点，
             // 此时旧 IntersectionObserver 会停留在脱离文档流的孤立节点上导致失效，
@@ -1366,7 +1469,7 @@
                 const sub_url = state.wbi_img.sub_url;
                 const img_key = img_url.slice(img_url.lastIndexOf('/') + 1, img_url.lastIndexOf('.'));
                 const sub_key = sub_url.slice(sub_url.lastIndexOf('/') + 1, sub_url.lastIndexOf('.'));
-                cachedWbiKeys = { img_key, sub_key };
+                cachedWbiKeys = { img_key, sub_key, mixin_key: getMixinKey(img_key + sub_key) };
                 return cachedWbiKeys;
             }
             const navRes = await targetWindow.fetch('https://api.bilibili.com/x/web-interface/nav');
@@ -1376,7 +1479,7 @@
                 const sub_url = navData.data.wbi_img.sub_url;
                 const img_key = img_url.slice(img_url.lastIndexOf('/') + 1, img_url.lastIndexOf('.'));
                 const sub_key = sub_url.slice(sub_url.lastIndexOf('/') + 1, sub_url.lastIndexOf('.'));
-                cachedWbiKeys = { img_key, sub_key };
+                cachedWbiKeys = { img_key, sub_key, mixin_key: getMixinKey(img_key + sub_key) };
                 return cachedWbiKeys;
             }
         } catch (e) {}
@@ -1384,8 +1487,8 @@
     }
 
     // 对请求参数进行 Wbi 签名并生成带 wts 与 w_rid 的查询字符串
-    function signWbi(params, img_key, sub_key) {
-        const mixin_key = getMixinKey(img_key + sub_key);
+    function signWbi(params, img_key, sub_key, cachedMixinKey) {
+        const mixin_key = cachedMixinKey || getMixinKey(img_key + sub_key);
         const curr_time = Math.round(Date.now() / 1000);
         const chr_filter = /[!'()*]/g;
         const query = [];
@@ -1454,29 +1557,29 @@
         }
     }
 
-    // 依据可视窗口内卡片的物理行数实时计算当前所在页（不打标记，每 6 行为一页，窗口中出现多页时取最大页数）
-    function updateViewportPage() {
-        if (!isWaterfall) return;
-        const mainContainer = getMainListContainer(document);
+    // 缓存可见卡片及其物理行号，避免高频滚动时全量触碰离屏节点几何属性
+    let cachedVisibleCards = [];
+    let cachedTotalRows = 0;
+    let cachedRowContainer = null;
+
+    function recomputeCardRows(mainContainer) {
+        cachedVisibleCards = [];
+        cachedTotalRows = 0;
+        cachedRowContainer = mainContainer;
         if (!mainContainer) return;
 
-        const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
         const children = mainContainer.children;
         const len = children.length;
-        if (!len) return;
-
         let currentRow = 0;
         let lastTop = -9999;
-        const inViewPages = [];
-        let lastPassedPage = 1;
 
         for (let i = 0; i < len; i++) {
             const el = children[i];
             if (el.id === 'bili-waterfall-loader' || el.classList.contains('flex_center')) continue;
             if (el.offsetHeight === 0) continue;
 
-            const isCard = el.classList.contains('video-list-item') || 
-                           el.matches('div[class*="col_"]') || 
+            const isCard = el.classList.contains('video-list-item') ||
+                           el.matches('div[class*="col_"]') ||
                            el.querySelector('.bili-video-card');
             if (!isCard) continue;
 
@@ -1485,31 +1588,68 @@
                 currentRow++;
                 lastTop = top;
             }
+            el._wfRow = currentRow;
+            cachedVisibleCards.push(el);
+        }
+        cachedTotalRows = currentRow;
+    }
 
-            // 每 6 行为一页
-            const cardPage = Math.floor((currentRow - 1) / 6) + 1;
+    // 依据可视窗口内卡片的物理行数实时计算当前所在页（二分查找 + 视口局部遍历，每 6 行为一页）
+    function updateViewportPage(forceRecomputeRows = false) {
+        if (!isWaterfall) return;
+        const mainContainer = getMainListContainer(document);
+        if (!mainContainer) return;
 
-            const rect = el.getBoundingClientRect();
-            // 判定是否在当前可视窗口中出现（与视口垂直相交）
-            if (rect.top < viewportHeight && rect.bottom > 0) {
-                inViewPages.push(cardPage);
+        if (forceRecomputeRows || cachedRowContainer !== mainContainer || cachedVisibleCards.length === 0) {
+            recomputeCardRows(mainContainer);
+        }
+
+        const cards = cachedVisibleCards;
+        const len = cards.length;
+        if (!len) return;
+
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+
+        // 二分查找第一个底边进入或位于视口下方的卡片（rect.bottom > 0）
+        let lo = 0;
+        let hi = len - 1;
+        let firstVisibleIdx = len;
+        while (lo <= hi) {
+            const mid = (lo + hi) >> 1;
+            const rect = cards[mid].getBoundingClientRect();
+            if (rect.bottom > 0) {
+                firstVisibleIdx = mid;
+                hi = mid - 1;
+            } else {
+                lo = mid + 1;
             }
-            // 记录已经滚过或正处于视口中的最大页数（用于视口位于行空隙时的兜底定位）
-            if (rect.top < viewportHeight) {
+        }
+
+        let maxInViewPage = 0;
+        let lastPassedPage = 1;
+
+        if (firstVisibleIdx < len) {
+            // 向前微调回退一行以防同排高度略微参差
+            let scanIdx = Math.max(0, firstVisibleIdx - 8);
+            for (; scanIdx < len; scanIdx++) {
+                const el = cards[scanIdx];
+                const rect = el.getBoundingClientRect();
+                if (rect.top >= viewportHeight) break;
+
+                const cardPage = Math.floor((el._wfRow - 1) / 6) + 1;
+                if (rect.bottom > 0) {
+                    if (cardPage > maxInViewPage) maxInViewPage = cardPage;
+                }
                 if (cardPage > lastPassedPage) {
                     lastPassedPage = cardPage;
                 }
             }
+        } else if (len > 0) {
+            lastPassedPage = Math.floor((cards[len - 1]._wfRow - 1) / 6) + 1;
         }
 
-        const newTotalPages = Math.max(1, Math.ceil(currentRow / 6));
-        let newPage = currentViewportPage;
-        if (inViewPages.length > 0) {
-            // 如果可视窗口中出现多个页中的视频卡片则显示最大页数那个
-            newPage = Math.max(...inViewPages);
-        } else if (currentRow > 0) {
-            newPage = lastPassedPage;
-        }
+        const newTotalPages = Math.max(1, Math.ceil(cachedTotalRows / 6));
+        let newPage = maxInViewPage > 0 ? maxInViewPage : lastPassedPage;
         newPage = Math.min(Math.max(1, newPage), newTotalPages);
 
         if (newPage !== currentViewportPage || newTotalPages !== totalViewportPages) {
@@ -1913,9 +2053,6 @@
                 a.href = videoHref;
             });
 
-            // 彻底移除母卡上残留的赞助商角标（如 sponsorThumbnailLabel 等扩展注入元素）
-            col.querySelectorAll('.sponsorThumbnailLabel, [class*="sponsorThumbnailLabel"]').forEach(el => el.remove());
-
             const titEl = col.querySelector('.bili-video-card__info--tit, h3');
             if (titEl) {
                 titEl.innerHTML = item.title;
@@ -2035,20 +2172,6 @@
             `;
         }
 
-        // 为瀑布流卡片挂载评价勋章（方案 B：右侧竖向勋章），作为封面类的最后一个子元素
-        const coverEl = col.querySelector('.v-img.bili-video-card__cover, .bili-video-card__cover');
-        if (coverEl) {
-            const stat = {
-                play: Number(item.play) || 0,
-                like: Number(item.like) || 0,
-                favorites: Number(item.favorites) || 0,
-                danmaku: Number(item.danmaku !== undefined ? item.danmaku : item.video_review) || 0,
-                duration: item.duration,
-                review: Number(item.review) || 0
-            };
-            renderBadgeColumn(coverEl, stat);
-        }
-
         return col;
     }
 
@@ -2071,10 +2194,11 @@
             // 存入标签字典供后续规则使用
             const rawTagText = [item.tag, item.keywords, item.tags, item.typename].filter(Boolean).join(',');
             if (rawTagText) {
-                videoTagMap.set(item.bvid, cleanText(rawTagText));
+                const cleanedTagText = cleanText(rawTagText);
+                setBoundedMap(videoTagMap, item.bvid, cleanedTagText);
                 if (item.aid) {
-                    videoTagMap.set(String(item.aid), cleanText(rawTagText));
-                    videoTagMap.set('av' + item.aid, cleanText(rawTagText));
+                    setBoundedMap(videoTagMap, String(item.aid), cleanedTagText);
+                    setBoundedMap(videoTagMap, 'av' + item.aid, cleanedTagText);
                 }
             }
 
@@ -2089,8 +2213,8 @@
                     review: Number(item.review) || 0,
                     pubdate: Number(item.pubdate) || 0
                 };
-                videoStatMap.set(item.bvid.toLowerCase(), stat);
-                if (item.aid) videoStatMap.set(String(item.aid), stat);
+                setBoundedMap(videoStatMap, item.bvid.toLowerCase(), stat);
+                if (item.aid) setBoundedMap(videoStatMap, String(item.aid), stat);
             }
 
             // 直接构建卡片
@@ -2107,7 +2231,7 @@
             if (isEvaluationBadge && typeof updateQualityFilterCounts === 'function') {
                 updateQualityFilterCounts();
             }
-            updateViewportPage();
+            updateViewportPage(true);
         }
         return addedCount;
     }
@@ -2191,7 +2315,7 @@
                     'x-bili-locale-json': JSON.stringify({ c_locale: { language: 'zh', script: 'Hans' }, always_translate: false })
                 };
 
-                const signedQs = signWbi(queryObj, keys.img_key, keys.sub_key);
+                const signedQs = signWbi(queryObj, keys.img_key, keys.sub_key, keys.mixin_key);
                 const res = await targetWindow.fetch(`${apiBase}?${signedQs}`, {
                     headers: { 'Referer': 'https://search.bilibili.com/' },
                     signal: controller.signal
@@ -2422,7 +2546,7 @@
 
         isPaging = false;
         refreshSeenBvidsFromDOM();
-        updateViewportPage();
+        updateViewportPage(true);
         updateBadge();
 
         if (isAllLoaded) {
@@ -2452,7 +2576,7 @@
         cachedCardTemplate = null;
         isPaging = false;
         refreshSeenBvidsFromDOM();
-        updateViewportPage();
+        updateViewportPage(true);
         bindWaterfallObserver();
         updateBadge();
         if (isAllLoaded) {
@@ -2545,10 +2669,11 @@
                 scrollRafId = requestAnimationFrame(() => {
                     scrollRafId = null;
                     updateViewportPage();
+                    if (!isWaterfallPaused && !isPaging && !isAllLoaded) {
+                        checkAndTriggerPaging();
+                    }
                 });
             }
-            if (isWaterfallPaused || isPaging || isAllLoaded) return;
-            checkAndTriggerPaging();
         }, { passive: true });
 
         // 视口尺寸变化监听（响应式栅格切换自适应）：
@@ -2560,7 +2685,7 @@
 
             if (resizeTimer) clearTimeout(resizeTimer);
             resizeTimer = setTimeout(() => {
-                updateViewportPage();
+                updateViewportPage(true);
 
                 const curLoader = document.getElementById('bili-waterfall-loader');
                 if (curLoader && curLoader.classList.contains('ended')) return;
@@ -2607,7 +2732,7 @@
             isAllLoaded = maxWaterfallPage <= 1;
             isPaging = false;
 
-            updateViewportPage();
+            updateViewportPage(true);
             getOrCreateBadge();
             updateBadge();
             getOrCreateLoader();
@@ -2627,6 +2752,9 @@
                 waterfallObserver = null;
             }
             currentObservedPager = null;
+            cachedVisibleCards = [];
+            cachedTotalRows = 0;
+            cachedRowContainer = null;
             const badge = document.getElementById('bili-waterfall-badge');
             if (badge) badge.remove();
 
@@ -2737,7 +2865,9 @@
         }
 
         // 仅在初次构建或内部按钮数不一致时生成结构
+        let isFirstRender = false;
         if (!filterRow.dataset.rendered) {
+            isFirstRender = true;
             filterRow.dataset.rendered = 'true';
             filterRow.innerHTML = `
                 <div class="bili-cleaner-filter-label" title="点击单选，支持按住 Ctrl 多选、按住 Shift 范围连选">🏷️ 视频品质:</div>
@@ -2766,7 +2896,9 @@
         }
 
         updateQualityFilterButtons(filterRow);
-        updateQualityFilterCounts();
+        if (isFirstRender) {
+            updateQualityFilterCounts();
+        }
     }
 
     // 切换品质筛选状态（类文件夹式交互：默认单选，Ctrl多选，Shift范围连选）
@@ -2824,11 +2956,39 @@
         // 刷新所有筛选按钮的高亮态
         document.querySelectorAll('.bili-cleaner-quality-filter-row').forEach(updateQualityFilterButtons);
 
-        // 重新安检过滤已有卡片
-        document.querySelectorAll('[data-purified-query]').forEach(card => {
-            delete card.dataset.purifiedQuery;
+        // 直接基于已缓存的品质分类切换卡片显隐，未就绪的卡片再补跑增量安检
+        const unreadyCards = [];
+        const container = getMainListContainer(document) || document;
+        const seenCards = new Set();
+        container.querySelectorAll('.video-list-item, div[class*="col_"], .bili-live-card').forEach(el => {
+            const card = el.closest('[class*="col_"], .video-list-item, .bili-live-card') || el;
+            if (seenCards.has(card)) return;
+            seenCards.add(card);
+            if (card.dataset.qualityClass === undefined) {
+                unreadyCards.push(card);
+                return;
+            }
+            const qClass = card.dataset.qualityClass;
+            const isSyntaxFail = card.dataset.syntaxPass === '0';
+            const isQualityFail = isEvaluationBadge && activeQualityFilters.size > 0 && (!qClass || !activeQualityFilters.has(qClass));
+            const innerCard = card.querySelector('.bili-video-card, .bili-live-card') || card;
+            if (isQualityFail) {
+                innerCard.classList.remove('bili-cleaner-dimmed');
+                card.style.setProperty('display', 'none', 'important');
+            } else {
+                card.style.removeProperty('display');
+                innerCard.classList.toggle('bili-cleaner-dimmed', isSyntaxFail);
+            }
         });
-        filterDOMElements();
+        if (unreadyCards.length > 0) {
+            filterDOMElements(unreadyCards);
+        }
+        if (isEvaluationBadge && typeof updateQualityFilterCounts === 'function') {
+            updateQualityFilterCounts();
+        }
+        if (isWaterfall && typeof updateViewportPage === 'function') {
+            updateViewportPage(true);
+        }
 
         // 若开启瀑布流，检测当前屏幕如果卡片变少不足以撑满一屏，主动尝试静默增补拉取
         if (isWaterfall && typeof checkWaterfallFillScreen === 'function') {
@@ -3038,7 +3198,7 @@
     }
 
     // 纯视频品质象限判定函数（返回命中象限对象）
-    function getQualityQuadrant(stat) {
+    function getQualityQuadrant(stat, precomputedMetrics = null) {
         if (!stat) return null;
         // 方案 1：数据尚未就绪（仅卡片 DOM 提取的粗略部分数据，无真实点赞/收藏）时，一开始不评级
         if (stat.isPartial) return null;
@@ -3056,7 +3216,7 @@
             danmakuDensity,
             normLikeRatio,
             normFavRatio
-        } = computeQualityMetrics(stat);
+        } = precomputedMetrics || computeQualityMetrics(stat);
 
         // 弹幕与评论热度特征分析
         // 争议/论战特征校验：真实网络对线与争议事件的核心特征是“观众不愿点赞，集中在评论区写小作文互撕”，评赞比异常高（>= 10%）
@@ -3167,7 +3327,7 @@
     }
 
     // 在视频封面 .v-img.bili-video-card__cover 内挂载/更新评价勋章列
-    function renderBadgeColumn(coverEl, stat) {
+    function renderBadgeColumn(coverEl, stat, precomputedQuadrant = undefined, precomputedMetrics = null) {
         if (!coverEl) return;
         if (!isEvaluationBadge) {
             const existing = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
@@ -3175,7 +3335,8 @@
             return;
         }
 
-        const quadrant = getQualityQuadrant(stat);
+        const metrics = precomputedMetrics || (stat && !stat.isPartial ? computeQualityMetrics(stat) : null);
+        const quadrant = precomputedQuadrant !== undefined ? precomputedQuadrant : getQualityQuadrant(stat, metrics);
         // 数据未就绪或未命中评级时，清空原有勋章并留白
         if (!quadrant) {
             const existing = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
@@ -3183,7 +3344,13 @@
             return;
         }
 
-        const metrics = computeQualityMetrics(stat);
+        // 精选高光减负策略：未开启“全部显示”时，稳健良作 (q-routine) 与 样本较少 (q-low-sample) 默认留白不显示
+        if (!isEvalFullMode && (quadrant.className === 'q-routine' || quadrant.className === 'q-low-sample')) {
+            const existing = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
+            if (existing) existing.remove();
+            return;
+        }
+
         const {
             play,
             like,
@@ -3199,13 +3366,6 @@
             playFactor
         } = metrics;
         const healthScore = computeHealthScore(metrics, quadrant.className);
-
-        // 精选高光减负策略：未开启“全部显示”时，稳健良作 (q-routine) 与 样本较少 (q-low-sample) 默认留白不显示
-        if (!isEvalFullMode && (quadrant.className === 'q-routine' || quadrant.className === 'q-low-sample')) {
-            const existing = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
-            if (existing) existing.remove();
-            return;
-        }
 
         let badgeCol = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
         if (!badgeCol) {
