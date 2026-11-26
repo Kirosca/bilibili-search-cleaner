@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>视频封面用 — 12 维品质胶囊素材页（横版 & 竖版）</title>
+  <style>
+    :root {
+      --page-bg: #f1f5f9;
+      --panel-bg: #ffffff;
+      --text: #0f172a;
+      --sub: #64748b;
+      --border: #e2e8f0;
+      --pill-scale: 1.5;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--page-bg);
+      color: var(--text);
+      padding: 28px 20px 64px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    /* 顶部控制栏 */
+    .toolbar {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px 22px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+    }
+
+    .toolbar-title h1 {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .toolbar-title p {
+      font-size: 12.5px;
+      color: var(--sub);
+      margin-top: 2px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .ctrl-group {
+      display: inline-flex;
+      background: #f1f5f9;
+      padding: 3px;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      gap: 2px;
+    }
+
+    .ctrl-btn {
+      border: none;
+      background: transparent;
+      padding: 5px 11px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #475569;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .ctrl-btn.active {
+      background: #ffffff;
+      color: #00aeec;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    }
+
+    /* 展示画布 */
+    .stage-card {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 22px 24px 28px;
+      box-shadow: 0 6px 24px rgba(15, 23, 42, 0.05);
+    }
+
+    .stage-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .stage-header h2 {
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .stage-tag {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(0, 174, 236, 0.12);
+      color: #0284c7;
+    }
+
+    .canvas {
+      border-radius: 14px;
+      padding: 36px 28px;
+      transition: background 0.2s ease;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    /* 画布背景模式 */
+    .canvas.bg-dark {
+      background: radial-gradient(circle at 20% 20%, #1e293b 0%, #0f172a 65%, #090d16 100%);
+      border: 1px solid #1e293b;
+    }
+    .canvas.bg-light {
+      background: #ffffff;
+      border: 1px dashed #cbd5e1;
+    }
+    .canvas.bg-checker {
+      background-color: #e5e7eb;
+      background-image:
+        linear-gradient(45deg, #cbd5e1 25%, transparent 25%),
+        linear-gradient(-45deg, #cbd5e1 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #cbd5e1 75%),
+        linear-gradient(-45deg, transparent 75%, #cbd5e1 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+      border: 1px solid #cbd5e1;
+    }
+    .canvas.bg-green {
+      background: #00ff00;
+      border: 1px solid #16a34a;
+    }
+
+    /* 横版布局：适合 16:9 封面横排 / 矩阵展示 */
+    .layout-horizontal {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: calc(14px * var(--pill-scale));
+      max-width: 1000px;
+    }
+
+    /* 竖版布局：适合 9:16 封面 / 画面侧边竖排 */
+    .layout-vertical-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 48px;
+      width: 100%;
+    }
+
+    .layout-vertical {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: calc(11px * var(--pill-scale));
+    }
+
+    .layout-vertical.align-center {
+      align-items: center;
+    }
+
+    .col-caption {
+      font-size: 12px;
+      font-weight: 600;
+      color: #94a3b8;
+      margin-bottom: 4px;
+      letter-spacing: 0.4px;
+    }
+    .canvas.bg-light .col-caption,
+    .canvas.bg-checker .col-caption {
+      color: #475569;
+    }
+
+    /* 原版同款胶囊样式（随 --pill-scale 等比无损缩放） */
+    .cover-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: calc(5px * var(--pill-scale));
+      padding: calc(4px * var(--pill-scale)) calc(10px * var(--pill-scale));
+      border-radius: calc(12px * var(--pill-scale));
+      font-size: calc(12px * var(--pill-scale));
+      font-weight: 700;
+      line-height: 1.2;
+      color: #ffffff;
+      white-space: nowrap;
+      user-select: none;
+      letter-spacing: 0.3px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .cover-pill-score {
+      font-size: calc(11px * var(--pill-scale));
+      font-weight: 600;
+      opacity: 0.92;
+      font-variant-numeric: tabular-nums;
+    }
+
+    body.hide-scores .cover-pill-score {
+      display: none;
+    }
+
+    /* 12 维金字塔渐变配色 */
+    .cover-pill.q-hall-of-fame {
+      background: linear-gradient(135deg, rgba(255, 170, 0, 0.96), rgba(255, 102, 0, 0.96));
+      border: 1.5px solid rgba(255, 235, 180, 0.8);
+      box-shadow: 0 0 18px rgba(255, 170, 0, 0.55), 0 4px 12px rgba(0, 0, 0, 0.35);
+    }
+    .cover-pill.q-viral-short {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.96), rgba(16, 185, 129, 0.96));
+      border: 1.5px solid rgba(165, 243, 252, 0.78);
+      box-shadow: 0 0 16px rgba(6, 182, 212, 0.45), 0 4px 12px rgba(0, 0, 0, 0.32);
+    }
+    .cover-pill.q-hardcore {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.96), rgba(217, 119, 6, 0.96));
+      border: 1.5px solid rgba(255, 215, 0, 0.65);
+      box-shadow: 0 4px 14px rgba(245, 158, 11, 0.45), 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+    .cover-pill.q-high-reputation {
+      background: linear-gradient(135deg, rgba(0, 174, 236, 0.96), rgba(0, 120, 215, 0.96));
+      border: 1.5px solid rgba(180, 230, 255, 0.65);
+      box-shadow: 0 4px 14px rgba(0, 174, 236, 0.45), 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+    .cover-pill.q-hidden-gem {
+      background: linear-gradient(135deg, rgba(147, 51, 234, 0.96), rgba(99, 102, 241, 0.96));
+      border: 1.5px solid rgba(220, 180, 255, 0.65);
+      box-shadow: 0 4px 14px rgba(147, 51, 234, 0.45), 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+    .cover-pill.q-balanced-masterpiece {
+      background: linear-gradient(135deg, rgba(71, 85, 105, 0.97), rgba(30, 41, 59, 0.99));
+      color: #f8fafc;
+      border: 1.5px solid rgba(226, 232, 240, 0.8);
+      box-shadow: 0 0 14px rgba(148, 163, 184, 0.38), 0 4px 12px rgba(0, 0, 0, 0.35);
+    }
+    .cover-pill.q-opinion-storm {
+      background: linear-gradient(135deg, rgba(236, 72, 153, 0.96), rgba(168, 85, 247, 0.96));
+      border: 1.5px solid rgba(251, 207, 232, 0.78);
+      box-shadow: 0 0 16px rgba(236, 72, 153, 0.5), 0 4px 12px rgba(0, 0, 0, 0.32);
+    }
+    .cover-pill.q-heated-debate {
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.96), rgba(79, 70, 229, 0.96));
+      border: 1.5px solid rgba(191, 219, 254, 0.75);
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.48), 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+    .cover-pill.q-danmaku-carnival {
+      background: linear-gradient(135deg, rgba(255, 68, 102, 0.96), rgba(255, 120, 40, 0.96));
+      border: 1.5px solid rgba(255, 200, 210, 0.65);
+      box-shadow: 0 4px 14px rgba(255, 68, 102, 0.45), 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+    .cover-pill.q-warning {
+      background: linear-gradient(135deg, rgba(220, 38, 38, 0.96), rgba(153, 27, 27, 0.96));
+      border: 1.5px solid rgba(254, 202, 202, 0.65);
+      box-shadow: 0 4px 14px rgba(220, 38, 38, 0.48), 0 4px 10px rgba(0, 0, 0, 0.32);
+    }
+    .cover-pill.q-routine {
+      background: linear-gradient(135deg, rgba(16, 110, 75, 0.94), rgba(10, 70, 50, 0.96));
+      border: 1.5px solid rgba(74, 222, 128, 0.45);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    .cover-pill.q-low-sample {
+      background: rgba(30, 41, 59, 0.9);
+      color: rgba(203, 213, 225, 0.96);
+      border: 1.5px solid rgba(148, 163, 184, 0.4);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 顶部控制栏 -->
+    <div class="toolbar">
+      <div class="toolbar-title">
+        <h1>🎨 视频封面用 — 12 维品质胶囊素材</h1>
+        <p>可切换底色、缩放倍率与是否显示参考分，方便直接截图用于 B 站横/竖版视频封面制作</p>
+      </div>
+      <div class="controls">
+        <div class="ctrl-group" id="bg-group">
+          <button class="ctrl-btn active" data-bg="bg-dark">深色封面底</button>
+          <button class="ctrl-btn" data-bg="bg-light">纯白底</button>
+          <button class="ctrl-btn" data-bg="bg-checker">透明棋盘格</button>
+          <button class="ctrl-btn" data-bg="bg-green">绿幕抠图</button>
+        </div>
+        <div class="ctrl-group" id="scale-group">
+          <button class="ctrl-btn" data-scale="1">1x</button>
+          <button class="ctrl-btn active" data-scale="1.5">1.5x (推荐)</button>
+          <button class="ctrl-btn" data-scale="2">2x (大特写)</button>
+        </div>
+        <div class="ctrl-group" id="score-group">
+          <button class="ctrl-btn active" data-score="show">带分数</button>
+          <button class="ctrl-btn" data-score="hide">纯标签</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1. 横版排版 -->
+    <section class="stage-card">
+      <div class="stage-header">
+        <h2>横版胶囊阵列 <span class="stage-tag">适合 16:9 横屏视频封面 / 顶部横幅</span></h2>
+      </div>
+      <div class="canvas bg-dark" id="canvas-h">
+        <div class="layout-horizontal" id="pills-horizontal"></div>
+      </div>
+    </section>
+
+    <!-- 2. 竖版排版 -->
+    <section class="stage-card">
+      <div class="stage-header">
+        <h2>竖版胶囊队列 <span class="stage-tag">适合封面左右侧边竖排 / 9:16 竖屏封面</span></h2>
+      </div>
+      <div class="canvas bg-dark" id="canvas-v">
+        <div class="layout-vertical-wrap">
+          <div>
+            <div class="col-caption">左对齐竖排（适合贴封面左侧）</div>
+            <div class="layout-vertical" id="pills-vertical-all"></div>
+          </div>
+          <div>
+            <div class="col-caption">精选核心 6 维居中竖排（高对比封面主视觉）</div>
+            <div class="layout-vertical align-center" id="pills-vertical-featured"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const PILLS = [
+      { key: 'q-hall-of-fame',         label: '🏆 殿堂神作',   score: '95', featured: true },
+      { key: 'q-hardcore',             label: '💡 硬核干货',   score: '84', featured: true },
+      { key: 'q-balanced-masterpiece', label: '🏅 综合标杆',   score: '82', featured: true },
+      { key: 'q-high-reputation',      label: '⭐ 高口碑佳作', score: '79', featured: true },
+      { key: 'q-hidden-gem',           label: '💎 冷门宝藏',   score: '81', featured: true },
+      { key: 'q-viral-short',          label: '⚡ 爆款短片',   score: '76', featured: false },
+      { key: 'q-opinion-storm',        label: '💥 话题焦点',   score: '74', featured: false },
+      { key: 'q-heated-debate',        label: '💬 激辩热议',   score: '68', featured: false },
+      { key: 'q-danmaku-carnival',     label: '🔥 弹幕密集',   score: '65', featured: false },
+      { key: 'q-routine',              label: '🍀 稳健良作',   score: '46', featured: false },
+      { key: 'q-warning',              label: '⚠️ 谨慎观看',   score: '12', featured: true },
+      { key: 'q-low-sample',           label: '🌱 样本较少',   score: '',   featured: false }
+    ];
+
+    function createPillHtml(p) {
+      const scoreHtml = p.score ? `<span class="cover-pill-score">· ${p.score}</span>` : '';
+      return `<div class="cover-pill ${p.key}"><span>${p.label}</span>${scoreHtml}</div>`;
+    }
+
+    document.getElementById('pills-horizontal').innerHTML = PILLS.map(createPillHtml).join('');
+    document.getElementById('pills-vertical-all').innerHTML = PILLS.map(createPillHtml).join('');
+    document.getElementById('pills-vertical-featured').innerHTML = PILLS.filter(p => p.featured).map(createPillHtml).join('');
+
+    // 背景切换
+    document.getElementById('bg-group').addEventListener('click', (e) => {
+      const btn = e.target.closest('.ctrl-btn');
+      if (!btn) return;
+      document.querySelectorAll('#bg-group .ctrl-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const bgCls = btn.dataset.bg;
+      ['canvas-h', 'canvas-v'].forEach(id => {
+        const el = document.getElementById(id);
+        el.className = `canvas ${bgCls}`;
+      });
+    });
+
+    // 缩放切换
+    document.getElementById('scale-group').addEventListener('click', (e) => {
+      const btn = e.target.closest('.ctrl-btn');
+      if (!btn) return;
+      document.querySelectorAll('#scale-group .ctrl-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.documentElement.style.setProperty('--pill-scale', btn.dataset.scale);
+    });
+
+    // 分数显隐切换
+    document.getElementById('score-group').addEventListener('click', (e) => {
+      const btn = e.target.closest('.ctrl-btn');
+      if (!btn) return;
+      document.querySelectorAll('#score-group .ctrl-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.body.classList.toggle('hide-scores', btn.dataset.score === 'hide');
+    });
+  </script>
+</body>
+</html>
