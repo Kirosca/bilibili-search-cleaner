@@ -2947,11 +2947,8 @@
         return { play, like: 0, favorites: 0, danmaku, duration, review: 0, isPartial: true };
     }
 
-    // 纯视频品质象限判定函数（返回命中象限对象）
-    function getQualityQuadrant(stat) {
-        if (!stat) return null;
-        // 方案 1：数据尚未就绪（仅卡片 DOM 提取的粗略部分数据，无真实点赞/收藏）时，一开始不评级
-        if (stat.isPartial) return null;
+    // 统一计算视频互动指标与时长/播放量修正权重
+    function computeQualityMetrics(stat) {
         const play = stat?.play || 0;
         const like = stat?.like || 0;
         const favorites = stat?.favorites || 0;
@@ -2968,8 +2965,85 @@
         // 方案 3：时长加权归一化（数学模型修正）
         // 5分钟为标准基准时长（durFactor = 1.0）；长视频完播难度大、观众付出时间成本极高，给予加权提升；短视频互动完播轻快无压力，给予系数惩罚（下限0.4，上限2.0）
         const durFactor = durationMinutes > 0 ? Math.min(2.0, Math.max(0.4, Math.sqrt(durationMinutes / 5.0))) : 1.0;
-        const normLikeRatio = likeRatio * durFactor;
-        const normFavRatio = favRatio * durFactor;
+        // 高播放量稀释修正（5万以下 1.0x，50万 1.20x，500万封顶 1.40x）
+        const playFactor = play > 50000 ? Math.min(1.4, 1.0 + 0.2 * Math.log10(play / 50000)) : 1.0;
+
+        const normLikeRatio = likeRatio * durFactor * playFactor;
+        const normFavRatio = favRatio * durFactor * playFactor;
+
+        return {
+            play,
+            like,
+            favorites,
+            danmaku,
+            review,
+            durationMinutes,
+            likeRatio,
+            favRatio,
+            reviewRatio,
+            reviewLikeRatio,
+            danmakuDensity,
+            durFactor,
+            playFactor,
+            normLikeRatio,
+            normFavRatio
+        };
+    }
+
+    // 分赛道权重表（同品级横向对比用，0~100% 饱和封顶）
+    const HEALTH_SCORE_TRACKS = {
+        'q-hardcore': { like: 0.35, fav: 0.55, dm: 0.10, review: 0, noDurPenalty: false },
+        'q-viral-short': { like: 0.55, fav: 0.25, dm: 0.20, review: 0, noDurPenalty: true },
+        'q-danmaku-carnival': { like: 0.30, fav: 0.15, dm: 0.55, review: 0, noDurPenalty: false },
+        'q-heated-debate': { like: 0.30, fav: 0.15, dm: 0, review: 0.55, noDurPenalty: false },
+        'q-opinion-storm': { like: 0.30, fav: 0.15, dm: 0.30, review: 0.25, noDurPenalty: false }
+    };
+    const DEFAULT_HEALTH_TRACK = { like: 0.50, fav: 0.35, dm: 0.15, review: 0, noDurPenalty: false };
+
+    // 按命中品级所在赛道计算 0~100% 综合参考分（含轻微先验平滑防小样本虚高）
+    function computeHealthScore(metrics, qualityClass) {
+        if (!metrics || metrics.play <= 0) return 0;
+        const track = HEALTH_SCORE_TRACKS[qualityClass] || DEFAULT_HEALTH_TRACK;
+        const effectiveDur = track.noDurPenalty ? 1.0 : metrics.durFactor;
+
+        const smoothPlay = metrics.play + 2000;
+        const smoothLikeRatio = ((metrics.like + 40) / smoothPlay) * effectiveDur * metrics.playFactor;
+        const smoothFavRatio = ((metrics.favorites + 20) / smoothPlay) * effectiveDur * metrics.playFactor;
+
+        const likeScore = 100 * (1 - Math.exp(-smoothLikeRatio / 0.045));
+        const favScore = 100 * (1 - Math.exp(-smoothFavRatio / 0.025));
+        const dmScore = 100 * (1 - Math.exp(-metrics.danmakuDensity / 12));
+        const reviewScore = 100 * (1 - Math.exp(-metrics.reviewRatio / 0.005));
+
+        const rawScore =
+            likeScore * track.like +
+            favScore * track.fav +
+            dmScore * track.dm +
+            reviewScore * track.review;
+
+        return Math.min(100, Math.round(rawScore));
+    }
+
+    // 纯视频品质象限判定函数（返回命中象限对象）
+    function getQualityQuadrant(stat) {
+        if (!stat) return null;
+        // 方案 1：数据尚未就绪（仅卡片 DOM 提取的粗略部分数据，无真实点赞/收藏）时，一开始不评级
+        if (stat.isPartial) return null;
+        const {
+            play,
+            like,
+            favorites,
+            danmaku,
+            review,
+            durationMinutes,
+            likeRatio,
+            favRatio,
+            reviewRatio,
+            reviewLikeRatio,
+            danmakuDensity,
+            normLikeRatio,
+            normFavRatio
+        } = computeQualityMetrics(stat);
 
         // 弹幕与评论热度特征分析
         // 争议/论战特征校验：真实网络对线与争议事件的核心特征是“观众不愿点赞，集中在评论区写小作文互撕”，评赞比异常高（>= 10%）
@@ -3096,18 +3170,22 @@
             return;
         }
 
-        const play = stat?.play || 0;
-        const like = stat?.like || 0;
-        const favorites = stat?.favorites || 0;
-        const danmaku = stat?.danmaku || 0;
-        const review = stat?.review || 0;
-        const durationMinutes = parseDurationMinutes(stat?.duration);
-        const durFactor = durationMinutes > 0 ? Math.min(2.0, Math.max(0.4, Math.sqrt(durationMinutes / 5.0))) : 1.0;
-
-        const likeRatio = play > 0 ? (like / play) : 0;
-        const favRatio = play > 0 ? (favorites / play) : 0;
-        const reviewRatio = play > 0 ? (review / play) : 0;
-        const danmakuDensity = durationMinutes > 0 ? (danmaku / durationMinutes) : 0;
+        const metrics = computeQualityMetrics(stat);
+        const {
+            play,
+            like,
+            favorites,
+            danmaku,
+            review,
+            durationMinutes,
+            likeRatio,
+            favRatio,
+            reviewRatio,
+            danmakuDensity,
+            durFactor,
+            playFactor
+        } = metrics;
+        const healthScore = computeHealthScore(metrics, quadrant.className);
 
         // 精选高光减负策略：未开启“全部显示”时，稳健良作 (q-routine) 与 样本较少 (q-low-sample) 默认留白不显示
         if (!isEvalFullMode && (quadrant.className === 'q-routine' || quadrant.className === 'q-low-sample')) {
@@ -3128,6 +3206,9 @@
             `【${quadrant.tag}】${quadrant.desc}`,
             '────────────────────'
         ];
+        if (play > 0) {
+            tipLines.push(`📊 综合参考分: ${healthScore}%`);
+        }
         if (like > 0) {
             tipLines.push(`👍 赞播比: ${(likeRatio * 100).toFixed(1)}% (${formatStat(like)})`);
         }
@@ -3135,7 +3216,8 @@
             tipLines.push(`⭐ 藏播比: ${(favRatio * 100).toFixed(1)}% (${formatStat(favorites)})`);
         }
         if (play > 0) {
-            tipLines.push(`▶️ 播放量: ${formatStat(play)}`);
+            const playFactorText = playFactor >= 1.05 ? ` (播放权重 ${playFactor.toFixed(2)}x)` : '';
+            tipLines.push(`▶️ 播放量: ${formatStat(play)}${playFactorText}`);
         }
         if (danmaku > 0) {
             const densityText = durationMinutes > 0 ? ` (${danmakuDensity.toFixed(1)}条/分)` : '';

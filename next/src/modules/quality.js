@@ -289,12 +289,9 @@ export function extractStatFromCard(card) {
 }
 
 /**
- * 纯视频品质象限判定函数（返回命中象限对象）
+ * 统一计算视频互动指标、时长/播放量修正权重与 0~100% 综合参考分
  */
-export function getQualityQuadrant(stat) {
-  if (!stat) return null;
-  if (stat.isPartial) return null;
-
+function computeQualityMetrics(stat) {
   const play = stat?.play || 0;
   const like = stat?.like || 0;
   const favorites = stat?.favorites || 0;
@@ -308,10 +305,67 @@ export function getQualityQuadrant(stat) {
   const reviewLikeRatio = like > 0 ? review / like : review > 0 ? 1 : 0;
   const danmakuDensity = durationMinutes > 0 ? danmaku / durationMinutes : 0;
 
+  // 时长加权（5分钟为 1.0x，范围 0.4x ~ 2.0x）
   const durFactor =
     durationMinutes > 0 ? Math.min(2.0, Math.max(0.4, Math.sqrt(durationMinutes / 5.0))) : 1.0;
-  const normLikeRatio = likeRatio * durFactor;
-  const normFavRatio = favRatio * durFactor;
+  // 高播放量稀释修正（5万以下 1.0x，50万 1.20x，500万封顶 1.40x）
+  const playFactor = play > 50000 ? Math.min(1.4, 1.0 + 0.2 * Math.log10(play / 50000)) : 1.0;
+
+  const normLikeRatio = likeRatio * durFactor * playFactor;
+  const normFavRatio = favRatio * durFactor * playFactor;
+
+  // 综合参考分（仅用于 Tooltip 横向参考）：混入轻微先验样本防小样本虚高，指数饱和封顶 100%
+  const smoothPlay = play + 2000;
+  const smoothLikeRatio = ((like + 40) / smoothPlay) * durFactor * playFactor;
+  const smoothFavRatio = ((favorites + 20) / smoothPlay) * durFactor * playFactor;
+  const likeScore = 100 * (1 - Math.exp(-smoothLikeRatio / 0.045));
+  const favScore = 100 * (1 - Math.exp(-smoothFavRatio / 0.025));
+  const dmScore = 100 * (1 - Math.exp(-danmakuDensity / 12));
+  const healthScore =
+    play > 0 ? Math.min(100, Math.round(likeScore * 0.5 + favScore * 0.35 + dmScore * 0.15)) : 0;
+
+  return {
+    play,
+    like,
+    favorites,
+    danmaku,
+    review,
+    durationMinutes,
+    likeRatio,
+    favRatio,
+    reviewRatio,
+    reviewLikeRatio,
+    danmakuDensity,
+    durFactor,
+    playFactor,
+    normLikeRatio,
+    normFavRatio,
+    healthScore,
+  };
+}
+
+/**
+ * 纯视频品质象限判定函数（返回命中象限对象）
+ */
+export function getQualityQuadrant(stat) {
+  if (!stat) return null;
+  if (stat.isPartial) return null;
+
+  const {
+    play,
+    like,
+    favorites,
+    danmaku,
+    review,
+    durationMinutes,
+    likeRatio,
+    favRatio,
+    reviewRatio,
+    reviewLikeRatio,
+    danmakuDensity,
+    normLikeRatio,
+    normFavRatio,
+  } = computeQualityMetrics(stat);
 
   const isDanmakuHigh =
     (danmakuDensity >= 15 && danmaku >= 300) || (danmaku >= 3000 && danmakuDensity >= 8);
@@ -460,19 +514,21 @@ export function renderBadgeColumn(coverEl, stat) {
     return;
   }
 
-  const play = stat?.play || 0;
-  const like = stat?.like || 0;
-  const favorites = stat?.favorites || 0;
-  const danmaku = stat?.danmaku || 0;
-  const review = stat?.review || 0;
-  const durationMinutes = parseDurationMinutes(stat?.duration);
-  const durFactor =
-    durationMinutes > 0 ? Math.min(2.0, Math.max(0.4, Math.sqrt(durationMinutes / 5.0))) : 1.0;
-
-  const likeRatio = play > 0 ? like / play : 0;
-  const favRatio = play > 0 ? favorites / play : 0;
-  const reviewRatio = play > 0 ? review / play : 0;
-  const danmakuDensity = durationMinutes > 0 ? danmaku / durationMinutes : 0;
+  const {
+    play,
+    like,
+    favorites,
+    danmaku,
+    review,
+    durationMinutes,
+    likeRatio,
+    favRatio,
+    reviewRatio,
+    danmakuDensity,
+    durFactor,
+    playFactor,
+    healthScore,
+  } = computeQualityMetrics(stat);
 
   if (!state.isEvalFullMode && (quadrant.className === 'q-routine' || quadrant.className === 'q-low-sample')) {
     const existing = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
@@ -488,6 +544,9 @@ export function renderBadgeColumn(coverEl, stat) {
   }
 
   const tipLines = [`【${quadrant.tag}】${quadrant.desc}`, '────────────────────'];
+  if (play > 0) {
+    tipLines.push(`📊 综合参考分: ${healthScore}%`);
+  }
   if (like > 0) {
     tipLines.push(`👍 赞播比: ${(likeRatio * 100).toFixed(1)}% (${formatStat(like)})`);
   }
@@ -495,7 +554,8 @@ export function renderBadgeColumn(coverEl, stat) {
     tipLines.push(`⭐ 藏播比: ${(favRatio * 100).toFixed(1)}% (${formatStat(favorites)})`);
   }
   if (play > 0) {
-    tipLines.push(`▶️ 播放量: ${formatStat(play)}`);
+    const playFactorText = playFactor >= 1.05 ? ` (播放权重 ${playFactor.toFixed(2)}x)` : '';
+    tipLines.push(`▶️ 播放量: ${formatStat(play)}${playFactorText}`);
   }
   if (danmaku > 0) {
     const densityText = durationMinutes > 0 ? ` (${danmakuDensity.toFixed(1)}条/分)` : '';
