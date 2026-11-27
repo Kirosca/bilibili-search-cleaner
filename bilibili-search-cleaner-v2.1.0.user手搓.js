@@ -335,7 +335,6 @@
  
     // 0. 接入 OpenCC 单例转换器（由 @require 本地持久化驱动）
     let sConverter = null;
-    let fallbackScriptInjected = false;
     // 将文本由繁体中文转换为简体中文
     function toSimplified(text) {
         if (!text) return '';
@@ -347,18 +346,6 @@
                     sConverter = opencc.Converter({ from: 't', to: 'cn' });
                 }
                 return sConverter(text);
-            } else if (!fallbackScriptInjected && typeof document !== 'undefined') {
-                // 若前序 CDN 未能成功注入 OpenCC，动态加载保底链接并唤醒重新判定
-                fallbackScriptInjected = true;
-                const script = document.createElement('script');
-                script.src = 'https://cdn.jsdelivr.net/npm/opencc-js@1.4.2/dist/umd/t2cn.js';
-                script.onload = () => {
-                    document.querySelectorAll('[data-purified-query]').forEach(card => {
-                        delete card.dataset.purifiedQuery;
-                    });
-                    filterDOMElements();
-                };
-                (document.head || document.documentElement).appendChild(script);
             }
         } catch {}
         return text;
