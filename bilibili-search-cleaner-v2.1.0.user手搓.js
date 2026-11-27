@@ -2844,7 +2844,7 @@
         {
             key: 'q-hidden-gem',
             label: '💎 冷门宝藏',
-            criteria: '播放 < 2万，赞 ≥ 200，藏 ≥ 80，且 (赞播比*权重 ≥ 8% 或 藏播比*权重 ≥ 4.5%)\n【特点】中小样本下的极高纯度遗珠，小众高分佳作（时长/播放加权）'
+            criteria: '((1000 ≤ 播放 < 3000 且 (赞 ≥ 150 或 藏 ≥ 80)) 或 (3000 ≤ 播放 < 2万 且 赞 ≥ 200，藏 ≥ 80))，且 (赞播比*权重 ≥ 8% 或 藏播比*权重 ≥ 4.5%)\n【特点】中小样本下的极高纯度遗珠，小众高分佳作（时长/播放加权）'
         },
         {
             key: 'q-routine',
@@ -3209,7 +3209,7 @@
         'q-danmaku-carnival': { like: 0.30, fav: 0.15, dm: 0.55, review: 0, noDurPenalty: false },
         'q-heated-debate': { like: 0.30, fav: 0.15, dm: 0, review: 0.55, noDurPenalty: false },
         'q-opinion-storm': { like: 0.30, fav: 0.15, dm: 0.30, review: 0.25, noDurPenalty: false },
-        'q-warning': { like: 0.60, fav: 0.40, dm: 0, review: 0, noBonus: true, maxScore: 25 }
+        'q-warning': { like: 0.60, fav: 0.40, dm: 0, review: 0, noBonus: true }
     };
     const DEFAULT_HEALTH_TRACK = { like: 0.50, fav: 0.35, dm: 0.15, review: 0, noDurPenalty: false };
 
@@ -3250,7 +3250,7 @@
     // 按杀戮尖塔式三层模型（品级底分 + 赛道表现浮动 + 明码词条加减）计算完整评分明细
     function computeScoreBreakdown(metrics, qualityClass, typename = '', evalContext = null) {
         if (!metrics || metrics.play <= 0) {
-            return { score: 0, base: 0, floatScore: 0, bonusTotal: 0, bonuses: [] };
+            return { score: 0, base: 0, floatScore: 0, bonusTotal: 0, rawBonusTotal: 0, capType: '', bonuses: [] };
         }
         let track = HEALTH_SCORE_TRACKS[qualityClass] || DEFAULT_HEALTH_TRACK;
         const band = SCORE_TIER_BANDS[qualityClass] || SCORE_TIER_BANDS['q-routine'];
@@ -3362,11 +3362,12 @@
         const bonusTotal = Math.min(12, rawBonusTotal);
         const rawTotal = band.base + floatScore + bonusTotal;
         const score = Math.min(band.max, Math.max(band.min, rawTotal));
+        const capType = rawTotal > band.max ? 'max' : (rawTotal < band.min ? 'min' : '');
 
-        return { score, base: band.base, floatScore, bonusTotal, bonuses };
+        return { score, base: band.base, floatScore, bonusTotal, rawBonusTotal, capType, bonuses };
     }
 
-    // 按命中品级所在赛道计算 0~100% 综合参考分
+    // 按命中品级所在赛道计算 0~100 综合参考分
     function computeHealthScore(metrics, qualityClass, typename = '') {
         return computeScoreBreakdown(metrics, qualityClass, typename).score;
     }
@@ -3590,10 +3591,12 @@
             tipLines.push(`📂 分区: ${stat.typename}`);
         }
         if (play > 0) {
+            const bonusCapNote = scoreDetail.rawBonusTotal > 12 ? `，上限封顶` : '';
             const bonusPart = scoreDetail.bonusTotal !== 0
-                ? (scoreDetail.bonusTotal > 0 ? ` + 词条${scoreDetail.bonusTotal}` : ` - 词条${Math.abs(scoreDetail.bonusTotal)}`)
+                ? (scoreDetail.bonusTotal > 0 ? ` + 词条${scoreDetail.bonusTotal}${bonusCapNote}` : ` - 词条${Math.abs(scoreDetail.bonusTotal)}`)
                 : '';
-            tipLines.push(`📊 综合参考分: ${healthScore}% (基础${scoreDetail.base} + 表现${scoreDetail.floatScore}${bonusPart})`);
+            const bandCapNote = scoreDetail.capType === 'max' ? '，品级封顶' : (scoreDetail.capType === 'min' ? '，品级保底' : '');
+            tipLines.push(`📊 综合参考分: ${healthScore} 分 (基础${scoreDetail.base} + 表现${scoreDetail.floatScore}${bonusPart}${bandCapNote})`);
             if (scoreDetail.bonuses.length > 0) {
                 tipLines.push(`✨ 结算词条: ${scoreDetail.bonuses.map(b => `${b.label}(${b.delta > 0 ? '+' : ''}${b.delta})`).join(' · ')}`);
             }
