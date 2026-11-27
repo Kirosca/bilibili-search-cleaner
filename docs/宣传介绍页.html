@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bilibili 搜索净化器 v3.0 — 精准语法 · 12维品质雷达 · 无缝瀑布流</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bili: {
+              DEFAULT: '#00aeec',
+              dark: '#0096cc',
+              light: '#e6f7fd',
+            },
+            bilipink: {
+              DEFAULT: '#fb7299',
+              light: '#fff0f5',
+            }
+          },
+          boxShadow: {
+            'glass': '0 8px 32px rgba(15, 23, 42, 0.08)',
+            'bili': '0 10px 30px -10px rgba(0, 174, 236, 0.35)',
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    }
+    .bg-grid-pattern {
+      background-image: radial-gradient(rgba(148, 163, 184, 0.22) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+
+    /* 还原脚本内 12 维品质胶囊精确配色 */
+    .bili-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2.5px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.25;
+      white-space: nowrap;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.26);
+      user-select: none;
+    }
+    .bili-pill-score {
+      font-size: 10.5px;
+      font-weight: 600;
+      opacity: 0.92;
+      font-variant-numeric: tabular-nums;
+    }
+    .q-hall-of-fame { background: linear-gradient(135deg, rgba(255, 170, 0, 0.95), rgba(255, 102, 0, 0.95)); border: 1px solid rgba(255, 235, 180, 0.75); box-shadow: 0 0 10px rgba(255, 170, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.28); }
+    .q-viral-short { background: linear-gradient(135deg, rgba(6, 182, 212, 0.95), rgba(16, 185, 129, 0.95)); border: 1px solid rgba(165, 243, 252, 0.75); box-shadow: 0 0 10px rgba(6, 182, 212, 0.4), 0 2px 8px rgba(0, 0, 0, 0.28); }
+    .q-hardcore { background: linear-gradient(135deg, rgba(245, 158, 11, 0.94), rgba(217, 119, 6, 0.94)); border: 1px solid rgba(255, 215, 0, 0.55); box-shadow: 0 2px 8px rgba(245, 158, 11, 0.38); }
+    .q-high-reputation { background: linear-gradient(135deg, rgba(0, 174, 236, 0.94), rgba(0, 120, 215, 0.94)); border: 1px solid rgba(180, 230, 255, 0.55); box-shadow: 0 2px 8px rgba(0, 174, 236, 0.38); }
+    .q-hidden-gem { background: linear-gradient(135deg, rgba(147, 51, 234, 0.94), rgba(99, 102, 241, 0.94)); border: 1px solid rgba(220, 180, 255, 0.55); box-shadow: 0 2px 8px rgba(147, 51, 234, 0.38); }
+    .q-balanced-masterpiece { background: linear-gradient(135deg, rgba(71, 85, 105, 0.96), rgba(30, 41, 59, 0.98)); color: #f8fafc; border: 1px solid rgba(226, 232, 240, 0.75); box-shadow: 0 0 10px rgba(148, 163, 184, 0.32), 0 2px 8px rgba(0, 0, 0, 0.28); }
+    .q-opinion-storm { background: linear-gradient(135deg, rgba(236, 72, 153, 0.95), rgba(168, 85, 247, 0.95)); border: 1px solid rgba(251, 207, 232, 0.75); box-shadow: 0 0 10px rgba(236, 72, 153, 0.45), 0 2px 8px rgba(0, 0, 0, 0.28); }
+    .q-heated-debate { background: linear-gradient(135deg, rgba(37, 99, 235, 0.95), rgba(79, 70, 229, 0.95)); border: 1px solid rgba(191, 219, 254, 0.75); box-shadow: 0 2px 8px rgba(37, 99, 235, 0.42); }
+    .q-danmaku-carnival { background: linear-gradient(135deg, rgba(255, 68, 102, 0.94), rgba(255, 120, 40, 0.94)); border: 1px solid rgba(255, 200, 210, 0.55); box-shadow: 0 2px 8px rgba(255, 68, 102, 0.38); }
+    .q-warning { background: linear-gradient(135deg, rgba(220, 38, 38, 0.94), rgba(153, 27, 27, 0.94)); border: 1px solid rgba(254, 202, 202, 0.55); box-shadow: 0 2px 8px rgba(220, 38, 38, 0.38); }
+    .q-routine { background: linear-gradient(135deg, rgba(16, 110, 75, 0.9), rgba(10, 70, 50, 0.94)); border: 1px solid rgba(74, 222, 128, 0.38); }
+    .q-low-sample { background: rgba(30, 41, 59, 0.86); color: rgba(203, 213, 225, 0.95); border: 1px solid rgba(148, 163, 184, 0.3); }
+
+    /* 虚化占位模拟 */
+    .sim-card {
+      transition: opacity 0.25s ease, filter 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+    }
+    .sim-card.is-dimmed {
+      opacity: 0.16;
+      filter: grayscale(85%) contrast(85%);
+    }
+    .sim-card.is-dimmed:hover {
+      opacity: 0.96;
+      filter: none;
+      transform: translateY(-2px);
+    }
+    .sim-card.is-hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased selection:bg-bili/20 selection:text-bili-dark">
+
+  <!-- 顶部导航 -->
+  <header class="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b border-slate-200/80">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <a href="#top" class="flex items-center gap-2.5 group">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-bili to-blue-600 text-white flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+          </svg>
+        </div>
+        <div>
+          <div class="font-bold text-slate-900 leading-tight flex items-center gap-2">
+            <span>Bilibili 搜索净化器</span>
+            <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-bili/10 text-bili-dark">v3.0.0</span>
+          </div>
+          <p class="text-[11px] text-slate-500">去掉无关视频 · 12 维品质雷达 · 无缝瀑布流</p>
+        </div>
+      </a>
+
+      <nav class="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600">
+        <a href="#simulator" class="hover:text-bili transition-colors">交互体验</a>
+        <a href="#painpoints" class="hover:text-bili transition-colors">核心痛点</a>
+        <a href="#quality" class="hover:text-bili transition-colors">12维评级</a>
+        <a href="#workflow" class="hover:text-bili transition-colors">使用与菜单</a>
+      </nav>
+
+      <div class="flex items-center gap-2.5">
+        <a href="#install" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold shadow-sm transition-all hover:-translate-y-0.5">
+          <span>立即安装</span>
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+          </svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero 区域 -->
+  <section id="top" class="relative overflow-hidden bg-grid-pattern border-b border-slate-200/80">
+    <div class="absolute -top-28 -left-24 w-96 h-96 bg-bili/15 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute -bottom-24 -right-24 w-96 h-96 bg-bilipink/15 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 pt-14 pb-16 relative">
+      <div class="text-center max-w-3xl mx-auto">
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm text-xs font-medium text-slate-600 mb-6">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>专为 <code class="font-mono text-bili-dark font-semibold">search.bilibili.com</code> 打造 · MIT 开源 · 零侵入本地计算</span>
+        </div>
+
+        <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900 leading-[1.18]">
+          把 B 站搜索，变成你的
+          <span class="bg-gradient-to-r from-bili via-blue-600 to-bilipink bg-clip-text text-transparent">高质量内容雷达</span>
+        </h1>
+
+        <p class="mt-5 text-base sm:text-lg text-slate-600 leading-relaxed">
+          告别搜不准、广告混杂、标题党踩雷与翻页割裂。<br class="hidden sm:inline" />
+          支持 <code class="px-1.5 py-0.5 rounded bg-slate-200/70 text-slate-800 font-mono text-sm">-排除词</code>
+          <code class="px-1.5 py-0.5 rounded bg-slate-200/70 text-slate-800 font-mono text-sm">#标签</code>
+          <code class="px-1.5 py-0.5 rounded bg-slate-200/70 text-slate-800 font-mono text-sm">@UP主</code> 语法、
+          <strong class="text-slate-800">12 维视频品质勋章</strong>、以及 <strong class="text-slate-800">Wbi 驱动无缝瀑布流</strong>。
+        </p>
+
+        <div class="mt-8 flex flex-wrap items-center justify-center gap-3.5">
+          <a href="#simulator" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-bili to-blue-600 text-white font-semibold text-sm shadow-bili hover:brightness-105 transition-all hover:-translate-y-0.5">
+            <span>在线试玩交互效果</span>
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </a>
+          <a href="#quality" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white border border-slate-200 text-slate-700 font-semibold text-sm shadow-sm hover:bg-slate-50 transition-all">
+            <span>查看 12 维品质评级</span>
+          </a>
+        </div>
+
+        <!-- 关键数据指标条 -->
+        <div class="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-3xl mx-auto">
+          <div class="bg-white/90 backdrop-blur rounded-2xl border border-slate-200/80 p-3.5 shadow-sm">
+            <div class="text-xl sm:text-2xl font-extrabold text-slate-900">4 种</div>
+            <div class="text-xs text-slate-500 mt-0.5">精准搜索语法 + 简繁互通</div>
+          </div>
+          <div class="bg-white/90 backdrop-blur rounded-2xl border border-slate-200/80 p-3.5 shadow-sm">
+            <div class="text-xl sm:text-2xl font-extrabold text-bili-dark">12 维</div>
+            <div class="text-xs text-slate-500 mt-0.5">视频品质象限与避坑预警</div>
+          </div>
+          <div class="bg-white/90 backdrop-blur rounded-2xl border border-slate-200/80 p-3.5 shadow-sm">
+            <div class="text-xl sm:text-2xl font-extrabold text-emerald-600">O(1)</div>
+            <div class="text-xs text-slate-500 mt-0.5">根类名虚化切换 · 千卡不卡</div>
+          </div>
+          <div class="bg-white/90 backdrop-blur rounded-2xl border border-slate-200/80 p-3.5 shadow-sm">
+            <div class="text-xl sm:text-2xl font-extrabold text-bilipink">Wbi</div>
+            <div class="text-xs text-slate-500 mt-0.5">签名驱动 · 无缝瀑布流</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 交互式沙盒模拟器 -->
+  <section id="simulator" class="py-16 bg-white border-b border-slate-200/80">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-bili-dark">Interactive Preview</span>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">真实效果 · 交互模拟器</h2>
+          <p class="text-sm text-slate-500 mt-1">试试输入语法、切换「虚化 / 隐藏」或按住 <kbd class="px-1.5 py-0.5 text-xs bg-slate-100 border border-slate-300 rounded">Ctrl</kbd> / <kbd class="px-1.5 py-0.5 text-xs bg-slate-100 border border-slate-300 rounded">Shift</kbd> 多选品质药丸</p>
+        </div>
+
+        <!-- 快捷预设 -->
+        <div class="flex flex-wrap items-center gap-2 text-xs">
+          <span class="text-slate-400 font-medium">预设语法：</span>
+          <button type="button" data-preset="Python -游戏" class="preset-btn px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-bili/10 hover:text-bili-dark font-mono transition-colors">Python -游戏</button>
+          <button type="button" data-preset="#实战 @极客" class="preset-btn px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-bili/10 hover:text-bili-dark font-mono transition-colors">#实战 @极客</button>
+          <button type="button" data-preset="教程 -标题党" class="preset-btn px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-bili/10 hover:text-bili-dark font-mono transition-colors">教程 -标题党</button>
+          <button type="button" data-preset="" class="preset-btn px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors">清空重置</button>
+        </div>
+      </div>
+
+      <!-- 模拟浏览器窗口 -->
+      <div class="rounded-2xl border border-slate-200 shadow-glass overflow-hidden bg-slate-50">
+        <!-- 模拟搜索框与脚本控制栏 -->
+        <div class="bg-white border-b border-slate-200 p-4 sm:p-5 space-y-4">
+          <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+            <!-- 搜索框 -->
+            <div class="relative flex-1 max-w-xl">
+              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </span>
+              <input id="sim-search-input" type="text" value="Python -游戏" placeholder="试试输入：Python -游戏 #实战 @极客"
+                class="w-full pl-10 pr-24 py-2.5 rounded-xl bg-slate-100 border border-transparent focus:bg-white focus:border-bili focus:outline-none text-sm font-mono text-slate-800 transition-all" />
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-slate-400 bg-white px-2 py-0.5 rounded border border-slate-200">按 / 聚焦</span>
+            </div>
+
+            <!-- 状态开关组 -->
+            <div class="flex flex-wrap items-center gap-2 text-xs">
+              <button id="sim-toggle-syntax" type="button" class="px-3 py-2 rounded-xl font-semibold border transition-all bg-bili/10 text-bili-dark border-bili/30">
+                🗝️ 语法过滤: 开启 (Alt+Q)
+              </button>
+              <button id="sim-toggle-dim" type="button" class="px-3 py-2 rounded-xl font-semibold border transition-all bg-amber-50 text-amber-700 border-amber-200">
+                👁️ 虚化保留: 开启
+              </button>
+              <button id="sim-toggle-score" type="button" class="px-3 py-2 rounded-xl font-semibold border transition-all bg-slate-100 text-slate-700 border-slate-200">
+                📊 显性评分: 开启
+              </button>
+            </div>
+          </div>
+
+          <!-- 模拟常驻筛选栏 + 品质药丸行 -->
+          <div class="pt-3 border-t border-dashed border-slate-200">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-xs font-semibold text-slate-500 mr-1" title="点击单选 | Ctrl 多选 | Shift 连选">🏷️ 视频品质:</span>
+              <div id="sim-quality-pills" class="flex flex-wrap items-center gap-1.5"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 模拟视频卡片网格 -->
+        <div class="p-4 sm:p-6">
+          <div id="sim-cards-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+          <div id="sim-empty-tip" class="hidden py-12 text-center text-slate-400 text-sm">
+            当前筛选条件下暂无匹配视频，试试切换品质标签或关闭语法过滤。
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 大痛点 vs 解法 Bento Grid -->
+  <section id="painpoints" class="py-16 bg-slate-50 border-b border-slate-200/80">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+      <div class="text-center max-w-2xl mx-auto mb-12">
+        <span class="text-xs font-bold uppercase tracking-wider text-bili-dark">Pain Points Solved</span>
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">直击 B 站搜索 6 大顽疾</h2>
+        <p class="text-sm text-slate-500 mt-2">每一项功能都来自真实高频搜索场景，不堆砌花哨无效的装饰</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- 1 -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-lg font-bold mb-4">🗝️</div>
+          <h3 class="text-lg font-bold text-slate-900">精准搜索语法 + 智能脱壳</h3>
+          <p class="text-xs font-semibold text-rose-500 mt-1">痛点：B站不支持减号排除、#Tag 与 @UP主 联合过滤</p>
+          <p class="text-sm text-slate-600 mt-2.5 leading-relaxed">
+            支持 <code class="bg-slate-100 px-1 rounded font-mono text-xs">-排除词</code>、<code class="bg-slate-100 px-1 rounded font-mono text-xs">#标签</code>、<code class="bg-slate-100 px-1 rounded font-mono text-xs">@UP主</code>。发送给 B 站接口时自动“脱壳”保证召回率，前端再精准拦截；并内置 <strong>OpenCC 简繁归一化</strong>，简繁互搜零障碍。
+          </p>
+        </div>
+
+        <!-- 2 -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-lg font-bold mb-4">🏆</div>
+          <h3 class="text-lg font-bold text-slate-900">12 维品质评级 + 避坑雷达</h3>
+          <p class="text-xs font-semibold text-rose-500 mt-1">痛点：只看播放量易被标题党骗点击，好内容被埋没</p>
+          <p class="text-sm text-slate-600 mt-2.5 leading-relaxed">
+            直接读取点赞、收藏、弹幕、评论、时长与分区，经过<strong>时长加权与高播放稀释修正</strong>，给出「殿堂神作 / 硬核干货 / 冷门宝藏 / 谨慎观看」等 12 类勋章及 0~100% 参考分，悬停可见明码加减分明细。
+          </p>
+        </div>
+
+        <!-- 3 -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div class="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center text-lg font-bold mb-4">🌊</div>
+          <h3 class="text-lg font-bold text-slate-900">Wbi 驱动无缝瀑布流</h3>
+          <p class="text-xs font-semibold text-rose-500 mt-1">痛点：过滤后单页视频变少，反复翻页打断沉浸感</p>
+          <p class="text-sm text-slate-600 mt-2.5 leading-relaxed">
+            原生 Wbi 签名自动请求下一页并去重拼接，动态适应列数布局。右下角悬浮微标实时显示「当前视口第几页」，支持<strong>左键暂停/继续、右键平滑回顶</strong>。
+          </p>
+        </div>
+
+        <!-- 4 -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-lg font-bold mb-4">👁️</div>
+          <h3 class="text-lg font-bold text-slate-900">虚化保留 vs 物理隐藏</h3>
+          <p class="text-xs font-semibold text-rose-500 mt-1">痛点：一刀切隐藏怕误杀，全保留又太眼花</p>
+          <p class="text-sm text-slate-600 mt-2.5 leading-relaxed">
+            开启「虚化显示」后，未命中视频降为 16% 透明度并去色占位，鼠标悬停即刻恢复清晰查验；通过根类名 <strong>O(1) 瞬时切换</strong>，千张卡片零重算不卡顿。
+          </p>
+        </div>
+
+        <!-- 5 -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-lg font-bold mb-4">🛡️</div>
+          <h3 class="text-lg font-bold text-slate-900">接口 + CSS 双层去广告</h3>
+          <p class="text-xs font-semibold text-rose-500 mt-1">痛点：商业推广、小火箭推广混在视频流里</p>
+          <p class="text-sm text-slate-600 mt-2.5 leading-relaxed">
+            在网络响应与 SSR 数据层物理剔除 <code class="bg-slate-100 px-1 rounded font-mono text-xs">is_ad_loc / is_promoted</code>，同时预注入 <code class="bg-slate-100 px-1 rounded font-mono text-xs">:has()</code> CSS 规则在渲染前秒杀推广卡片。
+          </p>
+        </div>
+
+        <!-- 6 -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg font-bold mb-4">⚡</div>
+          <h3 class="text-lg font-bold text-slate-900">筛选常驻 + 快捷键 + 性能</h3>
+          <p class="text-xs font-semibold text-rose-500 mt-1">痛点：筛选面板默认折叠、长列表滚动掉帧</p>
+          <p class="text-sm text-slate-600 mt-2.5 leading-relaxed">
+            自动展开并锁定筛选面板；支持 <kbd class="px-1 bg-slate-100 border rounded text-xs">/</kbd> 聚焦搜索框、<kbd class="px-1 bg-slate-100 border rounded text-xs">Alt+Q</kbd> 秒切过滤；配合 <code class="bg-slate-100 px-1 rounded font-mono text-xs">content-visibility: auto</code> 离屏优化，刷千条依然丝滑。
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12 维视频品质图鉴 -->
+  <section id="quality" class="py-16 bg-white border-b border-slate-200/80">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-bili-dark">12-Dimension Quality Pyramid</span>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">12 维视频品质图鉴 & 三层评分模型</h2>
+          <p class="text-sm text-slate-500 mt-1.5">品级底分 + 赛道表现浮动 + 明码词条加减，同品级也能分出高下</p>
+        </div>
+        <div class="flex flex-wrap gap-1.5 text-xs">
+          <span class="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium">🔥 三连拉满 +3</span>
+          <span class="px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-medium">📚 压箱宝典 +4</span>
+          <span class="px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium">🏛️ 三年经典 +4</span>
+          <span class="px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 font-medium">🕳️ 标题党预警 -3</span>
+        </div>
+      </div>
+
+      <div id="quality-catalog-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </div>
+  </section>
+
+  <!-- 油猴菜单与快捷键 -->
+  <section id="workflow" class="py-16 bg-slate-50 border-b border-slate-200/80">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+      <!-- 左侧：级联油猴菜单展示 -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+        <span class="text-xs font-bold uppercase tracking-wider text-bili-dark">Menu Control</span>
+        <h3 class="text-xl font-extrabold text-slate-900 mt-1">清晰克制的级联油猴菜单</h3>
+        <p class="text-sm text-slate-500 mt-1 mb-5">所有功能模块化开关，支持持久化记忆，还提供一键全开/全关</p>
+
+        <div class="rounded-xl bg-slate-900 text-slate-100 p-4 font-mono text-xs sm:text-sm space-y-2 shadow-inner">
+          <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-800/80">
+            <span>⚡ 一键全开/全关</span>
+            <span class="text-emerald-400">✅ 已开启</span>
+          </div>
+          <div class="flex items-center justify-between px-3 py-1.5">
+            <span>⚓ 搜索筛选常驻</span>
+            <span class="text-emerald-400">✅ 已开启</span>
+          </div>
+          <div class="flex items-center justify-between px-3 py-1.5">
+            <span>🌊 无缝瀑布流</span>
+            <span class="text-emerald-400">✅ 已开启</span>
+          </div>
+          <div class="flex items-center justify-between px-3 py-1.5">
+            <span>🗝️ 搜索语法过滤 (Alt+Q)</span>
+            <span class="text-emerald-400">✅ 已开启</span>
+          </div>
+          <div class="flex items-center justify-between px-3 py-1 pl-7 text-slate-300">
+            <span>└─ 虚化显示模糊内容</span>
+            <span class="text-emerald-400">✅ 已开启</span>
+          </div>
+          <div class="flex items-center justify-between px-3 py-1.5">
+            <span>🏷️ 视频品质标签</span>
+            <span class="text-emerald-400">✅ 已开启</span>
+          </div>
+          <div class="flex items-center justify-between px-3 py-1 pl-7 text-slate-300">
+            <span>├─ 标签可见范围</span>
+            <span class="text-amber-300">✨ 仅精选 / 📑 全部</span>
+          </div>
+          <div class="flex items-center justify-between px-3 py-1 pl-7 text-slate-300">
+            <span>└─ 封面显性评分</span>
+            <span class="text-emerald-400">✅ 已开启</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧：快捷键与安装指南 -->
+      <div id="install" class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-6">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-bili-dark">Shortcuts & Quick Start</span>
+          <h3 class="text-xl font-extrabold text-slate-900 mt-1">高频快捷键 & 3 步上手</h3>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+          <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+            <div class="font-mono font-bold text-slate-900"><kbd class="px-2 py-0.5 bg-white border border-slate-300 rounded shadow-xs">/</kbd></div>
+            <div class="text-xs text-slate-600 mt-1.5">任意位置快速聚焦搜索框</div>
+          </div>
+          <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+            <div class="font-mono font-bold text-slate-900"><kbd class="px-2 py-0.5 bg-white border border-slate-300 rounded shadow-xs">Alt</kbd> + <kbd class="px-2 py-0.5 bg-white border border-slate-300 rounded shadow-xs">Q</kbd></div>
+            <div class="text-xs text-slate-600 mt-1.5">秒切「搜索语法过滤」开关</div>
+          </div>
+          <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+            <div class="font-mono font-bold text-slate-900"><kbd class="px-2 py-0.5 bg-white border border-slate-300 rounded shadow-xs">Ctrl</kbd> / <kbd class="px-2 py-0.5 bg-white border border-slate-300 rounded shadow-xs">Shift</kbd> + 点击</div>
+            <div class="text-xs text-slate-600 mt-1.5">品质药丸支持多选与范围连选</div>
+          </div>
+          <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+            <div class="font-mono font-bold text-slate-900">左键 / 右键微标</div>
+            <div class="text-xs text-slate-600 mt-1.5">暂停继续瀑布流 / 平滑回到顶部</div>
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-100">
+          <ol class="space-y-2.5 text-sm text-slate-600">
+            <li class="flex items-start gap-2.5">
+              <span class="w-5 h-5 rounded-full bg-bili text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">1</span>
+              <span>浏览器安装 <strong>Tampermonkey（篡改猴）</strong> 或 <strong>Violentmonkey</strong> 扩展。</span>
+            </li>
+            <li class="flex items-start gap-2.5">
+              <span class="w-5 h-5 rounded-full bg-bili text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">2</span>
+              <span>导入脚本文件 <code class="px-1.5 py-0.5 rounded bg-slate-100 font-mono text-xs text-slate-800">bilibili-search-cleaner-v2.1.0.user手搓.js</code>。</span>
+            </li>
+            <li class="flex items-start gap-2.5">
+              <span class="w-5 h-5 rounded-full bg-bili text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>
+              <span>打开 <code class="px-1.5 py-0.5 rounded bg-slate-100 font-mono text-xs text-slate-800">search.bilibili.com</code> 搜索任意关键词，即刻生效！</span>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 页脚 -->
+  <footer class="bg-white py-8">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+      <div>
+        <span class="font-semibold text-slate-700">Bilibili 去掉搜索无关视频 (v3.0.0)</span> · Author: <span class="font-medium text-slate-700">Kirosca</span> · License: MIT
+      </div>
+      <div>
+        纯本地前端运行 · 不上传任何用户数据
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // 12 维品质定义（与脚本内 QUALITY_FILTER_OPTIONS 保持一致）
+    const QUALITY_DEFS = [
+      { key: 'all', label: '全部', isAll: true, desc: '展示当前搜索下的全部有效视频' },
+      { key: 'q-hall-of-fame', label: '🏆 殿堂神作', desc: '时长≥90秒且播放≥2万，赞播比*权重≥7%，藏播比*权重≥3.5%，三连拉满的顶峰神作。' },
+      { key: 'q-hardcore', label: '💡 硬核干货', desc: '藏赞比与藏播比极高，深度实用干货与教程合集（干货区门槛放宽 15%）。' },
+      { key: 'q-high-reputation', label: '⭐ 高口碑佳作', desc: '观众清一色好评点赞，高认可度优质佳作（含时长/播放加权）。' },
+      { key: 'q-balanced-masterpiece', label: '🏅 综合标杆', desc: '赞藏双优全面扎实，播放≥1万且各项指标均衡无短板。' },
+      { key: 'q-hidden-gem', label: '💎 冷门宝藏', desc: '播放<2万的中小样本遗珠，互动纯度极高的小众高分佳作。' },
+      { key: 'q-routine', label: '🍀 稳健良作', desc: '播放≥3000 且未触碰避坑线，内容扎实的中流砥柱良品。' },
+      { key: 'q-opinion-storm', label: '💥 话题焦点', desc: '弹幕密集与评论高评赞比齐飞，全网热议/深度探讨焦点。' },
+      { key: 'q-heated-debate', label: '💬 激辩热议', desc: '评赞比异常高且评论绝对量大，评论区长篇对线深度碰撞。' },
+      { key: 'q-danmaku-carnival', label: '🔥 弹幕密集', desc: '弹幕密度≥15条/分或总量≥3000，高能互动与名场面聚集。' },
+      { key: 'q-viral-short', label: '⚡ 爆款短片', desc: '时长<90秒，快节奏高完播互动爆棚的短视频精选。' },
+      { key: 'q-low-sample', label: '🌱 样本较少', desc: '播放<3000 的早期冷门或新发视频，冷门置信度保护暂不定性。' },
+      { key: 'q-warning', label: '⚠️ 谨慎观看', desc: '高播放但赞播比与藏播比极低，疑似标题党或低质内容避坑预警。' }
+    ];
+
+    // 模拟器样本视频数据
+    const MOCK_VIDEOS = [
+      {
+        title: '【硬核】Python 异步编程底层原理全解析（附源码实战）',
+        up: '极客码农',
+        tags: ['Python', '实战', '教程', '异步'],
+        play: '18.6万',
+        duration: '34:20',
+        quality: 'q-hall-of-fame',
+        score: '94%',
+        bonus: '🔥 三连拉满 +3 · ⏱️ 长篇硬核 +2',
+        coverGrad: 'from-amber-500/20 via-orange-500/15 to-slate-900/85'
+      },
+      {
+        title: 'Python 自动化办公实战：50行代码解放双手',
+        up: '极客效率局',
+        tags: ['Python', '实战', '办公'],
+        play: '6.2万',
+        duration: '14:05',
+        quality: 'q-hardcore',
+        score: '86%',
+        bonus: '📚 压箱宝典 +4 · 📂 干货分区 +1',
+        coverGrad: 'from-amber-400/20 via-yellow-500/10 to-slate-900/85'
+      },
+      {
+        title: '用 Python 写一个贪吃蛇小游戏（零基础娱乐向）',
+        up: '游戏制作君',
+        tags: ['Python', '游戏', '娱乐'],
+        play: '12.4万',
+        duration: '08:40',
+        quality: 'q-routine',
+        score: '49%',
+        bonus: '🎈 娱乐微调 -2',
+        coverGrad: 'from-emerald-500/20 via-teal-500/10 to-slate-900/85'
+      },
+      {
+        title: '震惊！学 Python 的人90%都后悔了！标题党警告',
+        up: '流量收割机',
+        tags: ['Python', '闲聊'],
+        play: '45.0万',
+        duration: '04:12',
+        quality: 'q-warning',
+        score: '14%',
+        bonus: '🕳️ 标题党预警 -3',
+        coverGrad: 'from-rose-600/25 via-red-500/15 to-slate-900/85'
+      },
+      {
+        title: '小众神级 Python 调试技巧：看懂内存泄漏只需这一招',
+        up: '极客实验室',
+        tags: ['Python', '实战', '教程'],
+        play: '8,400',
+        duration: '11:30',
+        quality: 'q-hidden-gem',
+        score: '79%',
+        bonus: '💎 纯度极高 +2 · 🏛️ 跨年长青 +2',
+        coverGrad: 'from-purple-500/25 via-indigo-500/15 to-slate-900/85'
+      },
+      {
+        title: '60秒看懂 Python 装饰器！丝滑动画演示',
+        up: '动画学编程',
+        tags: ['Python', '教程'],
+        play: '23.1万',
+        duration: '01:02',
+        quality: 'q-viral-short',
+        score: '82%',
+        bonus: '⚡ 短小精悍 +2',
+        coverGrad: 'from-cyan-500/25 via-emerald-500/15 to-slate-900/85'
+      },
+      {
+        title: 'Python 3.13 移除 GIL 究竟影响多大？评论区吵翻了',
+        up: '技术观察室',
+        tags: ['Python', '资讯'],
+        play: '9.8万',
+        duration: '16:45',
+        quality: 'q-heated-debate',
+        score: '68%',
+        bonus: '⚔️ 争议高发 -2',
+        coverGrad: 'from-blue-600/25 via-indigo-600/15 to-slate-900/85'
+      },
+      {
+        title: '刚录的 Python 环境变量配置避坑指南（新片）',
+        up: '新手村导师',
+        tags: ['Python', '教程'],
+        play: '1,240',
+        duration: '06:18',
+        quality: 'q-low-sample',
+        score: '34%',
+        bonus: '冷门置信度保护',
+        coverGrad: 'from-slate-500/25 via-slate-600/15 to-slate-900/85'
+      }
+    ];
+
+    // 渲染 12 维品质图鉴
+    const catalogGrid = document.getElementById('quality-catalog-grid');
+    QUALITY_DEFS.filter(d => !d.isAll).forEach(def => {
+      const card = document.createElement('div');
+      card.className = 'rounded-2xl border border-slate-200 bg-slate-50/70 p-4 hover:bg-white hover:shadow-sm transition-all';
+      card.innerHTML = `
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <span class="bili-pill ${def.key}">${def.label}</span>
+          <code class="text-[11px] font-mono text-slate-400">${def.key}</code>
+        </div>
+        <p class="text-xs text-slate-600 leading-relaxed">${def.desc}</p>
+      `;
+      catalogGrid.appendChild(card);
+    });
+
+    // 模拟器状态
+    let simSyntaxEnabled = true;
+    let simDimmedEnabled = true;
+    let simScoreEnabled = true;
+    let simActiveQualities = new Set();
+    let simLastAnchor = null;
+
+    const qualityOrder = QUALITY_DEFS.filter(d => !d.isAll).map(d => d.key);
+    const searchInput = document.getElementById('sim-search-input');
+    const pillsContainer = document.getElementById('sim-quality-pills');
+    const cardsGrid = document.getElementById('sim-cards-grid');
+    const emptyTip = document.getElementById('sim-empty-tip');
+
+    function parseQuery(raw) {
+      const tokens = raw.trim().split(/\s+/).filter(Boolean);
+      const normal = [], exclude = [], tags = [], ups = [];
+      tokens.forEach(t => {
+        if (t.startsWith('-') && t.length > 1) exclude.push(t.slice(1).toLowerCase());
+        else if (t.startsWith('#') && t.length > 1) tags.push(t.slice(1).toLowerCase());
+        else if (t.startsWith('@') && t.length > 1) ups.push(t.slice(1).toLowerCase());
+        else normal.push(t.toLowerCase());
+      });
+      return { normal, exclude, tags, ups };
+    }
+
+    function matchSyntax(video, parsed) {
+      if (!simSyntaxEnabled) return true;
+      const titleLower = video.title.toLowerCase();
+      const upLower = video.up.toLowerCase();
+      const tagsLower = video.tags.map(t => t.toLowerCase());
+      const allText = `${titleLower} ${upLower} ${tagsLower.join(' ')}`;
+
+      for (const ex of parsed.exclude) {
+        if (allText.includes(ex)) return false;
+      }
+      for (const n of parsed.normal) {
+        if (!titleLower.includes(n) && !tagsLower.some(t => t.includes(n))) return false;
+      }
+      for (const tg of parsed.tags) {
+        if (!tagsLower.some(t => t.includes(tg))) return false;
+      }
+      for (const u of parsed.ups) {
+        if (!upLower.includes(u)) return false;
+      }
+      return true;
+    }
+
+    function renderSim() {
+      const parsed = parseQuery(searchInput.value);
+      const syntaxResults = MOCK_VIDEOS.map(v => ({ video: v, syntaxPass: matchSyntax(v, parsed) }));
+
+      // 统计每个品质的数量（基于通过语法的视频）
+      const counts = {};
+      let passCount = 0;
+      syntaxResults.forEach(({ video, syntaxPass }) => {
+        if (syntaxPass) {
+          passCount++;
+          counts[video.quality] = (counts[video.quality] || 0) + 1;
+        }
+      });
+
+      // 渲染品质筛选药丸
+      pillsContainer.innerHTML = '';
+      QUALITY_DEFS.filter(d => d.isAll || counts[d.key] > 0 || simActiveQualities.has(d.key)).forEach(def => {
+        const isActive = def.isAll ? simActiveQualities.size === 0 : simActiveQualities.has(def.key);
+        const count = def.isAll ? passCount : (counts[def.key] || 0);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `px-2.5 py-1 rounded-full text-xs font-medium border transition-all flex items-center gap-1 ${
+          isActive
+            ? 'bg-bili text-white border-bili shadow-xs'
+            : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200/70'
+        }`;
+        btn.innerHTML = `<span>${def.label}</span><span class="opacity-75 text-[10.5px] font-mono">(${count})</span>`;
+        btn.addEventListener('click', (e) => {
+          if (def.isAll) {
+            simActiveQualities.clear();
+            simLastAnchor = null;
+          } else if (e.shiftKey && simLastAnchor && qualityOrder.includes(simLastAnchor)) {
+            const a = qualityOrder.indexOf(simLastAnchor);
+            const b = qualityOrder.indexOf(def.key);
+            const [start, end] = a < b ? [a, b] : [b, a];
+            if (!e.ctrlKey && !e.metaKey) simActiveQualities.clear();
+            for (let i = start; i <= end; i++) simActiveQualities.add(qualityOrder[i]);
+          } else if (e.ctrlKey || e.metaKey) {
+            if (simActiveQualities.has(def.key)) simActiveQualities.delete(def.key);
+            else simActiveQualities.add(def.key);
+            simLastAnchor = def.key;
+          } else {
+            if (simActiveQualities.size === 1 && simActiveQualities.has(def.key)) {
+              simActiveQualities.clear();
+            } else {
+              simActiveQualities.clear();
+              simActiveQualities.add(def.key);
+            }
+            simLastAnchor = def.key;
+          }
+          renderSim();
+        });
+        pillsContainer.appendChild(btn);
+      });
+
+      // 渲染卡片
+      cardsGrid.innerHTML = '';
+      let visibleTotal = 0;
+      syntaxResults.forEach(({ video, syntaxPass }) => {
+        const qualityPass = simActiveQualities.size === 0 || simActiveQualities.has(video.quality);
+        const qDef = QUALITY_DEFS.find(d => d.key === video.quality);
+
+        const card = document.createElement('div');
+        let stateClass = '';
+        if (!qualityPass) {
+          stateClass = 'is-hidden';
+        } else if (!syntaxPass) {
+          stateClass = simDimmedEnabled ? 'is-dimmed' : 'is-hidden';
+        }
+        if (stateClass !== 'is-hidden') visibleTotal++;
+
+        card.className = `sim-card bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-md ${stateClass}`;
+        card.innerHTML = `
+          <div class="relative aspect-video bg-gradient-to-br ${video.coverGrad} p-2.5 flex flex-col justify-between">
+            <div class="flex items-start justify-between gap-1">
+              <span class="bili-pill ${video.quality}" title="${video.bonus}">
+                <span>${qDef.label}</span>
+                ${simScoreEnabled ? `<span class="bili-pill-score">${video.score}</span>` : ''}
+              </span>
+            </div>
+            <div class="flex items-center justify-between text-[11px] text-white/90 font-medium">
+              <span class="px-1.5 py-0.5 rounded bg-black/50 backdrop-blur-xs">▶ ${video.play}</span>
+              <span class="px-1.5 py-0.5 rounded bg-black/50 backdrop-blur-xs font-mono">${video.duration}</span>
+            </div>
+          </div>
+          <div class="p-3">
+            <h4 class="text-xs sm:text-[13px] font-semibold text-slate-800 line-clamp-2 leading-snug min-h-[2.3rem]">${video.title}</h4>
+            <div class="mt-2 flex items-center justify-between text-[11px] text-slate-500">
+              <span>@${video.up}</span>
+              <span class="text-slate-400 truncate max-w-[55%]" title="${video.bonus}">${video.tags.map(t => '#' + t).join(' ')}</span>
+            </div>
+          </div>
+        `;
+        cardsGrid.appendChild(card);
+      });
+
+      emptyTip.classList.toggle('hidden', visibleTotal > 0);
+    }
+
+    // 绑定模拟器交互事件
+    searchInput.addEventListener('input', renderSim);
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        searchInput.value = btn.dataset.preset;
+        renderSim();
+      });
+    });
+
+    const btnSyntax = document.getElementById('sim-toggle-syntax');
+    const btnDim = document.getElementById('sim-toggle-dim');
+    const btnScore = document.getElementById('sim-toggle-score');
+
+    btnSyntax.addEventListener('click', () => {
+      simSyntaxEnabled = !simSyntaxEnabled;
+      btnSyntax.textContent = `🗝️ 语法过滤: ${simSyntaxEnabled ? '开启' : '关闭'} (Alt+Q)`;
+      btnSyntax.className = simSyntaxEnabled
+        ? 'px-3 py-2 rounded-xl font-semibold border transition-all bg-bili/10 text-bili-dark border-bili/30'
+        : 'px-3 py-2 rounded-xl font-semibold border transition-all bg-slate-100 text-slate-500 border-slate-200';
+      renderSim();
+    });
+
+    btnDim.addEventListener('click', () => {
+      simDimmedEnabled = !simDimmedEnabled;
+      btnDim.textContent = `👁️ 虚化保留: ${simDimmedEnabled ? '开启' : '关闭 (物理隐藏)'}`;
+      btnDim.className = simDimmedEnabled
+        ? 'px-3 py-2 rounded-xl font-semibold border transition-all bg-amber-50 text-amber-700 border-amber-200'
+        : 'px-3 py-2 rounded-xl font-semibold border transition-all bg-slate-100 text-slate-600 border-slate-200';
+      renderSim();
+    });
+
+    btnScore.addEventListener('click', () => {
+      simScoreEnabled = !simScoreEnabled;
+      btnScore.textContent = `📊 显性评分: ${simScoreEnabled ? '开启' : '关闭'}`;
+      btnScore.className = simScoreEnabled
+        ? 'px-3 py-2 rounded-xl font-semibold border transition-all bg-slate-100 text-slate-700 border-slate-200'
+        : 'px-3 py-2 rounded-xl font-semibold border transition-all bg-white text-slate-400 border-slate-200';
+      renderSim();
+    });
+
+    renderSim();
+  </script>
+</body>
+</html>
