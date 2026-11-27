@@ -3174,8 +3174,8 @@
         // 方案 3：时长加权归一化（数学模型修正）
         // 5分钟为标准基准时长（durFactor = 1.0）；长视频完播难度大、观众付出时间成本极高，给予加权提升；短视频互动完播轻快无压力，给予系数惩罚（下限0.4，上限2.0）
         const durFactor = durationMinutes > 0 ? Math.min(2.0, Math.max(0.4, Math.sqrt(durationMinutes / 5.0))) : 1.0;
-        // 高播放量稀释修正（5万以下 1.0x，50万 1.20x，500万封顶 1.40x）
-        const playFactor = play > 50000 ? Math.min(1.4, 1.0 + 0.2 * Math.log10(play / 50000)) : 1.0;
+        // 高播放量稀释修正（5万以下 1.0x，50万 1.20x，500万 1.40x，5000万封顶 1.60x）
+        const playFactor = play > 50000 ? Math.min(1.6, 1.0 + 0.2 * Math.log10(play / 50000)) : 1.0;
 
         const normLikeRatio = likeRatio * durFactor * playFactor;
         const normFavRatio = favRatio * durFactor * playFactor;
@@ -3303,10 +3303,12 @@
             } else if (metrics.favLikeRatio >= 0.90 && metrics.favorites >= 300) {
                 bonuses.push({ label: '💎 纯度极高', delta: 2 });
             }
-            const isPhenomenal = metrics.play >= 3000000 && metrics.likeRatio >= 0.05 && metrics.favRatio >= 0.025;
+            const playLikeRatio = metrics.likeRatio * effectivePlay;
+            const playFavRatio = metrics.favRatio * effectivePlay;
+            const isPhenomenal = metrics.play >= 3000000 && playLikeRatio >= 0.05 && playFavRatio >= 0.025;
             if (isPhenomenal) {
                 bonuses.push({ label: '👑 现象级破圈', delta: 4 });
-            } else if (metrics.play >= 1000000 && metrics.likeRatio >= 0.05) {
+            } else if (metrics.play >= 1000000 && playLikeRatio >= 0.05) {
                 bonuses.push({ label: '🌊 百万不稀释', delta: 3 });
             }
             if (metrics.durationMinutes >= 45 && metrics.normLikeRatio >= 0.04) {
@@ -3332,9 +3334,9 @@
             } else if (metrics.review >= 500 && metrics.likeRatio >= 0.05 && metrics.reviewLikeRatio >= 0.02 && metrics.reviewLikeRatio <= 0.12) {
                 bonuses.push({ label: '🗣️ 深度共鸣', delta: 2 });
             }
-            if (metrics.ageDays >= 1095 && (metrics.likeRatio >= 0.05 || metrics.favRatio >= 0.03)) {
+            if (metrics.ageDays >= 1095 && (playLikeRatio >= 0.05 || playFavRatio >= 0.03)) {
                 bonuses.push({ label: '🏛️ 三年经典', delta: 4 });
-            } else if (metrics.ageDays >= 365 && (metrics.likeRatio >= 0.05 || metrics.favRatio >= 0.03)) {
+            } else if (metrics.ageDays >= 365 && (playLikeRatio >= 0.05 || playFavRatio >= 0.03)) {
                 bonuses.push({ label: '🏛️ 跨年长青', delta: 2 });
             } else if (metrics.ageDays >= 0 && metrics.ageDays < 2 && band.base >= 50) {
                 bonuses.push({ label: '⏳ 新片冷静', delta: -3 });
