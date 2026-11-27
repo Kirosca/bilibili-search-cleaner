@@ -3596,7 +3596,7 @@
                 ? (scoreDetail.bonusTotal > 0 ? ` + 词条${scoreDetail.bonusTotal}${bonusCapNote}` : ` - 词条${Math.abs(scoreDetail.bonusTotal)}`)
                 : '';
             const bandCapNote = scoreDetail.capType === 'max' ? '，品级封顶' : (scoreDetail.capType === 'min' ? '，品级保底' : '');
-            tipLines.push(`📊 综合参考分: ${healthScore} 分 (基础${scoreDetail.base} + 表现${scoreDetail.floatScore}${bonusPart}${bandCapNote})`);
+            tipLines.push(`📊 综合参考分: ${healthScore} (基础${scoreDetail.base} + 表现${scoreDetail.floatScore}${bonusPart}${bandCapNote})`);
             if (scoreDetail.bonuses.length > 0) {
                 tipLines.push(`✨ 结算词条: ${scoreDetail.bonuses.map(b => `${b.label}(${b.delta > 0 ? '+' : ''}${b.delta})`).join(' · ')}`);
             }
