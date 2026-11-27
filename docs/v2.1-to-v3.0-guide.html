@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bilibili 搜索净化 · v2.1.0 → v3.0.0 完整升级说明书</title>
+  <title>Bilibili 搜索净化 · v2.1.0 → v3.0.0 升级说明</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* 100% 还原脚本封面品级胶囊样式 */
@@ -214,7 +214,7 @@
             Bilibili 去掉搜索无关视频
           </h1>
           <p class="text-slate-300 text-sm sm:text-base max-w-2xl leading-relaxed">
-            从 260 行的“单一关键词物理隐藏脚本”，全面进化为集 <span class="text-sky-300 font-semibold">搜索语法过滤</span>、<span class="text-sky-300 font-semibold">O(1) 聚光灯虚化</span>、<span class="text-sky-300 font-semibold">WBI 无缝瀑布流</span> 与 <span class="text-sky-300 font-semibold">12 维视频品质雷达</span> 于一体的搜索净化工作台。
+            从 260 行的“关键词隐藏脚本”，更新为包含 <span class="text-sky-300 font-semibold">搜索语法过滤</span>、<span class="text-sky-300 font-semibold">O(1) 虚化</span>、<span class="text-sky-300 font-semibold">WBI 瀑布流</span> 与 <span class="text-sky-300 font-semibold">12 维品质分类</span> 的脚本。
           </p>
         </div>
 
@@ -259,7 +259,7 @@
       <div class="px-4 sm:px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <h2 class="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2.5">
           <span class="w-2 h-5 bg-sky-600 rounded-full shrink-0"></span>
-          功能速览（30 秒看懂 v3.0.0 核心能力）
+          功能速览（v3.0.0）
         </h2>
         <span class="text-xs text-slate-500">点击卡片右下角可直接跳转对应详解</span>
       </div>
@@ -745,49 +745,49 @@
                 <span class="pill q-hall-of-fame">🏆 殿堂神作</span>
                 <span class="text-[11px] font-mono text-amber-700">T0 顶峰</span>
               </div>
-              <p class="text-xs text-slate-600 leading-relaxed">90 秒以上长篇深度精作，赞播比与藏播比双率断层领先，三连拉满。</p>
+              <p class="text-xs text-slate-600 leading-relaxed">90 秒以上视频，赞播比与藏播比达标。</p>
             </div>
             <div class="p-3 rounded-lg bg-white border border-slate-200/90 space-y-1">
               <div class="flex items-center justify-between gap-2">
                 <span class="pill q-viral-short">⚡ 爆款短片</span>
                 <span class="text-[11px] font-mono text-cyan-700">T0/T1 短片</span>
               </div>
-              <p class="text-xs text-slate-600 leading-relaxed">90 秒内高能快节奏短片，完播与互动爆发力极强，防止与长篇神作互相挤压。</p>
+              <p class="text-xs text-slate-600 leading-relaxed">90 秒内短片，赞播比或藏播比达标，与长视频分赛道判定。</p>
             </div>
             <div class="p-3 rounded-lg bg-white border border-slate-200/90 space-y-1">
               <div class="flex items-center justify-between gap-2">
                 <span class="pill q-hardcore">💡 硬核干货</span>
                 <span class="text-[11px] font-mono text-amber-700">T1 收藏向</span>
               </div>
-              <p class="text-xs text-slate-600 leading-relaxed">90 秒以上高收藏转化内容，主打实用教程、深度科普与知识合集。</p>
+              <p class="text-xs text-slate-600 leading-relaxed">90 秒以上收藏转化达标内容，包括教程、科普与合集。</p>
             </div>
             <div class="p-3 rounded-lg bg-white border border-slate-200/90 space-y-1">
               <div class="flex items-center justify-between gap-2">
                 <span class="pill q-high-reputation">⭐ 高口碑佳作</span>
                 <span class="text-[11px] font-mono text-sky-700">T1 好评向</span>
               </div>
-              <p class="text-xs text-slate-600 leading-relaxed">经时长加权后赞播比突出的高认可度作品，观众普遍给予正面好评。</p>
+              <p class="text-xs text-slate-600 leading-relaxed">经时长加权后赞播比达标的作品。</p>
             </div>
             <div class="p-3 rounded-lg bg-white border border-slate-200/90 space-y-1">
               <div class="flex items-center justify-between gap-2">
                 <span class="pill q-balanced-masterpiece">🏅 综合标杆</span>
                 <span class="text-[11px] font-mono text-slate-700">T1.5 六边形</span>
               </div>
-              <p class="text-xs text-slate-600 leading-relaxed">赞播比与藏播比双优均衡，无明显短板的全面扎实水准。</p>
+              <p class="text-xs text-slate-600 leading-relaxed">赞播比与藏播比均达标。</p>
             </div>
             <div class="p-3 rounded-lg bg-white border border-slate-200/90 space-y-1">
               <div class="flex items-center justify-between gap-2">
                 <span class="pill q-hidden-gem">💎 冷门宝藏</span>
                 <span class="text-[11px] font-mono text-purple-700">小众破格</span>
               </div>
-              <p class="text-xs text-slate-600 leading-relaxed">播放量在 1000~2万之间的中小样本高纯度遗珠，适合挖掘被埋没的佳作。</p>
+              <p class="text-xs text-slate-600 leading-relaxed">播放量在 1000~2万之间且赞播比或藏播比达标的作品。</p>
             </div>
             <div class="p-3 rounded-lg bg-white border border-slate-200/90 space-y-1 sm:col-span-2 lg:col-span-3">
               <div class="flex items-center justify-between gap-2">
                 <span class="pill q-routine">🍀 稳健良作</span>
                 <span class="text-[11px] font-mono text-emerald-700">T3 基准兜底（仅精选模式下隐藏封面微标）</span>
               </div>
-              <p class="text-xs text-slate-600 leading-relaxed">播放 ≥ 3000 且未触碰低质预警线，亦未落入高阶或热议象限的常规健康内容，作为可靠基本盘。</p>
+              <p class="text-xs text-slate-600 leading-relaxed">播放 ≥ 3000 且未触碰预警线、也未落入其他象限的内容。</p>
             </div>
           </div>
         </div>

@@ -85,14 +85,14 @@
         B站搜索净化器：手搓版核心演进与对比说明
       </h1>
       <p class="text-slate-600 leading-relaxed max-w-3xl">
-        相比最初的 3.0 发布版，当前手搓版（<code class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 text-xs font-mono">bilibili-search-cleaner-v2.1.0.user手搓.js</code>）在<strong>视频品质打分体系</strong>、<strong>分区与流量动态校正</strong>、<strong>交互筛选体验</strong>以及<strong>大列表渲染性能</strong>四个方向进行了全面重构与增强。
+        相比 3.0 发布版，手搓版在<strong>视频品质打分体系</strong>、<strong>分区与流量校正</strong>、<strong>交互筛选</strong>以及<strong>大列表渲染性能</strong>四个方向进行了调整。
       </p>
 
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
         <div class="rounded-xl bg-slate-50 border border-slate-200 p-4">
           <div class="text-xs font-semibold text-sky-600 uppercase tracking-wider mb-1">01 · 新增功能</div>
           <div class="text-lg font-bold text-slate-900">三层打分 + 20+ 词条</div>
-          <p class="text-xs text-slate-500 mt-1">支持封面显性评分开关、样本较少筛选胶囊、卡片详尽 Tooltip 拆解。</p>
+          <p class="text-xs text-slate-500 mt-1">支持封面显性评分开关、样本较少筛选胶囊、卡片 Tooltip 拆解。</p>
         </div>
         <div class="rounded-xl bg-slate-50 border border-slate-200 p-4">
           <div class="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-1">02 · 规则与模型</div>
@@ -118,7 +118,7 @@
       <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-5">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 class="text-lg font-bold text-slate-900">1. 杀戮尖塔风格「三层综合参考分」与封面显性评分开关</h3>
+            <h3 class="text-lg font-bold text-slate-900">1.「三层参考分」与封面显性评分开关</h3>
             <p class="text-sm text-slate-600 mt-1">
               发布版仅展示品级名称；手搓版新增 <code class="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">SCORE_TIER_BANDS</code>、<code class="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">computeScoreBreakdown</code> 与 <code class="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">computeHealthScore</code>，将评分拆解为 <strong>基础分 + 表现分 + 词条修正</strong>。
             </p>
@@ -211,11 +211,11 @@
           <ul class="text-sm text-slate-600 space-y-2 list-disc list-inside">
             <li>在 <code class="font-mono text-xs bg-slate-100 px-1 rounded">QUALITY_FILTER_OPTIONS</code> 与 <code class="font-mono text-xs bg-slate-100 px-1 rounded">QUALITY_CATEGORY_KEYS</code> 中加入 <code class="font-mono text-xs bg-slate-100 px-1 rounded">q-low-sample</code>。</li>
             <li>完整支持单选、<kbd class="px-1.5 py-0.5 text-xs bg-slate-100 border border-slate-300 rounded">Ctrl</kbd> 多选、<kbd class="px-1.5 py-0.5 text-xs bg-slate-100 border border-slate-300 rounded">Shift</kbd> 连选以及实时数量统计。</li>
-            <li>筛选胶囊 Tooltip 新增 <code class="font-mono text-xs bg-slate-100 px-1 rounded">【参考分权重】</code> 说明，方便快速理解不同品级的打分侧重。</li>
+            <li>筛选胶囊 Tooltip 新增 <code class="font-mono text-xs bg-slate-100 px-1 rounded">【参考分权重】</code> 说明，列出不同品级的打分侧重。</li>
           </ul>
         </div>
         <div>
-          <h3 class="text-base font-bold text-slate-900 mb-2">4. 卡片胶囊 Tooltip 信息全量升级</h3>
+          <h3 class="text-base font-bold text-slate-900 mb-2">4. 卡片胶囊 Tooltip 信息更新</h3>
           <div class="rounded-xl bg-slate-900 text-slate-100 p-4 text-xs font-mono space-y-1 leading-relaxed">
             <div>📂 分区: 科技 / 计算机技术</div>
             <div>📊 综合参考分: 91% (基础 78 + 表现 8 + 词条 5)</div>

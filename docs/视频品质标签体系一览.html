@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>12 维视频品质标签展示 · Bilibili 搜索净化 v3.0.0</title>
+  <title>12 维视频品质标签展示 · Bilibili 搜索净化 v3.1.0</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* 100% 还原脚本封面品级胶囊样式 */
@@ -103,19 +103,24 @@
     <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-sky-950 text-white px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <div>
         <div class="flex items-center gap-2 text-xs text-sky-300 font-semibold">
-          <span>🏷️ Bilibili 去掉搜索无关视频 v3.0.0</span>
+          <span>🏷️ Bilibili 去掉搜索无关视频 v3.1.0</span>
           <span class="text-sky-400/50">·</span>
-          <span class="font-mono">12 维视频品质雷达</span>
+          <span class="font-mono">12 维视频品质分类与打分</span>
         </div>
         <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-white mt-1">
           视频品质标签体系一览
         </h1>
       </div>
       <div class="flex flex-col sm:items-end gap-1.5">
-        <span class="px-3 py-1 rounded-lg bg-white/10 border border-white/15 font-mono text-xs text-amber-200 w-fit">
-          时长权重 = clamp(√(时长分 / 5.0), 0.40, 2.00)
-        </span>
-        <span class="text-[11px] text-slate-300">支持封面左上角微标展示 + 顶部【品级标签】多选筛选与实时计数</span>
+        <div class="flex flex-wrap gap-1.5">
+          <span class="px-2.5 py-1 rounded-lg bg-white/10 border border-white/15 font-mono text-[11px] text-amber-200">
+            时长权重 = clamp(√(时长分/5), 0.40, 2.00)
+          </span>
+          <span class="px-2.5 py-1 rounded-lg bg-white/10 border border-white/15 font-mono text-[11px] text-sky-200">
+            播放权重 = 5万起对数补偿 (1.00~1.60x)
+          </span>
+        </div>
+        <span class="text-[11px] text-slate-300">封面左上角展示品级与 0~100 参考分 + 顶部【品级标签】多选筛选与计数</span>
       </div>
     </div>
 
@@ -129,7 +134,7 @@
             一、正向内容质量金字塔（7 级）
           </h2>
           <span class="text-[11px] font-medium text-amber-800 bg-amber-100/90 border border-amber-200 px-2.5 py-0.5 rounded-full w-fit">
-            按含金量与传播纯度分层 · 全部支持顶部筛选
+            按判定优先级分层 · 全部支持顶部筛选
           </span>
         </div>
 
@@ -137,64 +142,64 @@
           <div class="p-3 rounded-lg bg-white border border-slate-200/90 flex flex-col justify-between gap-2">
             <div class="flex items-center justify-between gap-2">
               <span class="pill q-hall-of-fame">🏆 殿堂神作</span>
-              <span class="text-[11px] font-mono font-semibold text-amber-700">T0 顶峰</span>
+              <span class="text-[11px] font-mono font-semibold text-amber-700">68~98 分</span>
             </div>
-            <p class="text-xs text-slate-600 leading-relaxed">90 秒以上长篇深度精作，赞播比、藏播比双率断层领先，三连拉满。</p>
-            <div class="text-[11px] font-mono text-slate-400 pt-1.5 border-t border-slate-100">播放≥2万 · 赞≥1500 · 藏≥800</div>
+            <p class="text-xs text-slate-600 leading-relaxed">顺位 04。时长 ≥ 90 秒且播放 ≥ 2 万，加权赞播比 ≥ 7% 且加权藏播比 ≥ 3.5%；底分 68，91~98 分仅该品级可达。</p>
+            <div class="text-[11px] font-mono text-slate-400 pt-1.5 border-t border-slate-100">赞≥1500 · 藏≥800 · 默认赛道</div>
           </div>
 
           <div class="p-3 rounded-lg bg-white border border-slate-200/90 flex flex-col justify-between gap-2">
             <div class="flex items-center justify-between gap-2">
               <span class="pill q-viral-short">⚡ 爆款短片</span>
-              <span class="text-[11px] font-mono font-semibold text-cyan-700">T0/T1 短片</span>
+              <span class="text-[11px] font-mono font-semibold text-cyan-700">60~88 分</span>
             </div>
-            <p class="text-xs text-slate-600 leading-relaxed">90 秒内高能快节奏短片，完播与互动爆发力极强，独立赛道不互卷。</p>
-            <div class="text-[11px] font-mono text-slate-400 pt-1.5 border-t border-slate-100">时长&lt;90秒 · 高赞播/藏播比</div>
+            <p class="text-xs text-slate-600 leading-relaxed">顺位 05。时长 0~90 秒内，满足三档播放/赞率/藏率任一分支即命中；算分免除时长折减惩罚。</p>
+            <div class="text-[11px] font-mono text-slate-400 pt-1.5 border-t border-slate-100">赛道权重：赞55% · 藏25% · 弹20%</div>
           </div>
 
           <div class="p-3 rounded-lg bg-white border border-slate-200/90 flex flex-col justify-between gap-2">
             <div class="flex items-center justify-between gap-2">
               <span class="pill q-hardcore">💡 硬核干货</span>
-              <span class="text-[11px] font-mono font-semibold text-amber-700">T1 收藏向</span>
+              <span class="text-[11px] font-mono font-semibold text-amber-700">60~88 分</span>
             </div>
-            <p class="text-xs text-slate-600 leading-relaxed">90 秒以上高收藏转化内容，主打实用教程、深度科普与知识合集。</p>
-            <div class="text-[11px] font-mono text-slate-400 pt-1.5 border-t border-slate-100">藏≥250且加权藏播≥4% / 藏≥2000</div>
+            <p class="text-xs text-slate-600 leading-relaxed">顺位 07。时长 ≥ 90 秒，校验藏赞比（常规 ≥ 40%、干货区 ≥ 30%、娱乐区 ≥ 55%）与藏播比；含播≥3000 且藏赞比≥75% 绿通。</p>
+            <div class="text-[11px] font-mono text-slate-400 pt-1.5 border-t border-slate-100">干货区0.85x · 娱乐区1.15x · 藏55%</div>
           </div>
 
           <div class="p-3 rounded-lg bg-white border border-slate-200/90 flex flex-col justify-between gap-2">
             <div class="flex items-center justify-between gap-2">
               <span class="pill q-high-reputation">⭐ 高口碑佳作</span>
-              <span class="text-[11px] font-mono font-semibold text-sky-700">T1 好评向</span>
+              <span class="text-[11px] font-mono font-semibold text-sky-700">60~88 分</span>
             </div>
-            <p class="text-xs text-slate-600 leading-relaxed">经时长加权后赞播比突出的高认可度作品，观众清一色正面好评。</p>
-            <div class="text-[11px] font-mono text-slate-400 pt-1.5 border-t border-slate-100">赞≥400且加权赞播≥7% / 赞≥5000</div>
+            <p class="text-xs text-slate-600 leading-relaxed">顺位 08。(播 ≥ 5000 且加权赞播 ≥ 7% 且赞 ≥ 400) 或 (赞 ≥ 5000 且加权赞播 ≥ 4.5%)。</p>
+            <div class="text-[11px] font-mono text-slate-400 pt-1.5 border-t border-slate-100">赞≥400/5000 · 默认赛道</div>
           </div>
 
           <div class="p-3 rounded-lg bg-white border border-slate-200/90 flex flex-col justify-between gap-2">
             <div class="flex items-center justify-between gap-2">
               <span class="pill q-balanced-masterpiece">🏅 综合标杆</span>
-              <span class="text-[11px] font-mono font-semibold text-slate-700">T1.5 六边形</span>
+              <span class="text-[11px] font-mono font-semibold text-slate-700">62~90 分</span>
             </div>
-            <p class="text-xs text-slate-600 leading-relaxed">赞播比与藏播比双优均衡，无明显短板的全面扎实水准。</p>
-            <div class="text-[11px] font-mono text-slate-400 pt-1.5 border-t border-slate-100">播放≥1万 · 赞≥600 · 藏≥300</div>
+            <p class="text-xs text-slate-600 leading-relaxed">顺位 09。播放 ≥ 1 万、加权赞播 ≥ 4.5%、加权藏播 ≥ 2.2%，且赞 ≥ 600、藏 ≥ 300。</p>
+            <div class="text-[11px] font-mono text-slate-400 pt-1.5 border-t border-slate-100">底分 62 · 默认赛道</div>
           </div>
 
           <div class="p-3 rounded-lg bg-white border border-slate-200/90 flex flex-col justify-between gap-2">
             <div class="flex items-center justify-between gap-2">
               <span class="pill q-hidden-gem">💎 冷门宝藏</span>
-              <span class="text-[11px] font-mono font-semibold text-purple-700">小众破格</span>
+              <span class="text-[11px] font-mono font-semibold text-purple-700">60~88 分</span>
             </div>
-            <p class="text-xs text-slate-600 leading-relaxed">中小播放量下的极高纯度遗珠，专门挖掘低曝光但高口碑的佳作。</p>
-            <div class="text-[11px] font-mono text-slate-400 pt-1.5 border-t border-slate-100">播放 1000~2万 · 加权赞≥8%/藏≥4.5%</div>
+            <p class="text-xs text-slate-600 leading-relaxed">顺位 01/06。含 1000~3000 破格（赞≥150或藏≥80）与 3000~2万（赞≥200且藏≥80），加权赞播≥8% 或藏播≥4.5%。</p>
+            <div class="text-[11px] font-mono text-slate-400 pt-1.5 border-t border-slate-100">优先于硬核干货 · 默认赛道</div>
           </div>
 
           <div class="p-3 rounded-lg bg-white border border-slate-200/90 flex flex-col justify-between gap-2 sm:col-span-2">
             <div class="flex items-center justify-between gap-2">
               <span class="pill q-routine">🍀 稳健良作</span>
-              <span class="text-[11px] font-mono font-semibold text-emerald-700">T3 基准兜底 · 【仅精选】模式隐藏封面微标</span>
+              <span class="text-[11px] font-mono font-semibold text-emerald-700">22~58 分 · 【仅精选】模式隐藏封面微标</span>
             </div>
-            <p class="text-xs text-slate-600 leading-relaxed">播放 ≥ 3000 且未触碰低质预警线，亦未落入高阶或热议象限的常规健康内容，作为可靠基本盘保留。</p>
-            <div class="text-[11px] font-mono text-slate-400 pt-1.5 border-t border-slate-100">播放≥3000 · 仅精选留白不打扰封面，顶部筛选仍可勾选</div>
+            <p class="text-xs text-slate-600 leading-relaxed">顺位 13。播放 ≥ 3000 且未触发谨慎观看线、也未命中上述其他品级或热议象限的内容；底分 22，与避坑区（≤ 20）隔离。</p>
+            <div class="text-[11px] font-mono text-slate-400 pt-1.5 border-t border-slate-100">播放≥3000 · 仅精选模式隐藏封面，顶部筛选可用</div>
           </div>
         </div>
       </section>
@@ -210,7 +215,7 @@
               二、互动与话题热度象限（3 级）
             </h2>
             <span class="text-[11px] font-medium text-indigo-800 bg-indigo-100/90 border border-indigo-200 px-2.5 py-0.5 rounded-full w-fit">
-              支持顶部筛选
+              顺位 10~12 · 支持顶部筛选
             </span>
           </div>
 
@@ -218,25 +223,25 @@
             <div class="p-3 rounded-lg bg-white border border-slate-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div class="flex items-start sm:items-center gap-2.5">
                 <span class="pill q-opinion-storm shrink-0">💥 话题焦点</span>
-                <span class="text-xs text-slate-600">弹幕刷屏与评论区热议齐飞的全网焦点</span>
+                <span class="text-xs text-slate-600">同时满足「弹幕密集」与「激辩热议」两项条件（50~82 分）</span>
               </div>
-              <span class="text-[11px] font-mono text-slate-400 shrink-0">弹幕密集 + 激辩热议</span>
+              <span class="text-[11px] font-mono text-slate-400 shrink-0">赞30%·藏15%·弹30%·评25%</span>
             </div>
 
             <div class="p-3 rounded-lg bg-white border border-slate-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div class="flex items-start sm:items-center gap-2.5">
                 <span class="pill q-heated-debate shrink-0">💬 激辩热议</span>
-                <span class="text-xs text-slate-600">评论区观点激烈碰撞、长评输出密集</span>
+                <span class="text-xs text-slate-600">评赞比 ≥ 10%（干货/教程向 ≥ 18%），且评 ≥ 300/评播 ≥ 0.35% 或 评 ≥ 1500/评播 ≥ 0.2%（46~78 分）</span>
               </div>
-              <span class="text-[11px] font-mono text-slate-400 shrink-0">评赞比≥10% · 评≥300</span>
+              <span class="text-[11px] font-mono text-slate-400 shrink-0">赞30%·藏15%·评55%</span>
             </div>
 
             <div class="p-3 rounded-lg bg-white border border-slate-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div class="flex items-start sm:items-center gap-2.5">
                 <span class="pill q-danmaku-carnival shrink-0">🔥 弹幕密集</span>
-                <span class="text-xs text-slate-600">高能名场面与笑点密集，弹幕高频如潮</span>
+                <span class="text-xs text-slate-600">密度 ≥ 15条/分且弹幕 ≥ 300，或总量 ≥ 3000 且密度 ≥ 8（娱乐区密度门槛 +15%）（44~76 分）</span>
               </div>
-              <span class="text-[11px] font-mono text-slate-400 shrink-0">密度≥15条/分 / 弹幕≥3000</span>
+              <span class="text-[11px] font-mono text-slate-400 shrink-0">赞30%·藏15%·弹55%</span>
             </div>
           </div>
         </section>
@@ -250,7 +255,7 @@
                 三、置信度与避坑预警（2 级）
               </h2>
               <span class="text-[11px] font-medium text-slate-600 bg-slate-200/80 border border-slate-300 px-2.5 py-0.5 rounded-full w-fit">
-                仅作封面提示 · 不入筛选栏
+                顺位 02~03 · 样本较少支持筛选
               </span>
             </div>
 
@@ -258,24 +263,24 @@
               <div class="p-3 rounded-lg bg-white border border-rose-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div class="flex items-start sm:items-center gap-2.5">
                   <span class="pill q-warning shrink-0">⚠️ 谨慎观看</span>
-                  <span class="text-xs text-slate-600">高播放但赞藏双低，低质/标题党预警（始终展示）</span>
+                  <span class="text-xs text-slate-600">播 ≥ 3000 且赞 &gt; 0；≤15分 需赞&lt;1.2% 且藏&lt;0.5%；&gt;15分 需赞&lt;0.5% 且藏&lt;0.2%（0~20 分，不入筛选栏）</span>
                 </div>
-                <span class="text-[11px] font-mono text-rose-500 shrink-0">播放≥2万 · 赞&lt;1.2% · 藏&lt;0.5%</span>
+                <span class="text-[11px] font-mono text-rose-500 shrink-0">赞60% · 藏40% · 封顶20</span>
               </div>
 
               <div class="p-3 rounded-lg bg-white border border-slate-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div class="flex items-start sm:items-center gap-2.5">
                   <span class="pill q-low-sample shrink-0">🌱 样本较少</span>
-                  <span class="text-xs text-slate-600">样本不足暂不定性，防止小基数误判（仅精选隐藏）</span>
+                  <span class="text-xs text-slate-600">播放 &lt; 3000 且未触发冷门破格，胶囊不显示分数（仅精选模式隐藏，支持顶部筛选）</span>
                 </div>
-                <span class="text-[11px] font-mono text-slate-400 shrink-0">播放&lt;3000 且未破格</span>
+                <span class="text-[11px] font-mono text-slate-400 shrink-0">12~48 分（隐藏）</span>
               </div>
             </div>
           </div>
 
           <div class="px-3 py-2 rounded-lg bg-white border border-slate-200 text-[11px] text-slate-500 flex flex-wrap items-center justify-between gap-2">
-            <span>💡 <strong>悬停任意封面微标</strong>可查看实时赞播比、藏播比、弹幕密度与时长权重</span>
-            <span class="font-mono text-slate-400">直播卡已自动跳过防误标</span>
+            <span>💡 <strong>悬停封面微标</strong>可查看分区、参考分拆解（base + float + 词条）、赞播比、藏播比、弹幕密度、时长与播放权重</span>
+            <span class="font-mono text-slate-400">直播卡自动跳过</span>
           </div>
         </section>
 

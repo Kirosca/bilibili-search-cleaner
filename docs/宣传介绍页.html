@@ -142,16 +142,15 @@
         </div>
 
         <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900 leading-[1.18]">
-          把 B 站搜索，变成你的
-          <span class="bg-gradient-to-r from-bili via-blue-600 to-bilipink bg-clip-text text-transparent">高质量内容雷达</span>
+          B 站搜索过滤与
+          <span class="bg-gradient-to-r from-bili via-blue-600 to-bilipink bg-clip-text text-transparent">12 维品质筛选</span>
         </h1>
 
         <p class="mt-5 text-base sm:text-lg text-slate-600 leading-relaxed">
-          告别搜不准、广告混杂、标题党踩雷与翻页割裂。<br class="hidden sm:inline" />
           支持 <code class="px-1.5 py-0.5 rounded bg-slate-200/70 text-slate-800 font-mono text-sm">-排除词</code>
           <code class="px-1.5 py-0.5 rounded bg-slate-200/70 text-slate-800 font-mono text-sm">#标签</code>
           <code class="px-1.5 py-0.5 rounded bg-slate-200/70 text-slate-800 font-mono text-sm">@UP主</code> 语法、
-          <strong class="text-slate-800">12 维视频品质勋章</strong>、以及 <strong class="text-slate-800">Wbi 驱动无缝瀑布流</strong>。
+          <strong class="text-slate-800">12 维视频品质勋章</strong>、以及 <strong class="text-slate-800">Wbi 驱动瀑布流</strong>。
         </p>
 
         <div class="mt-8 flex flex-wrap items-center justify-center gap-3.5">
@@ -196,7 +195,7 @@
       <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
         <div>
           <span class="text-xs font-bold uppercase tracking-wider text-bili-dark">Interactive Preview</span>
-          <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">真实效果 · 交互模拟器</h2>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">交互效果模拟器</h2>
           <p class="text-sm text-slate-500 mt-1">试试输入语法、切换「虚化 / 隐藏」或按住 <kbd class="px-1.5 py-0.5 text-xs bg-slate-100 border border-slate-300 rounded">Ctrl</kbd> / <kbd class="px-1.5 py-0.5 text-xs bg-slate-100 border border-slate-300 rounded">Shift</kbd> 多选品质药丸</p>
         </div>
 
@@ -266,8 +265,8 @@
     <div class="max-w-6xl mx-auto px-4 sm:px-6">
       <div class="text-center max-w-2xl mx-auto mb-12">
         <span class="text-xs font-bold uppercase tracking-wider text-bili-dark">Pain Points Solved</span>
-        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">直击 B 站搜索 6 大顽疾</h2>
-        <p class="text-sm text-slate-500 mt-2">每一项功能都来自真实高频搜索场景，不堆砌花哨无效的装饰</p>
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">6 项功能模块</h2>
+        <p class="text-sm text-slate-500 mt-2">覆盖搜索语法、品质评级、自动翻页、虚化、去广告与快捷键</p>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -361,8 +360,8 @@
       <!-- 左侧：级联油猴菜单展示 -->
       <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
         <span class="text-xs font-bold uppercase tracking-wider text-bili-dark">Menu Control</span>
-        <h3 class="text-xl font-extrabold text-slate-900 mt-1">清晰克制的级联油猴菜单</h3>
-        <p class="text-sm text-slate-500 mt-1 mb-5">所有功能模块化开关，支持持久化记忆，还提供一键全开/全关</p>
+        <h3 class="text-xl font-extrabold text-slate-900 mt-1">级联油猴菜单</h3>
+        <p class="text-sm text-slate-500 mt-1 mb-5">支持开关持久化与一键全开/全关</p>
 
         <div class="rounded-xl bg-slate-900 text-slate-100 p-4 font-mono text-xs sm:text-sm space-y-2 shadow-inner">
           <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-800/80">
@@ -462,18 +461,18 @@
     // 12 维品质定义（与脚本内 QUALITY_FILTER_OPTIONS 保持一致）
     const QUALITY_DEFS = [
       { key: 'all', label: '全部', isAll: true, desc: '展示当前搜索下的全部有效视频' },
-      { key: 'q-hall-of-fame', label: '🏆 殿堂神作', desc: '时长≥90秒且播放≥2万，赞播比*权重≥7%，藏播比*权重≥3.5%，三连拉满的顶峰神作。' },
-      { key: 'q-hardcore', label: '💡 硬核干货', desc: '藏赞比与藏播比极高，深度实用干货与教程合集（干货区门槛放宽 15%）。' },
-      { key: 'q-high-reputation', label: '⭐ 高口碑佳作', desc: '观众清一色好评点赞，高认可度优质佳作（含时长/播放加权）。' },
-      { key: 'q-balanced-masterpiece', label: '🏅 综合标杆', desc: '赞藏双优全面扎实，播放≥1万且各项指标均衡无短板。' },
-      { key: 'q-hidden-gem', label: '💎 冷门宝藏', desc: '播放<2万的中小样本遗珠，互动纯度极高的小众高分佳作。' },
-      { key: 'q-routine', label: '🍀 稳健良作', desc: '播放≥3000 且未触碰避坑线，内容扎实的中流砥柱良品。' },
-      { key: 'q-opinion-storm', label: '💥 话题焦点', desc: '弹幕密集与评论高评赞比齐飞，全网热议/深度探讨焦点。' },
-      { key: 'q-heated-debate', label: '💬 激辩热议', desc: '评赞比异常高且评论绝对量大，评论区长篇对线深度碰撞。' },
-      { key: 'q-danmaku-carnival', label: '🔥 弹幕密集', desc: '弹幕密度≥15条/分或总量≥3000，高能互动与名场面聚集。' },
-      { key: 'q-viral-short', label: '⚡ 爆款短片', desc: '时长<90秒，快节奏高完播互动爆棚的短视频精选。' },
-      { key: 'q-low-sample', label: '🌱 样本较少', desc: '播放<3000 的早期冷门或新发视频，冷门置信度保护暂不定性。' },
-      { key: 'q-warning', label: '⚠️ 谨慎观看', desc: '高播放但赞播比与藏播比极低，疑似标题党或低质内容避坑预警。' }
+      { key: 'q-hall-of-fame', label: '🏆 殿堂神作', desc: '时长≥90秒且播放≥2万，赞播比*权重≥7%，藏播比*权重≥3.5%。' },
+      { key: 'q-hardcore', label: '💡 硬核干货', desc: '藏赞比与藏播比达标，含教程与合集（干货区门槛放宽 15%）。' },
+      { key: 'q-high-reputation', label: '⭐ 高口碑佳作', desc: '点赞率达标（含时长/播放加权）。' },
+      { key: 'q-balanced-masterpiece', label: '🏅 综合标杆', desc: '播放≥1万且赞播比、藏播比均达标。' },
+      { key: 'q-hidden-gem', label: '💎 冷门宝藏', desc: '播放<2万的中小样本高赞藏比视频。' },
+      { key: 'q-routine', label: '🍀 稳健良作', desc: '播放≥3000 且未触碰避坑线的常规视频。' },
+      { key: 'q-opinion-storm', label: '💥 话题焦点', desc: '同时满足弹幕密集与激辩热议条件。' },
+      { key: 'q-heated-debate', label: '💬 激辩热议', desc: '评赞比与评论数量达标。' },
+      { key: 'q-danmaku-carnival', label: '🔥 弹幕密集', desc: '弹幕密度≥15条/分或总量≥3000。' },
+      { key: 'q-viral-short', label: '⚡ 爆款短片', desc: '时长<90秒，赞播比或藏播比达标。' },
+      { key: 'q-low-sample', label: '🌱 样本较少', desc: '播放<3000 的视频，暂不作定性评级。' },
+      { key: 'q-warning', label: '⚠️ 谨慎观看', desc: '播放达标但赞播比与藏播比低于阈值。' }
     ];
 
     // 模拟器样本视频数据

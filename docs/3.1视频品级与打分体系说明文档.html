@@ -73,7 +73,7 @@
         </div>
       </div>
       <p class="text-sm text-slate-600 leading-relaxed max-w-4xl">
-        本体系在搜索页零额外请求的前提下，基于播放、点赞、收藏、弹幕、评论、时长、分区与发布时间，完成 <strong>12 维定性品级判定</strong> 与 <strong>0~100 综合参考分</strong> 计算。通过「低底分 + <code>[perfFloor, perfCeil]</code> 双端区间拉伸 + 明码词条加减」，实现<strong>防倒挂隔离</strong>、<strong>60 分佳作及格线</strong>与<strong>同品级大跨度区分</strong>。
+        本体系在搜索页无额外请求的前提下，基于播放、点赞、收藏、弹幕、评论、时长、分区与发布时间，完成 <strong>12 维品级判定</strong> 与 <strong>0~100 参考分</strong> 计算。通过「底分 + <code>[perfFloor, perfCeil]</code> 区间拉伸 + 词条加减」，实现<strong>防倒挂隔离</strong>、<strong>60 分及格线</strong>与<strong>同品级跨度区分</strong>。
       </p>
     </header>
 
@@ -81,24 +81,24 @@
     <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
       <h2 class="text-lg sm:text-xl font-bold flex items-center gap-2.5 mb-3">
         <span class="w-7 h-7 rounded-lg bg-bili/15 text-bili text-sm font-bold inline-flex items-center justify-center">0</span>
-        打分体系总览：先定性分级，再三层算分
+        打分体系总览：先定级，再三层算分
       </h2>
       <div class="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3 mb-5 flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm">
         <div>
           <span class="font-bold text-slate-800">总分公式：</span>
-          <code class="text-bili font-semibold">综合参考分 = clamp( 品级基础底分 + 赛道表现浮动分 + 结算词条净加分, min, max )</code>
+          <code class="text-bili font-semibold">参考分 = clamp( 品级底分 + 赛道浮动分 + 词条净加分, min, max )</code>
         </div>
-        <span class="text-xs text-slate-500">悬停封面胶囊可查看完整拆解明细（触及词条上限或品级封顶时自动标注）</span>
+        <span class="text-xs text-slate-500">悬停封面胶囊可查看拆解明细（触及词条上限或品级封顶时标注）</span>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
         <div class="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
           <div class="flex items-center gap-2 font-bold text-sm text-slate-800 mb-2">
             <span class="px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-600 text-xs">第一层</span>
-            品级稀有度底分 (base)
+            品级底分 (base)
           </div>
           <p class="text-xs text-slate-600 leading-relaxed">
-            先经 12 维瀑布流判定品级并锚定区间：<strong>⚠️ 谨慎观看</strong> 封顶 20、<strong>🍀 稳健良作</strong> 保底 22（防倒挂）；四档佳作守住 <strong>60</strong> 及格线；<strong>🏆 殿堂神作</strong> 独享 <code>91~98</code> 天花板。
+            先判定品级并锚定区间：<strong>⚠️ 谨慎观看</strong> 封顶 20、<strong>🍀 稳健良作</strong> 保底 22；四档佳作下限 <strong>60</strong>；<strong>🏆 殿堂神作</strong> 区间为 <code>68~98</code>（<code>91~98</code> 仅该品级可达）。
           </p>
         </div>
 
@@ -108,37 +108,37 @@
             赛道表现浮动 (floatScore)
           </div>
           <p class="text-xs text-slate-600 leading-relaxed">
-            按赛道加权（如干货偏藏 55%、弹幕偏弹 55%）与平滑饱和曲线算出全站表现率 <code>perfRatio</code>，再按各品级有效区间 <code>[perfFloor, perfCeil]</code> 拉伸与非对称曲率映射，将同品级内部差距铺满 <code>0~floatMax</code>。
+            按赛道加权（干货藏 55%、弹幕 55%）与饱和曲线计算表现率 <code>perfRatio</code>，再按各品级区间 <code>[perfFloor, perfCeil]</code> 拉伸与曲率映射，将同品级内部差距映射至 <code>0~floatMax</code>。
           </p>
         </div>
 
         <div class="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
           <div class="flex items-center gap-2 font-bold text-sm text-slate-800 mb-2">
             <span class="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 text-xs">第三层</span>
-            明码结算词条 (bonuses)
+            结算词条 (bonuses)
           </div>
           <p class="text-xs text-slate-600 leading-relaxed">
-            正向净加分封顶 <strong>+12</strong>。覆盖三连爆发、藏赞纯度、百万/破圈体量、超长/短精篇幅、三年/跨年时间检验、深度共鸣与分区/风险微调（同维度严格互斥）。
+            正向净加分上限 <strong>+12</strong>。覆盖三连、藏赞比、播放体量、篇幅时长、发布天数、评论互动与分区/风险调整（同维度互斥）。
           </p>
         </div>
       </div>
 
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
         <div class="rounded-lg bg-rose-500/5 border border-rose-500/20 px-3 py-2.5">
-          <div class="font-bold text-rose-600 mb-0.5">✅ 绝不倒挂</div>
+          <div class="font-bold text-rose-600 mb-0.5">✅ 区间不倒挂</div>
           <div class="text-slate-600">避坑封顶 20，稳健保底 22</div>
         </div>
         <div class="rounded-lg bg-emerald-500/5 border border-emerald-500/20 px-3 py-2.5">
-          <div class="font-bold text-emerald-600 mb-0.5">✅ 同级拉得开</div>
-          <div class="text-slate-600">双端拉伸吃满 22~36 分跨度</div>
+          <div class="font-bold text-emerald-600 mb-0.5">✅ 同级有跨度</div>
+          <div class="text-slate-600">区间拉伸覆盖 22~36 分跨度</div>
         </div>
         <div class="rounded-lg bg-sky-500/5 border border-sky-500/20 px-3 py-2.5">
-          <div class="font-bold text-sky-600 mb-0.5">✅ 跨级有协同</div>
-          <div class="text-slate-600">高配佳作可反超擦线神作</div>
+          <div class="font-bold text-sky-600 mb-0.5">✅ 跨级可交叉</div>
+          <div class="text-slate-600">高分佳作可高于低分神作</div>
         </div>
         <div class="rounded-lg bg-amber-500/5 border border-amber-500/20 px-3 py-2.5">
-          <div class="font-bold text-amber-600 mb-0.5">✅ 完全可解释</div>
-          <div class="text-slate-600">Tooltip 透明列出每分来源</div>
+          <div class="font-bold text-amber-600 mb-0.5">✅ 来源可查</div>
+          <div class="text-slate-600">Tooltip 列出每分来源</div>
         </div>
       </div>
     </section>
@@ -148,17 +148,17 @@
       <div class="flex flex-wrap items-center justify-between gap-3 mb-2">
         <h2 class="text-lg sm:text-xl font-bold flex items-center gap-2.5">
           <span class="w-7 h-7 rounded-lg bg-bili/15 text-bili text-sm font-bold inline-flex items-center justify-center">1</span>
-          品级分数区间与交叉包裹可视化（0 ~ 100）
+          品级分数区间可视化（0 ~ 100）
         </h2>
         <div class="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-          <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-sky-500/80 inline-block"></span>底分→表现浮动区 (base ~ base+floatMax)</span>
-          <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-amber-400/60 border border-amber-500/50 inline-block"></span>词条突破上限区 (最高+12)</span>
-          <span class="inline-flex items-center gap-1.5"><span class="w-0.5 h-3.5 bg-rose-500 inline-block"></span>20/22 防倒挂线</span>
-          <span class="inline-flex items-center gap-1.5"><span class="w-0.5 h-3.5 bg-sky-500 inline-block"></span>60 佳作及格线</span>
+          <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-sky-500/80 inline-block"></span>底分→浮动区 (base ~ base+floatMax)</span>
+          <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-amber-400/60 border border-amber-500/50 inline-block"></span>词条加分区 (最高+12)</span>
+          <span class="inline-flex items-center gap-1.5"><span class="w-0.5 h-3.5 bg-rose-500 inline-block"></span>20/22 隔离线</span>
+          <span class="inline-flex items-center gap-1.5"><span class="w-0.5 h-3.5 bg-sky-500 inline-block"></span>60 及格线</span>
         </div>
       </div>
       <p class="text-sm text-slate-600 mb-6">
-        下图按 <code>0~100</code> 绝对刻度对齐展示各品级区间：<strong>避坑区 (0~20) 与稳健区 (22~58) 严格物理隔离</strong>；<strong>四档佳作均守住 60 及格线</strong>；中高品级采用<strong>阶梯交叉包裹</strong>（顶级高配佳作 <code>80~90</code> 可反超擦线神作 <code>68~76</code>，而 <code>91~98</code> 为殿堂神作独享天花板）。
+        下图按 <code>0~100</code> 刻度展示各品级区间：<strong>避坑区 (0~20) 与稳健区 (22~58) 隔离</strong>；<strong>四档佳作下限为 60</strong>；中高品级区间交叉（高分佳作 <code>80~90</code> 可高于低分神作 <code>68~76</code>，<code>91~98</code> 仅殿堂神作可达）。
       </p>
 
       <!-- Scale Axis -->
@@ -183,16 +183,16 @@
       <!-- Overlap Insights -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-5 border-t border-slate-100 text-xs">
         <div class="rounded-xl bg-rose-500/5 border border-rose-500/20 p-3.5">
-          <div class="font-bold text-rose-600 mb-1">🛡️ 低质硬隔离（0~20 vs 22~58）</div>
-          <p class="text-slate-600"><code>⚠️ 谨慎观看</code> 封顶 20 分，<code>🍀 稳健良作</code> 保底 22 分，两者之间存在不可跨越的防线，杜绝低质视频反超良作。</p>
+          <div class="font-bold text-rose-600 mb-1">🛡️ 低质隔离（0~20 vs 22~58）</div>
+          <p class="text-slate-600"><code>⚠️ 谨慎观看</code> 封顶 20 分，<code>🍀 稳健良作</code> 保底 22 分，两者区间不重叠。</p>
         </div>
         <div class="rounded-xl bg-sky-500/5 border border-sky-500/20 p-3.5">
-          <div class="font-bold text-sky-600 mb-1">⚖️ 中高档交叉包裹（60~90 vs 68~98）</div>
-          <p class="text-slate-600">擦线 <code>🏆 殿堂神作</code>（<code>68~76</code>）会被集齐稀有词条的顶级 <code>💡 硬核干货</code>/<code>🏅 综合标杆</code>（<code>82~90</code>）反超，实现跨档动态均衡。</p>
+          <div class="font-bold text-sky-600 mb-1">⚖️ 中高档区间交叉（60~90 vs 68~98）</div>
+          <p class="text-slate-600">低分 <code>🏆 殿堂神作</code>（<code>68~76</code>）可低于高词条 <code>💡 硬核干货</code>/<code>🏅 综合标杆</code>（<code>82~90</code>）。</p>
         </div>
         <div class="rounded-xl bg-amber-500/5 border border-amber-500/20 p-3.5">
-          <div class="font-bold text-amber-600 mb-1">👑 专属传世天花板（91 ~ 98）</div>
-          <p class="text-slate-600">90 分以上仅向 <code>🏆 殿堂神作</code> 开放，必须同时具备顶尖表现分与多项稀缺词条（如现象级破圈 + 三年经典）才能触及。</p>
+          <div class="font-bold text-amber-600 mb-1">👑 91~98 区间（殿堂神作）</div>
+          <p class="text-slate-600">90 分以上仅向 <code>🏆 殿堂神作</code> 开放，需同时具备高表现分与多项加分词条（如现象级破圈 + 三年经典）。</p>
         </div>
       </div>
     </section>
@@ -204,7 +204,7 @@
         <code>perfFloor</code> 区间拉伸原理与实时打分模拟器
       </h2>
       <p class="text-sm text-slate-600 mb-5">
-        先通过指数饱和曲线（基准分母：赞 <code>0.06</code> / 藏 <code>0.035</code> / 弹幕 <code>18条/分</code> / 评 <code>0.006</code>）算出全站表现率 <code>perfRatio</code>，再按各品级的有效区间 <code>[perfFloor, perfCeil]</code> 做重映射 <code>(perfRatio - perfFloor) / (perfCeil - perfFloor)</code>，结合非对称曲率（中高品级 <code>1.15</code> 次幂 / 基础品级 <code>0.90</code> 次幂），把有效差距铺开到 <code>0 ~ floatMax</code> 全幅跨度。
+        先通过指数饱和曲线（基准分母：赞 <code>0.06</code> / 藏 <code>0.035</code> / 弹幕 <code>18条/分</code> / 评 <code>0.006</code>）计算表现率 <code>perfRatio</code>，再按各品级区间 <code>[perfFloor, perfCeil]</code> 重映射 <code>(perfRatio - perfFloor) / (perfCeil - perfFloor)</code>，结合曲率（底分≥50 取 <code>1.15</code> 次幂 / 其余取 <code>0.90</code> 次幂），将差距映射至 <code>0 ~ floatMax</code>。
       </p>
 
       <!-- Interactive Simulator -->
@@ -284,7 +284,7 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
         <div class="rounded-xl bg-slate-50 border border-slate-200 p-4">
           <div class="font-bold text-sm mb-1.5">⏱️ 时长权重 <code>durFactor</code></div>
-          <p class="text-xs text-slate-600">以 5 分钟为基准：<code>clamp(sqrt(时长分钟 / 5), 0.4, 2.0)</code>。短视频适度折减，长篇精作最高享 2 倍加权。</p>
+          <p class="text-xs text-slate-600">以 5 分钟为基准：<code>clamp(sqrt(时长分钟 / 5), 0.4, 2.0)</code>。短时长折减，长时长最高 2 倍加权。</p>
         </div>
         <div class="rounded-xl bg-slate-50 border border-slate-200 p-4">
           <div class="font-bold text-sm mb-1.5">▶️ 播放量权重 <code>playFactor</code></div>
@@ -307,25 +307,25 @@
               <td class="py-2.5 px-3 font-mono text-slate-400">01</td>
               <td class="py-2.5 px-3 whitespace-nowrap"><span class="bili-pill q-hidden-gem">💎 冷门宝藏</span><span class="ml-1.5 text-[11px] text-slate-400">(破格)</span></td>
               <td class="py-2.5 px-3"><code>1000≤播&lt;3000</code>，<code>赞≥150或藏≥80</code>，<code>加权赞播≥8%或加权藏播≥4.5%</code></td>
-              <td class="py-2.5 px-3 text-slate-500">超小样本极高纯度破格提拔。</td>
+              <td class="py-2.5 px-3 text-slate-500">小样本破格判定。</td>
             </tr>
             <tr>
               <td class="py-2.5 px-3 font-mono text-slate-400">02</td>
               <td class="py-2.5 px-3 whitespace-nowrap"><span class="bili-pill q-low-sample">🌱 样本较少</span></td>
               <td class="py-2.5 px-3"><code>播放 &lt; 3000</code>（未破格）</td>
-              <td class="py-2.5 px-3 text-slate-500">胶囊不露分；默认展示，“仅精选”模式下隐藏。</td>
+              <td class="py-2.5 px-3 text-slate-500">胶囊不显示分数；默认展示，“仅精选”模式下隐藏。</td>
             </tr>
             <tr>
               <td class="py-2.5 px-3 font-mono text-slate-400">03</td>
               <td class="py-2.5 px-3 whitespace-nowrap"><span class="bili-pill q-warning">⚠️ 谨慎观看</span></td>
               <td class="py-2.5 px-3"><code>播≥3000 &amp;&amp; 赞&gt;0</code>；<code>≤15分</code> 需 <code>赞播&lt;1.2% &amp;&amp; 藏播&lt;0.5%</code>；<code>&gt;15分</code> 需 <code>赞播&lt;0.5% &amp;&amp; 藏播&lt;0.2%</code></td>
-              <td class="py-2.5 px-3 text-slate-500">避坑封顶 20 分，不吃词条与放大加成。</td>
+              <td class="py-2.5 px-3 text-slate-500">封顶 20 分，不计词条与权重加成。</td>
             </tr>
             <tr>
               <td class="py-2.5 px-3 font-mono text-slate-400">04</td>
               <td class="py-2.5 px-3 whitespace-nowrap"><span class="bili-pill q-hall-of-fame">🏆 殿堂神作</span></td>
               <td class="py-2.5 px-3"><code>时长≥90s</code>，<code>播≥2万</code>，<code>加权赞播≥7%</code>，<code>加权藏播≥3.5%</code>，<code>赞≥1500</code>，<code>藏≥800</code></td>
-              <td class="py-2.5 px-3 text-slate-500">独享 91~98 传世天花板。</td>
+              <td class="py-2.5 px-3 text-slate-500">区间 68~98（91~98 仅此品级可达）。</td>
             </tr>
             <tr>
               <td class="py-2.5 px-3 font-mono text-slate-400">05</td>
@@ -337,7 +337,7 @@
               <td class="py-2.5 px-3 font-mono text-slate-400">06</td>
               <td class="py-2.5 px-3 whitespace-nowrap"><span class="bili-pill q-hidden-gem">💎 冷门宝藏</span></td>
               <td class="py-2.5 px-3"><code>播&lt;2万</code>，<code>赞≥200</code>，<code>藏≥80</code>，<code>加权赞播≥8%或加权藏播≥4.5%</code></td>
-              <td class="py-2.5 px-3 text-slate-500">优先保留小众遗珠属性。</td>
+              <td class="py-2.5 px-3 text-slate-500">优先于常规品级判定。</td>
             </tr>
             <tr>
               <td class="py-2.5 px-3 font-mono text-slate-400">07</td>
@@ -349,13 +349,13 @@
               <td class="py-2.5 px-3 font-mono text-slate-400">08</td>
               <td class="py-2.5 px-3 whitespace-nowrap"><span class="bili-pill q-high-reputation">⭐ 高口碑佳作</span></td>
               <td class="py-2.5 px-3"><code>(播≥5000 &amp;&amp; 加权赞播≥7% &amp;&amp; 赞≥400)</code> 或 <code>(赞≥5000 &amp;&amp; 加权赞播≥4.5%)</code></td>
-              <td class="py-2.5 px-3 text-slate-500">高赞好评向佳作。</td>
+              <td class="py-2.5 px-3 text-slate-500">点赞率达标视频。</td>
             </tr>
             <tr>
               <td class="py-2.5 px-3 font-mono text-slate-400">09</td>
               <td class="py-2.5 px-3 whitespace-nowrap"><span class="bili-pill q-balanced-masterpiece">🏅 综合标杆</span></td>
               <td class="py-2.5 px-3"><code>播≥1万</code>，<code>加权赞播≥4.5%</code>，<code>加权藏播≥2.2%</code>，<code>赞≥600</code>，<code>藏≥300</code></td>
-              <td class="py-2.5 px-3 text-slate-500">赞藏均衡无短板。</td>
+              <td class="py-2.5 px-3 text-slate-500">赞藏双率达标。</td>
             </tr>
             <tr>
               <td class="py-2.5 px-3 font-mono text-slate-400">10~12</td>
@@ -380,7 +380,7 @@
         <span class="w-7 h-7 rounded-lg bg-bili/15 text-bili text-sm font-bold inline-flex items-center justify-center">4</span>
         明码结算词条清单（正向净加分封顶 +12）
       </h2>
-      <p class="text-sm text-slate-600 mb-4">同维度内严格互斥（取最高档），悬停封面胶囊可查看每条明细。</p>
+      <p class="text-sm text-slate-600 mb-4">同维度内互斥（取最高档），悬停封面胶囊可查看明细。</p>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
@@ -409,7 +409,7 @@
         </div>
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-3.5 sm:col-span-2 lg:col-span-3">
           <div class="font-bold text-slate-800 mb-1">分区与风险词条：📂 干货分区 <span class="text-emerald-600">+1</span> · 🎈 娱乐微调 <span class="text-rose-500">-2</span>（神作/破圈免除） · 🕳️ 标题党预警 <span class="text-rose-500">-3</span> · ⚔️ 争议高发 <span class="text-rose-500">-2</span> · 🤖 长篇冷清 <span class="text-rose-500">-1</span> · 📉 互动平淡 <span class="text-rose-500">-4</span></div>
-          <p class="text-slate-500">在保持跨级层次的同时，对10万+低赞藏快餐、非干货区高争议、长视频冷清及擦线平淡作品做精细化扣分。</p>
+          <p class="text-slate-500">对 10 万+ 低赞藏、非干货区高争议、长视频冷清及低互动视频进行扣分。</p>
         </div>
       </div>
     </section>
