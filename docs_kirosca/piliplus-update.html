@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>PiliPlus 测试版功能说明与【选推】筛选语法指南</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0284c7',
+              600: '#0369a1',
+              700: '#075985',
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    /* 优化移动端横向滚动条体验 */
+    .table-scroll {
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 transparent;
+    }
+    .table-scroll::-webkit-scrollbar {
+      height: 6px;
+    }
+    .table-scroll::-webkit-scrollbar-thumb {
+      background-color: #cbd5e1;
+      border-radius: 9999px;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    pre code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased font-sans selection:bg-sky-100 selection:text-sky-900 min-h-screen">
+
+  <!-- 顶部导航栏（支持移动端横向滑动标签） -->
+  <header class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200">
+    <div class="max-w-5xl mx-auto px-3.5 sm:px-6">
+      <div class="h-14 sm:h-16 flex items-center justify-between border-b border-slate-100/80">
+        <div class="flex items-center space-x-2.5">
+          <span class="font-extrabold text-lg sm:text-xl tracking-tight text-slate-900">PiliPlus</span>
+          <span class="text-[11px] sm:text-xs font-semibold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-200 whitespace-nowrap">说明文档</span>
+        </div>
+        <div class="text-[11px] sm:text-xs text-slate-500 font-mono bg-slate-100 px-2 py-0.5 rounded">dev-sync-2.2.0.2</div>
+      </div>
+      <!-- 移动端横向滑动目录 -->
+      <nav class="flex items-center space-x-4 sm:space-x-6 text-xs sm:text-sm font-medium text-slate-600 overflow-x-auto py-2.5 no-scrollbar whitespace-nowrap">
+        <a href="#summary" class="hover:text-sky-600 active:text-sky-700 transition">功能速览</a>
+        <a href="#evolution" class="hover:text-sky-600 active:text-sky-700 transition">版本演进</a>
+        <a href="#curated" class="hover:text-sky-600 active:text-sky-700 transition">【选推】系统</a>
+        <a href="#upstream" class="hover:text-sky-600 active:text-sky-700 transition">上游更新</a>
+        <a href="#compare" class="hover:text-sky-600 active:text-sky-700 transition">参数对比表</a>
+        <a href="#filter-guide" class="hover:text-sky-600 active:text-sky-700 transition">筛选语法教程</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- 主体内容容器 -->
+  <main class="max-w-5xl mx-auto px-3.5 sm:px-6 py-6 sm:py-10 space-y-8 sm:space-y-12">
+
+    <!-- 标题区块 -->
+    <section class="border-b border-slate-200 pb-6 sm:pb-8">
+      <div class="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-medium bg-slate-100 text-slate-700 mb-3 sm:mb-4 border border-slate-200">
+        <span>分支：dev-sync-2.2.0.2</span>
+        <span>•</span>
+        <span>提交号：33f86d62f</span>
+      </div>
+      <h1 class="text-xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight leading-snug sm:leading-tight">
+        PiliPlus 测试版功能说明与【选推】筛选语法指南
+      </h1>
+      <p class="mt-2.5 sm:mt-3 text-slate-600 text-sm sm:text-base md:text-lg leading-relaxed">
+        本文档针对本次构建版本与前序 <span class="font-semibold text-slate-800">v4 版本（v2.1.2-v4）</span> 进行全量差异比对，涵盖自研【选推】功能改造、v2.2 高级筛选语法规范及上游主线版本合并说明。
+      </p>
+    </section>
+
+    <!-- 简洁版：功能与用法说明 -->
+    <section id="summary" class="bg-white rounded-2xl p-4 sm:p-6 md:p-8 shadow-sm border border-slate-200">
+      <div class="flex items-center gap-2 mb-4 sm:mb-5 pb-3 border-b border-slate-100">
+        <div class="w-2 sm:w-2.5 h-5 sm:h-6 bg-sky-600 rounded-full"></div>
+        <h2 class="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight">【简洁版】功能与用法说明</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-6 text-sm sm:text-base">
+        <!-- 选推功能 -->
+        <div class="bg-slate-50 rounded-xl p-4 sm:p-5 border border-slate-200/80 flex flex-col justify-between">
+          <div>
+            <div class="font-bold text-slate-900 flex items-center gap-2 mb-2">
+              <span class="w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center text-xs font-mono font-bold">1</span>
+              首页【选推】：自定义常驻推荐流
+            </div>
+            <p class="text-slate-600 text-xs sm:text-sm leading-relaxed mb-3">
+              以往想看特定内容需要在搜索框反复手动输入复杂的关键词与筛选排除表达式。<strong>【选推】将这一过程自动化</strong>：在后台一次性配置好规则，首页【选推】栏目即可按照这些规则自动请求并混合展示视频，打开直接刷，无需重复搜索。
+            </p>
+            <div class="bg-white p-3 rounded-lg border border-slate-200 text-xs text-slate-600 space-y-1.5 mb-2">
+              <p><strong>浏览入口</strong>：首页顶部导航栏切换至【选推】。</p>
+              <p><strong>规则配置</strong>：【设置】➔【推荐设置】➔【选推规则管理】。</p>
+              <p><strong>默认规则</strong>：已更新为 <code class="px-1 py-0.5 rounded bg-slate-100 font-mono">@影视飓风</code>、<code class="px-1 py-0.5 rounded bg-slate-100 font-mono">TED</code>、<code class="px-1 py-0.5 rounded bg-slate-100 font-mono">斯坦福</code>。</p>
+            </div>
+          </div>
+          <p class="text-[11px] sm:text-xs text-slate-500 mt-2">支持剪贴板一键导入导出备份，重置规则提供 5 秒撤销；自动过滤充电专属与课堂视频。</p>
+        </div>
+
+        <!-- 筛选语法 -->
+        <div class="bg-slate-50 rounded-xl p-4 sm:p-5 border border-slate-200/80 flex flex-col justify-between">
+          <div>
+            <div class="font-bold text-slate-900 flex items-center gap-2 mb-2">
+              <span class="w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center text-xs font-mono font-bold">2</span>
+              v2.2 高级筛选语法
+            </div>
+            <ul class="space-y-2 text-slate-600 text-xs sm:text-sm">
+              <li>
+                <strong class="text-slate-800">逻辑分支（<code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">|</code> 管道符）</strong>：单条规则支持包含多个平行主题（如 <code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">TED | 斯坦福</code>），任一分支满足即放行。
+              </li>
+              <li>
+                <strong class="text-slate-800">三维排除（<code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">-</code> 符号）</strong>：不仅能排除标题（<code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">-解说</code>），还可直接排除标签（<code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">-#手游</code>）和 UP 主（<code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">-@营销号</code>）。
+              </li>
+              <li>
+                <strong class="text-slate-800">严格精确匹配（成对引号 <code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">""</code>）</strong>：使用引号包裹目标词（如 <code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">-#"ai"</code>），系统严格全字匹配，不误杀 <code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">air</code>、<code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">daily</code> 等正常标签。
+              </li>
+            </ul>
+          </div>
+          <p class="text-[11px] sm:text-xs text-slate-500 mt-3">支持繁简自动互通与中文全角符号自动转换，输入无需切换键盘。</p>
+        </div>
+
+        <!-- 离线MP4导出 -->
+        <div class="bg-slate-50 rounded-xl p-4 sm:p-5 border border-slate-200/80 flex flex-col justify-between">
+          <div>
+            <div class="font-bold text-slate-900 flex items-center gap-2 mb-2">
+              <span class="w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center text-xs font-mono font-bold">3</span>
+              离线缓存一键导出 MP4
+            </div>
+            <p class="text-slate-600 text-xs sm:text-sm leading-relaxed mb-2">
+              客户端内已离线下载完成的视频，支持直接无损合并导出为标准通用的 MP4 文件至公共存储目录。
+            </p>
+            <p class="text-slate-600 text-xs sm:text-sm leading-relaxed">
+              导出时自动清洗文件名非法字符并完整保留原视频标题与分 P 序列，便于通过外部播放器观看或归档备份。
+            </p>
+          </div>
+          <p class="text-[11px] sm:text-xs text-slate-500 mt-2">无需外部格式转换工具，应用内直接一键完成。</p>
+        </div>
+
+        <!-- 播放与桌面特性 -->
+        <div class="bg-slate-50 rounded-xl p-4 sm:p-5 border border-slate-200/80 flex flex-col justify-between">
+          <div>
+            <div class="font-bold text-slate-900 flex items-center gap-2 mb-2">
+              <span class="w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center text-xs font-mono font-bold">4</span>
+              播放与交互优化
+            </div>
+            <ul class="space-y-1.5 text-slate-600 text-xs sm:text-sm">
+              <li><strong class="text-slate-800">悬停预览</strong>：桌面端鼠标指针悬停在视频封面即可加载片段预览。</li>
+              <li><strong class="text-slate-800">防削波爆音</strong>：播放器音量超过 100% 时自动启动限幅平滑处理。</li>
+              <li><strong class="text-slate-800">剧集正反序</strong>：PGC 番剧/影视剧集面板支持切换正序与倒序排布。</li>
+              <li><strong class="text-slate-800">流量安全控制</strong>：进入视频详情页默认不自动播放，避免蜂窝网络下流量意外消耗。</li>
+            </ul>
+          </div>
+          <p class="text-[11px] sm:text-xs text-slate-500 mt-2">快退逻辑重构为多级顺滑连续响应，体验更加平稳。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 第一部分：版本演进 -->
+    <section id="evolution" class="bg-white rounded-2xl p-4 sm:p-6 md:p-8 shadow-sm border border-slate-200">
+      <div class="flex items-center gap-2 mb-4 sm:mb-5 pb-3 border-b border-slate-100">
+        <div class="w-2 sm:w-2.5 h-5 sm:h-6 bg-sky-600 rounded-full"></div>
+        <h2 class="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight">第一部分：版本演进脉络</h2>
+      </div>
+
+      <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 sm:p-5 mb-4 flex justify-center overflow-x-auto table-scroll">
+        <div class="mermaid text-xs sm:text-sm min-w-[340px] max-w-2xl w-full">
+flowchart TD
+    BASE["基准版本: v2.1.2-v4 (2026-08-29)"]
+
+    subgraph UPSTREAM ["上游官方主线迭代 (Upstream Main)"]
+        U1["v2.1.3: 接口更新与基础组件优化"]
+        U2["v2.1.4: 搜索与播放体验增强"]
+        U3["v2.1.5: 跨平台窗口与依赖库升级 (Flutter 3.47.5)"]
+        U4["v2.1.6: 离线缓存重构与剧集面板优化"]
+        U5["v2.2.0: 悬停视频预览与防削波防爆音 (Flutter 3.47.9)"]
+        U6["v2.2.0.2: 桌面端推荐源切换与验证码刷新"]
+        U1 --> U2 --> U3 --> U4 --> U5 --> U6
+    end
+
+    subgraph CUSTOM ["自研功能架构演进 (Custom BiliFeed)"]
+        C1["架构解耦: 独立抽取至 lib/bili_feed 模块"]
+        C2["【选推】防风控: 100ms 异步缓冲与独立游标分页"]
+        C3["筛选引擎升级: v2.2 布尔架构 (分支/三维排除/精确匹配)"]
+        C4["体验增强: 离线视频无损导出 MP4 与 mediacodec 硬解调优"]
+        C1 --> C2 --> C3 --> C4
+    end
+
+    BASE --> U1
+    BASE --> C1
+
+    U6 --> TARGET["本次先行测试构建版本<br>dev-sync-2.2.0.2 (Commit: 33f86d62f)"]
+    C4 --> TARGET
+
+    classDef baseStyle fill:#f8fafc,stroke:#94a3b8,stroke-width:2px,color:#0f172a;
+    classDef upstreamStyle fill:#f0fdf4,stroke:#22c55e,stroke-width:1.5px,color:#14532d;
+    classDef customStyle fill:#f0f9ff,stroke:#0284c7,stroke-width:1.5px,color:#0c4a6e;
+    classDef targetStyle fill:#0284c7,stroke:#0369a1,stroke-width:2px,color:#ffffff;
+
+    class BASE baseStyle;
+    class U1,U2,U3,U4,U5,U6 upstreamStyle;
+    class C1,C2,C3,C4 customStyle;
+    class TARGET targetStyle;
+        </div>
+      </div>
+
+      <p class="mt-3.5 text-slate-600 text-xs sm:text-sm leading-relaxed">
+        如上图所示，本次构建版本完整合流了上游 2.1.2 之后的全部官方主线提交，同时将自研功能解耦至独立目录并行演进，最终汇聚为当前集成了最新上游底座与 v2.2 筛选系统的测试构建。
+      </p>
+    </section>
+
+    <!-- 第二部分：自研【选推】系统深度解析与核心原理 -->
+    <section id="curated" class="bg-white rounded-2xl p-4 sm:p-6 md:p-8 shadow-sm border border-slate-200">
+      <div class="flex items-center gap-2 mb-4 sm:mb-5 pb-3 border-b border-slate-100">
+        <div class="w-2 sm:w-2.5 h-5 sm:h-6 bg-sky-600 rounded-full"></div>
+        <h2 class="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight">第二部分：自研【选推】功能与技术实现说明</h2>
+      </div>
+
+      <div class="space-y-5 sm:space-y-6 text-xs sm:text-sm md:text-base leading-relaxed text-slate-600">
+        <div>
+          <h3 class="text-sm sm:text-base md:text-lg font-bold text-slate-900 mb-2">1. 【选推】解决的用户痛点与核心逻辑</h3>
+          <p class="mb-2">
+            <strong class="text-slate-800">解决的痛点</strong>：传统模式下，推荐流由平台推荐算法主导，容易出现同质化内容与无关推送；而普通搜索模式虽然精准，但每次都要求用户在搜索框重新手动输入繁琐的检索式，无法形成连续刷取的信息流。
+          </p>
+          <p>
+            <strong class="text-slate-800">运行机制</strong>：【选推】充当用户的“自动化内容助理”。用户在【选推规则管理】中设定的多条过滤表达式会被持久化保存为独立推荐源。页面启动或下拉刷新时，调度引擎依次向各个有效规则抓取视频候选池，通过公平配额轮询（Fair-share Quota Loop）将多条规则的内容交织为统一信息流。
+          </p>
+
+          <!-- 推荐池六步调度流程 -->
+          <div class="mt-4 bg-sky-50/60 rounded-xl p-3.5 sm:p-4 border border-sky-100">
+            <h4 class="text-xs sm:text-sm font-bold text-sky-950 mb-2.5 flex items-center gap-1.5">
+              <svg class="w-4 h-4 text-sky-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              客户端【选推推荐池规则说明】（六步流水线调度规则）
+            </h4>
+            <div class="space-y-2 text-xs sm:text-sm text-slate-700">
+              <div class="flex items-start gap-2">
+                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-sky-200 text-sky-800 text-[11px] font-bold shrink-0 mt-0.5">1</span>
+                <div><strong class="text-slate-900">提取阶段</strong>：每次请求以 21 条为目标总量，按启用规则数均分名额，并通过 100ms 异步节流稳定拉取。</div>
+              </div>
+              <div class="flex items-start gap-2">
+                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-sky-200 text-sky-800 text-[11px] font-bold shrink-0 mt-0.5">2</span>
+                <div><strong class="text-slate-900">清洗阶段</strong>：命中规则的视频在进入推荐池前，会自动拦截充电专属、课堂专区以及黑名单 UP 主的稿件。</div>
+              </div>
+              <div class="flex items-start gap-2">
+                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-sky-200 text-sky-800 text-[11px] font-bold shrink-0 mt-0.5">3</span>
+                <div><strong class="text-slate-900">补位阶段</strong>：若某条规则因条件苛刻导致候选不足，剩余名额自动由存量充足的规则顺位补足，确保每次刷新数量饱满。</div>
+              </div>
+              <div class="flex items-start gap-2">
+                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-sky-200 text-sky-800 text-[11px] font-bold shrink-0 mt-0.5">4</span>
+                <div><strong class="text-slate-900">循环阶段</strong>：单条规则翻页到底后自动重置回第 1 页，各规则游标互不干扰、独立持久化存储。</div>
+              </div>
+              <div class="flex items-start gap-2">
+                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-sky-200 text-sky-800 text-[11px] font-bold shrink-0 mt-0.5">5</span>
+                <div><strong class="text-slate-900">去重与呈现</strong>：基于 1500 条历史去重池过滤重复项，最终将所有规则产出的视频打乱交错呈现。</div>
+              </div>
+              <div class="flex items-start gap-2">
+                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-sky-200 text-sky-800 text-[11px] font-bold shrink-0 mt-0.5">6</span>
+                <div><strong class="text-slate-900">配置调整</strong>：点击卡片编辑规则，长按左侧手柄拖拽排序，点击开关即时生效。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="text-sm sm:text-base md:text-lg font-bold text-slate-900 mb-2">2. 底层稳定性与风控优化实现</h3>
+          <div class="space-y-3">
+            <div class="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
+              <strong class="text-slate-800">100ms 异步请求缓冲</strong>：
+              <p class="text-xs sm:text-sm mt-1">在 v4 版本中，多规则并发请求集中发出，高频刷新或编辑保存规则时极易触发服务端的短时频控（产生 412 状态码或频繁跳出滑块验证码）。本次在多规则数据拉取与尾部填充循环中，加入 <code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">Future.delayed(const Duration(milliseconds: 100))</code> 异步延时，将突发请求平摊，消除风控拦截。</p>
+            </div>
+            <div class="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
+              <strong class="text-slate-800">独立分页游标隔离</strong>：
+              <p class="text-xs sm:text-sm mt-1">每个规则维护独立的页码与游标偏移状态，单条规则达到最后一页或因限流无数据时，不影响其他规则的数据供给。</p>
+            </div>
+            <div class="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
+              <strong class="text-slate-800">底层内容纯度过滤流水线</strong>：
+              <p class="text-xs sm:text-sm mt-1">在卡片分发至渲染层前，底层自动识别并剔除充电专属视频（<code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">isCharging</code> 状态或充电角标）、课堂专区视频（<code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">cheese</code> 协议、<code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">isPugv</code> 状态）以及本地黑名单 UP 主的全部稿件。</p>
+            </div>
+            <div class="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
+              <strong class="text-slate-800">旧版数据自动平滑迁移</strong>：
+              <p class="text-xs sm:text-sm mt-1">本地配置持久化初始化阶段内置规则校验迁移逻辑，系统检测到历史存储的八极拳等旧版测试规则时会自动执行清理与排序重整，无需用户手动初始化配置。</p>
+            </div>
+            <div class="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
+              <strong class="text-slate-800">业务模块解耦</strong>：
+              <p class="text-xs sm:text-sm mt-1">自研业务代码全部隔离至 <code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">lib/bili_feed/</code> 独立目录，与上游核心业务组件保持清晰边界，极大降低后续版本合并冲突率。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 第三部分：上游主线技术更新清单 -->
+    <section id="upstream" class="bg-white rounded-2xl p-4 sm:p-6 md:p-8 shadow-sm border border-slate-200">
+      <div class="flex items-center gap-2 mb-4 sm:mb-5 pb-3 border-b border-slate-100">
+        <div class="w-2 sm:w-2.5 h-5 sm:h-6 bg-sky-600 rounded-full"></div>
+        <h2 class="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight">第三部分：上游更新清单 (v2.1.2 至 v2.2.0.2+)</h2>
+      </div>
+
+      <div class="space-y-5 sm:space-y-6">
+        <div>
+          <h3 class="text-sm sm:text-base md:text-lg font-bold text-slate-900 mb-2.5 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-sky-500"></span>
+            1. 基础架构与平台层
+          </h3>
+          <ul class="text-xs sm:text-sm text-slate-600 space-y-2 list-disc list-inside bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-100 leading-relaxed">
+            <li><strong class="text-slate-800">Flutter SDK 升级</strong>：从 3.47.1 升级至 3.47.9，修复底层文本选择与跨平台窗口视图缺陷。</li>
+            <li><strong class="text-slate-800">Linux 平台</strong>：内嵌网页组件切换为 <code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">webview_all</code> 方案（PR #3423）；支持 Linux MPRIS 媒体控制规范（PR #3438）；增加 Wayland 环境下 EGLImage 黑屏规避逻辑（PR #3261）。</li>
+            <li><strong class="text-slate-800">iOS 平台</strong>：支持原生画中画（PR #3162）；修复音量监听器注册时导致系统音频类别被覆盖的问题（PR #3039）；更新短信验证码注册通道（PR #3484）。</li>
+            <li><strong class="text-slate-800">Android 平台</strong>：适配 Android 16+ 远程播放信息同步（PR #3442）；DLNA 投屏前增加局域网权限校验（PR #3365）；修复 ChromeOS 环境下的屏幕旋转异常（PR #3406）。</li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 class="text-sm sm:text-base md:text-lg font-bold text-slate-900 mb-2.5 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-sky-500"></span>
+            2. 播放器与音频处理
+          </h3>
+          <ul class="text-xs sm:text-sm text-slate-600 space-y-2 list-disc list-inside bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-100 leading-relaxed">
+            <li><strong class="text-slate-800">音频防削波失真</strong>：播放器音量放大超过 100% 时加入限幅处理，避免音频信号截断产生的杂音（PR #3448）。</li>
+            <li><strong class="text-slate-800">多级连续快退</strong>：重构快退逻辑，避免短时间内连续快退导致的缓冲区异常。</li>
+            <li><strong class="text-slate-800">独立流媒体缓冲</strong>：分离直播缓冲池与点播缓冲池配置（PR #3272, #3308），改善直播加载响应。</li>
+            <li><strong class="text-slate-800">网络直链保留</strong>：播放层保留 API 返回的带鉴权 Akamai 直链（PR #3380）。</li>
+            <li><strong class="text-slate-800">弹幕跳转修正</strong>：弹幕内的时间跳转链接提前 200ms 执行 Seek，匹配视频关键帧。</li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 class="text-sm sm:text-base md:text-lg font-bold text-slate-900 mb-2.5 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-sky-500"></span>
+            3. 界面交互与桌面端
+          </h3>
+          <ul class="text-xs sm:text-sm text-slate-600 space-y-2 list-disc list-inside bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-100 leading-relaxed">
+            <li><strong class="text-slate-800">悬停视频预览</strong>：桌面端支持鼠标悬停在视频卡片上加载片段预览，附带动画防抖逻辑。</li>
+            <li><strong class="text-slate-800">推荐来源切换</strong>：设置中增加桌面端推荐视频源选择器（<code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">rcmdSource</code>），可切换 PC 端接口或 App 端接口。</li>
+            <li><strong class="text-slate-800">PGC 剧集面板</strong>：重构剧集面板结构，支持正序/倒序排列，增加分季离线缓存按钮。</li>
+            <li><strong class="text-slate-800">专栏图文与评论</strong>：优化长文排版与引用块展示；评论区支持折叠回复展开；评论区支持 LaTeX 数学符号转 Unicode 显示（PR #2792）。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 第四部分：核心参数与配置对比表（重点修复移动端窄屏压缩bug） -->
+    <section id="compare" class="bg-white rounded-2xl p-4 sm:p-6 md:p-8 shadow-sm border border-slate-200">
+      <div class="flex items-center gap-2 mb-3 sm:mb-4 pb-3 border-b border-slate-100">
+        <div class="w-2 sm:w-2.5 h-5 sm:h-6 bg-sky-600 rounded-full"></div>
+        <h2 class="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight">第四部分：核心参数与配置对比表</h2>
+      </div>
+
+      <!-- 移动端横向滑动提示 -->
+      <div class="text-[11px] text-slate-400 mb-2 flex items-center gap-1 sm:hidden">
+        <span>👉</span><span>表格较宽，左右滑动可查看完整对比内容</span>
+      </div>
+
+      <div class="overflow-x-auto border border-slate-200 rounded-xl table-scroll">
+        <table class="min-w-[680px] w-full text-left border-collapse text-xs sm:text-sm">
+          <thead>
+            <tr class="border-b border-slate-200 bg-slate-50 text-slate-700">
+              <th class="py-3 px-3.5 sm:px-4 font-semibold whitespace-nowrap min-w-[130px] bg-slate-100/50">对比维度</th>
+              <th class="py-3 px-3.5 sm:px-4 font-semibold whitespace-nowrap min-w-[180px]">v4 版本 (v2.1.2-v4)</th>
+              <th class="py-3 px-3.5 sm:px-4 font-semibold whitespace-nowrap min-w-[220px]">本次测试版本 (dev-sync-2.2.0.2)</th>
+              <th class="py-3 px-3.5 sm:px-4 font-semibold whitespace-nowrap min-w-[170px]">说明</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 text-slate-600">
+            <tr>
+              <td class="py-3 px-3.5 sm:px-4 font-semibold text-slate-900 whitespace-nowrap bg-slate-50/40">【选推】核心定位</td>
+              <td class="py-3 px-3.5 sm:px-4">基础关键词推荐流</td>
+              <td class="py-3 px-3.5 sm:px-4 font-medium text-sky-700">自定义常驻推荐系统（免去手动重复检索）</td>
+              <td class="py-3 px-3.5 sm:px-4">规则常态化自动化轮询</td>
+            </tr>
+            <tr>
+              <td class="py-3 px-3.5 sm:px-4 font-semibold text-slate-900 whitespace-nowrap bg-slate-50/40">【选推】请求频率</td>
+              <td class="py-3 px-3.5 sm:px-4">无强制延时，高频请求易出验证码</td>
+              <td class="py-3 px-3.5 sm:px-4 font-medium text-sky-700">增加 100ms 异步请求缓冲</td>
+              <td class="py-3 px-3.5 sm:px-4">消除触发服务端风控拦截的情况</td>
+            </tr>
+            <tr>
+              <td class="py-3 px-3.5 sm:px-4 font-semibold text-slate-900 whitespace-nowrap bg-slate-50/40">【选推】内容纯度</td>
+              <td class="py-3 px-3.5 sm:px-4">依赖基础过滤，偶有付费视频</td>
+              <td class="py-3 px-3.5 sm:px-4 font-medium text-sky-700">自动剔除充电专属、课堂视频与黑名单</td>
+              <td class="py-3 px-3.5 sm:px-4">避免出现不可播放的稿件</td>
+            </tr>
+            <tr>
+              <td class="py-3 px-3.5 sm:px-4 font-semibold text-slate-900 whitespace-nowrap bg-slate-50/40">【选推】规则备份</td>
+              <td class="py-3 px-3.5 sm:px-4">仅支持界面手动编辑</td>
+              <td class="py-3 px-3.5 sm:px-4 font-medium text-sky-700">支持剪贴板导入导出，重置支持 5 秒撤销</td>
+              <td class="py-3 px-3.5 sm:px-4">方便配置迁移与防止误操作</td>
+            </tr>
+            <tr>
+              <td class="py-3 px-3.5 sm:px-4 font-semibold text-slate-900 whitespace-nowrap bg-slate-50/40">上游内核版本</td>
+              <td class="py-3 px-3.5 sm:px-4">v2.1.2</td>
+              <td class="py-3 px-3.5 sm:px-4 font-medium text-sky-700">v2.2.0.2</td>
+              <td class="py-3 px-3.5 sm:px-4">合并上游 6 个迭代版本的修复与特性</td>
+            </tr>
+            <tr>
+              <td class="py-3 px-3.5 sm:px-4 font-semibold text-slate-900 whitespace-nowrap bg-slate-50/40">Flutter SDK</td>
+              <td class="py-3 px-3.5 sm:px-4">3.47.1</td>
+              <td class="py-3 px-3.5 sm:px-4 font-medium text-sky-700">3.47.9</td>
+              <td class="py-3 px-3.5 sm:px-4">修复底层渲染与交互缺陷</td>
+            </tr>
+            <tr>
+              <td class="py-3 px-3.5 sm:px-4 font-semibold text-slate-900 whitespace-nowrap bg-slate-50/40">筛选引擎架构</td>
+              <td class="py-3 px-3.5 sm:px-4">2.1 基础匹配</td>
+              <td class="py-3 px-3.5 sm:px-4 font-medium text-sky-700">v2.2 布尔引擎（引号精确匹配/三维排除/分支）</td>
+              <td class="py-3 px-3.5 sm:px-4">提升多条件组合与过滤精度</td>
+            </tr>
+            <tr>
+              <td class="py-3 px-3.5 sm:px-4 font-semibold text-slate-900 whitespace-nowrap bg-slate-50/40">离线视频导出</td>
+              <td class="py-3 px-3.5 sm:px-4">仅应用内缓存播放</td>
+              <td class="py-3 px-3.5 sm:px-4 font-medium text-sky-700">支持无损导出为外部通用 MP4 文件</td>
+              <td class="py-3 px-3.5 sm:px-4">便于在外部播放器中使用</td>
+            </tr>
+            <tr>
+              <td class="py-3 px-3.5 sm:px-4 font-semibold text-slate-900 whitespace-nowrap bg-slate-50/40">大音量处理</td>
+              <td class="py-3 px-3.5 sm:px-4">超过 100% 音量易出现破音</td>
+              <td class="py-3 px-3.5 sm:px-4 font-medium text-sky-700">增加限幅防削波失真算法</td>
+              <td class="py-3 px-3.5 sm:px-4">改善音质表现</td>
+            </tr>
+            <tr>
+              <td class="py-3 px-3.5 sm:px-4 font-semibold text-slate-900 whitespace-nowrap bg-slate-50/40">详情页自动播放</td>
+              <td class="py-3 px-3.5 sm:px-4">依据历史配置</td>
+              <td class="py-3 px-3.5 sm:px-4 font-medium text-sky-700">默认关闭 (false)</td>
+              <td class="py-3 px-3.5 sm:px-4">避免消耗蜂窝网络流量</td>
+            </tr>
+            <tr>
+              <td class="py-3 px-3.5 sm:px-4 font-semibold text-slate-900 whitespace-nowrap bg-slate-50/40">Android 硬解策略</td>
+              <td class="py-3 px-3.5 sm:px-4">默认配置</td>
+              <td class="py-3 px-3.5 sm:px-4 font-medium text-sky-700">mediacodec-copy 优先</td>
+              <td class="py-3 px-3.5 sm:px-4">降低高分辨率播放异常概率</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 第五部分：筛选与高级检索语法使用教程 -->
+    <section id="filter-guide" class="bg-white rounded-2xl p-4 sm:p-6 md:p-8 shadow-sm border border-slate-200">
+      <div class="flex items-center gap-2 mb-4 sm:mb-5 pb-3 border-b border-slate-100">
+        <div class="w-2 sm:w-2.5 h-5 sm:h-6 bg-sky-600 rounded-full"></div>
+        <h2 class="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight">第五部分：筛选与高级检索语法使用教程 (v2.2)</h2>
+      </div>
+
+      <div class="space-y-6 sm:space-y-8">
+        <!-- 筛选语法对比表（重点修复移动端窄屏压缩bug） -->
+        <div>
+          <h3 class="text-sm sm:text-base md:text-lg font-bold text-slate-900 mb-2">1. 版本 2.1 与版本 2.2 筛选语法对比表</h3>
+          <div class="text-[11px] text-slate-400 mb-2 flex items-center gap-1 sm:hidden">
+            <span>👉</span><span>左右滑动可查看完整对比内容</span>
+          </div>
+          <div class="overflow-x-auto border border-slate-200 rounded-xl table-scroll">
+            <table class="min-w-[720px] w-full text-left border-collapse text-xs sm:text-sm">
+              <thead>
+                <tr class="bg-slate-50 text-slate-700 border-b border-slate-200">
+                  <th class="py-3 px-3.5 sm:px-4 font-semibold whitespace-nowrap min-w-[140px] bg-slate-100/50">语法特性</th>
+                  <th class="py-3 px-3.5 sm:px-4 font-semibold whitespace-nowrap min-w-[170px]">2.1 语法架构 (旧版)</th>
+                  <th class="py-3 px-3.5 sm:px-4 font-semibold whitespace-nowrap min-w-[230px]">2.2 布尔语法架构 (本次测试版)</th>
+                  <th class="py-3 px-3.5 sm:px-4 font-semibold whitespace-nowrap min-w-[170px]">实际作用</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 text-slate-600">
+                <tr>
+                  <td class="py-3 px-3.5 sm:px-4 font-semibold text-slate-900 whitespace-nowrap bg-slate-50/40">🔀 多分支逻辑 (OR)</td>
+                  <td class="py-3 px-3.5 sm:px-4 text-rose-600">❌ 不支持（所有条件均为 AND 关系）</td>
+                  <td class="py-3 px-3.5 sm:px-4 text-emerald-700 font-medium">✅ 支持 <code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">|</code> 分支（满足任一分支即保留）</td>
+                  <td class="py-3 px-3.5 sm:px-4">单条规则可配置多个平行主题</td>
+                </tr>
+                <tr>
+                  <td class="py-3 px-3.5 sm:px-4 font-semibold text-slate-900 whitespace-nowrap bg-slate-50/40">🛡️ 负向排除维度 (NOT)</td>
+                  <td class="py-3 px-3.5 sm:px-4 text-amber-600">⚠️ 仅支持标题排除 (<code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">-关键词</code>)</td>
+                  <td class="py-3 px-3.5 sm:px-4 text-emerald-700 font-medium">✅ 支持三维排除 (<code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">-标题</code>、<code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">-#标签</code>、<code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">-@UP主</code>)</td>
+                  <td class="py-3 px-3.5 sm:px-4">支持按标签或作者维度直接排除内容</td>
+                </tr>
+                <tr>
+                  <td class="py-3 px-3.5 sm:px-4 font-semibold text-slate-900 whitespace-nowrap bg-slate-50/40">🎯 精确匹配机制 (Quotes)</td>
+                  <td class="py-3 px-3.5 sm:px-4 text-rose-600">❌ 不支持（均为子串模糊匹配）</td>
+                  <td class="py-3 px-4 text-emerald-700 font-medium">✅ 支持英文成对双引号 (<code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">""</code> 或 <code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">''</code>)</td>
+                  <td class="py-3 px-3.5 sm:px-4">避免短词模糊匹配导致的误伤</td>
+                </tr>
+                <tr>
+                  <td class="py-3 px-3.5 sm:px-4 font-semibold text-slate-900 whitespace-nowrap bg-slate-50/40">📝 带空格短语</td>
+                  <td class="py-3 px-3.5 sm:px-4 text-rose-600">❌ 不支持（空格会被拆分为多个词）</td>
+                  <td class="py-3 px-3.5 sm:px-4 text-emerald-700 font-medium">✅ 支持引号内包含空格（如 <code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">"deepseek v3"</code>）</td>
+                  <td class="py-3 px-3.5 sm:px-4">允许对英文短语或完整专有名词整体匹配</td>
+                </tr>
+                <tr>
+                  <td class="py-3 px-3.5 sm:px-4 font-semibold text-slate-900 whitespace-nowrap bg-slate-50/40">🏗️ 词法解析结构</td>
+                  <td class="py-3 px-3.5 sm:px-4 text-amber-600">⚠️ 基于空格正则切分</td>
+                  <td class="py-3 px-3.5 sm:px-4 text-emerald-700 font-medium">✅ 状态机切词并构建查询树</td>
+                  <td class="py-3 px-3.5 sm:px-4">提升语法解析的稳定性与容错率</td>
+                </tr>
+                <tr>
+                  <td class="py-3 px-3.5 sm:px-4 font-semibold text-slate-900 whitespace-nowrap bg-slate-50/40">🛡️ 未闭合引号容错</td>
+                  <td class="py-3 px-3.5 sm:px-4 text-rose-600">❌ 无处理逻辑</td>
+                  <td class="py-3 px-3.5 sm:px-4 text-emerald-700 font-medium">✅ 单侧未闭合引号自动剥离并降级匹配</td>
+                  <td class="py-3 px-3.5 sm:px-4">避免用户输入格式不全时发生错误</td>
+                </tr>
+                <tr>
+                  <td class="py-3 px-3.5 sm:px-4 font-semibold text-slate-900 whitespace-nowrap bg-slate-50/40">🌐 全角标点兼容</td>
+                  <td class="py-3 px-3.5 sm:px-4 text-amber-600">⚠️ 仅做繁简转换，全角符号无法识别为操作符</td>
+                  <td class="py-3 px-3.5 sm:px-4 text-emerald-700 font-medium">✅ 自动转换全角字符（<code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">｜－＃＠“”</code> 转半角）</td>
+                  <td class="py-3 px-3.5 sm:px-4">中文输入法下直接输入符号可正常识别</td>
+                </tr>
+                <tr>
+                  <td class="py-3 px-3.5 sm:px-4 font-semibold text-slate-900 whitespace-nowrap bg-slate-50/40">🚀 API 检索词提纯</td>
+                  <td class="py-3 px-3.5 sm:px-4 text-amber-600">⚠️ 简单剔除前缀字符后拼接</td>
+                  <td class="py-3 px-3.5 sm:px-4 text-emerald-700 font-medium">✅ 提取正向核心词并去重发送</td>
+                  <td class="py-3 px-3.5 sm:px-4">向接口提交规范检索词，保障候选数量</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 语法操作符规范表（重点修复移动端窄屏压缩bug） -->
+        <div>
+          <h3 class="text-sm sm:text-base md:text-lg font-bold text-slate-900 mb-2">2. 语法操作符规范</h3>
+          <div class="text-[11px] text-slate-400 mb-2 flex items-center gap-1 sm:hidden">
+            <span>👉</span><span>左右滑动可查看完整操作符说明</span>
+          </div>
+          <div class="overflow-x-auto border border-slate-200 rounded-xl table-scroll">
+            <table class="min-w-[560px] w-full text-left border-collapse text-xs sm:text-sm">
+              <thead>
+                <tr class="bg-slate-50 text-slate-700 border-b border-slate-200">
+                  <th class="py-3 px-3.5 sm:px-4 font-semibold whitespace-nowrap min-w-[130px] bg-slate-100/50">操作符</th>
+                  <th class="py-3 px-3.5 sm:px-4 font-semibold whitespace-nowrap min-w-[120px]">语法形式</th>
+                  <th class="py-3 px-3.5 sm:px-4 font-semibold whitespace-nowrap min-w-[100px]">作用目标</th>
+                  <th class="py-3 px-3.5 sm:px-4 font-semibold whitespace-nowrap min-w-[210px]">规则说明</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 text-slate-600">
+                <tr>
+                  <td class="py-2.5 px-3.5 sm:px-4 font-semibold text-slate-900 whitespace-nowrap bg-slate-50/40">📝 默认（无符号）</td>
+                  <td class="py-2.5 px-3.5 sm:px-4 font-mono text-xs whitespace-nowrap">关键词</td>
+                  <td class="py-2.5 px-3.5 sm:px-4 whitespace-nowrap">视频标题</td>
+                  <td class="py-2.5 px-3.5 sm:px-4">视频标题必须包含该关键词。</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 px-3.5 sm:px-4 font-semibold text-slate-900 whitespace-nowrap bg-slate-50/40">👤 UP 主限定</td>
+                  <td class="py-2.5 px-3.5 sm:px-4 font-mono text-xs whitespace-nowrap">@UP主名称</td>
+                  <td class="py-2.5 px-3.5 sm:px-4 whitespace-nowrap">视频作者</td>
+                  <td class="py-2.5 px-3.5 sm:px-4">限定视频发布者，同分支内多个 @UP 为“或”关系。</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 px-3.5 sm:px-4 font-semibold text-slate-900 whitespace-nowrap bg-slate-50/40">🏷️ 标签限定</td>
+                  <td class="py-2.5 px-3.5 sm:px-4 font-mono text-xs whitespace-nowrap">#标签名</td>
+                  <td class="py-2.5 px-3.5 sm:px-4 whitespace-nowrap">视频标签</td>
+                  <td class="py-2.5 px-3.5 sm:px-4">视频携带的标签中必须包含该文本。</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 px-3.5 sm:px-4 font-semibold text-slate-900 whitespace-nowrap bg-slate-50/40">🚫 标题排除</td>
+                  <td class="py-2.5 px-3.5 sm:px-4 font-mono text-xs whitespace-nowrap">-关键词</td>
+                  <td class="py-2.5 px-3.5 sm:px-4 whitespace-nowrap">视频标题</td>
+                  <td class="py-2.5 px-3.5 sm:px-4">视频标题命中该词则直接排除。</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 px-3.5 sm:px-4 font-semibold text-slate-900 whitespace-nowrap bg-slate-50/40">🚷 UP 主排除</td>
+                  <td class="py-2.5 px-3.5 sm:px-4 font-mono text-xs whitespace-nowrap">-@UP主名称</td>
+                  <td class="py-2.5 px-3.5 sm:px-4 whitespace-nowrap">视频作者</td>
+                  <td class="py-2.5 px-3.5 sm:px-4">该 UP 主发布的视频直接排除。</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 px-3.5 sm:px-4 font-semibold text-slate-900 whitespace-nowrap bg-slate-50/40">🔕 标签排除</td>
+                  <td class="py-2.5 px-3.5 sm:px-4 font-mono text-xs whitespace-nowrap">-#标签名</td>
+                  <td class="py-2.5 px-3.5 sm:px-4 whitespace-nowrap">视频标签</td>
+                  <td class="py-2.5 px-3.5 sm:px-4">视频携带该标签则直接排除。</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 px-3.5 sm:px-4 font-semibold text-slate-900 whitespace-nowrap bg-slate-50/40">🎯 精确匹配</td>
+                  <td class="py-2.5 px-3.5 sm:px-4 font-mono text-xs whitespace-nowrap">"..." 或 '...'</td>
+                  <td class="py-2.5 px-3.5 sm:px-4 whitespace-nowrap">标题 / UP主 / 标签</td>
+                  <td class="py-2.5 px-3.5 sm:px-4">要求完全一致，不进行子串模糊匹配。</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 px-3.5 sm:px-4 font-semibold text-slate-900 whitespace-nowrap bg-slate-50/40">🔀 分支或</td>
+                  <td class="py-2.5 px-3.5 sm:px-4 font-mono text-xs whitespace-nowrap">分支A | 分支B</td>
+                  <td class="py-2.5 px-3.5 sm:px-4 whitespace-nowrap">顶层分支</td>
+                  <td class="py-2.5 px-3.5 sm:px-4">满足分支 A 或分支 B 任一条件即可通过。</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 匹配优先级流程图 -->
+        <div>
+          <h3 class="text-sm sm:text-base md:text-lg font-bold text-slate-900 mb-2">3. 匹配逻辑与优先级</h3>
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 sm:p-5 mb-3.5 flex justify-center overflow-x-auto table-scroll">
+            <div class="mermaid text-xs sm:text-sm min-w-[320px] max-w-xl">
+flowchart TD
+    A["原始视频流"] --> B{"1. 基础过滤<br>(黑名单UP / 充电专属 / 课堂视频)"}
+    B -- 命中黑名单或付费内容 --> X["排除"]
+    B -- 未命中 --> C{"2. 全局排除检查 (NOT)<br>(-标题 / -@UP / -#Tag)"}
+    C -- 命中任一排除项 --> X
+    C -- 未命中排除项 --> D{"3. 分支逻辑检查 (OR)<br>分支1 | 分支2 | 分支3"}
+    D -- 命中任一分支的AND条件 --> Y["通过并展示"]
+    D -- 所有分支均未命中 --> X
+            </div>
+          </div>
+          <ol class="list-decimal list-inside text-xs sm:text-sm text-slate-600 space-y-1.5 leading-relaxed">
+            <li><strong class="text-slate-800">第一层：基础与专属内容过滤</strong>：系统黑名单 UP 主稿件直接过滤；充电专属与课堂付费视频直接过滤。</li>
+            <li><strong class="text-slate-800">第二层：全局排除检查（NOT，优先级最高）</strong>：带 <code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">-</code> 前缀的条件优先执行，命中任一排除项直接剔除。</li>
+            <li><strong class="text-slate-800">第三层：多分支匹配（OR 关系）</strong>：<code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">|</code> 分隔的分支之间为“或”关系，满足任一分支即保留；同一分支内部的标题词与标签词必须全部满足（AND 关系）。</li>
+          </ol>
+        </div>
+
+        <!-- 精确匹配说明 -->
+        <div>
+          <h3 class="text-sm sm:text-base md:text-lg font-bold text-slate-900 mb-2">4. 精确匹配说明（成对双引号）</h3>
+          <p class="text-xs sm:text-sm text-slate-600 mb-3 leading-relaxed">
+            在模糊匹配下，简短词汇容易误杀包含该字符的正常词汇。例如排除标签 <code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">-#ai</code>，若使用普通模糊匹配，标签为 <code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">daily</code>、<code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">air</code> 的视频也会被排除。
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 text-xs sm:text-sm">
+            <div class="bg-slate-50 p-3 sm:p-3.5 rounded-xl border border-slate-200">
+              <span class="text-slate-900 font-semibold block mb-1">精确排除标签</span>
+              <code class="text-rose-700 bg-rose-50 px-1 py-0.5 rounded border border-rose-200 font-mono text-xs">-#"ai"</code>
+              <p class="text-slate-500 mt-1.5 text-xs">仅当标签完全等于 ai 时才排除，不影响 air 或 daily。</p>
+            </div>
+            <div class="bg-slate-50 p-3 sm:p-3.5 rounded-xl border border-slate-200">
+              <span class="text-slate-900 font-semibold block mb-1">精确限定 UP 主</span>
+              <code class="text-sky-700 bg-sky-50 px-1 py-0.5 rounded border border-sky-200 font-mono text-xs">@"影视飓风"</code>
+              <p class="text-slate-500 mt-1.5 text-xs">仅匹配名称完全等于“影视飓风”的账号。</p>
+            </div>
+            <div class="bg-slate-50 p-3 sm:p-3.5 rounded-xl border border-slate-200">
+              <span class="text-slate-900 font-semibold block mb-1">精确标题短语</span>
+              <code class="text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200 font-mono text-xs">"深度学习"</code>
+              <p class="text-slate-500 mt-1.5 text-xs">要求标题包含连续且完整的短语。</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 规则配置示例 -->
+        <div>
+          <h3 class="text-sm sm:text-base md:text-lg font-bold text-slate-900 mb-2">5. 规则配置示例（适用于【选推】与搜索）</h3>
+          <div class="space-y-3">
+            <div class="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="font-bold text-slate-900 text-xs sm:text-sm">示例 1：指定单一 UP 主</span>
+                <span class="text-[11px] text-slate-400">单作者模式</span>
+              </div>
+              <div class="flex items-center gap-2 mb-2">
+                <code class="bg-white px-2 py-0.5 sm:px-2.5 sm:py-1 rounded border border-slate-200 font-mono text-xs sm:text-sm text-sky-800">@"影视飓风"</code>
+              </div>
+              <p class="text-xs sm:text-sm text-slate-600">效果：仅展示作者昵称完全等于“影视飓风”的视频。</p>
+            </div>
+
+            <div class="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="font-bold text-slate-900 text-xs sm:text-sm">示例 2：主题检索与排除杂质</span>
+                <span class="text-[11px] text-slate-400">正向 + 排除</span>
+              </div>
+              <div class="flex items-center gap-2 mb-2">
+                <code class="bg-white px-2 py-0.5 sm:px-2.5 sm:py-1 rounded border border-slate-200 font-mono text-xs sm:text-sm text-sky-800">深度学习 -培训 -入门 -#"广告"</code>
+              </div>
+              <p class="text-xs sm:text-sm text-slate-600">效果：标题包含“深度学习”，同时排除标题含“培训”、“入门”以及标签为“广告”的视频。</p>
+            </div>
+
+            <div class="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="font-bold text-slate-900 text-xs sm:text-sm">示例 3：多主题联合展示（分支或）</span>
+                <span class="text-[11px] text-slate-400">分支聚合</span>
+              </div>
+              <div class="flex items-center gap-2 mb-2">
+                <code class="bg-white px-2 py-0.5 sm:px-2.5 sm:py-1 rounded border border-slate-200 font-mono text-xs sm:text-sm text-sky-800">TED | 斯坦福 | 纪录片 #自然</code>
+              </div>
+              <p class="text-xs sm:text-sm text-slate-600">效果：满足以下任一条件即可保留：(1) 标题含 TED；(2) 标题含 斯坦福；(3) 标题含 纪录片 且标签含 自然。</p>
+            </div>
+
+            <div class="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="font-bold text-slate-900 text-xs sm:text-sm">示例 4：领域内容与多维度排除</span>
+                <span class="text-[11px] text-slate-400">跨维度排除</span>
+              </div>
+              <div class="flex items-center gap-2 mb-2">
+                <code class="bg-white px-2 py-0.5 sm:px-2.5 sm:py-1 rounded border border-slate-200 font-mono text-xs sm:text-sm text-sky-800">物理 #科普 -#二次元 -#游戏 -@营销号UP</code>
+              </div>
+              <p class="text-xs sm:text-sm text-slate-600">效果：标题包含“物理”且标签包含“科普”；排除携带“二次元”或“游戏”标签的稿件；排除指定作者“营销号UP”的视频。</p>
+            </div>
+
+            <div class="bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="font-bold text-slate-900 text-xs sm:text-sm">示例 5：防止误伤的精确排除组合</span>
+                <span class="text-[11px] text-slate-400">防误伤精细过滤</span>
+              </div>
+              <div class="flex items-center gap-2 mb-2">
+                <code class="bg-white px-2 py-0.5 sm:px-2.5 sm:py-1 rounded border border-slate-200 font-mono text-xs sm:text-sm text-sky-800">摄影 -#"ai" -#"二次元"</code>
+              </div>
+              <p class="text-xs sm:text-sm text-slate-600">效果：检索摄影主题视频；精确排除标签完全等于 ai 与 二次元 的稿件；保留标签为 air、daily 等包含相关子串的正常摄影视频。</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 使用注意事项 -->
+        <div>
+          <h3 class="text-sm sm:text-base md:text-lg font-bold text-slate-900 mb-2">6. 使用注意事项</h3>
+          <ul class="text-xs sm:text-sm text-slate-600 space-y-1.5 list-disc list-inside leading-relaxed">
+            <li><strong>词间空格</strong>：同一分支内的多个条件请使用标准空格分隔（如 <code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">关键词A 关键词B -排除词</code>）。</li>
+            <li><strong>符号格式</strong>：推荐直接使用半角符号（<code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">|</code>、<code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">-</code>、<code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">#</code>、<code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">@</code>、<code class="px-1 py-0.5 rounded bg-slate-200 text-xs font-mono">""</code>）。</li>
+            <li><strong>规则备份</strong>：在【选推规则管理】中配置较多规则后，建议使用右上角的导出功能将配置保存至文本便签备用。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 页脚 -->
+  <footer class="border-t border-slate-200 bg-white py-6 sm:py-8 text-center text-xs text-slate-500">
+    <div class="max-w-5xl mx-auto px-4">
+      <p>PiliPlus 说明文档</p>
+      <p class="mt-1">构建分支：dev-sync-2.2.0.2 • 2026</p>
+    </div>
+  </footer>
+
+</body>
+</html>

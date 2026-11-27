@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>心智逆向工程：唯识宗与极客生存指南</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600;700;900&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
+            background-color: #f7f4ed; /* 宣纸/古朴暖黄底色 */
+            color: #2c2523; /* 墨黑 */
+        }
+        .font-mono {
+            font-family: 'Fira Code', monospace;
+        }
+        /* 佛教印章风格标签 */
+        .zen-seal {
+            border: 1px solid #991b1b;
+            color: #991b1b;
+            background-color: #fef2f2;
+        }
+        /* 仿经卷古朴卡片 */
+        .zen-card {
+            background-color: #ffffff;
+            border: 1px solid #e7e2d6;
+            box-shadow: 0 2px 6px rgba(68, 51, 33, 0.04);
+            transition: all 0.25s ease;
+        }
+        .zen-card:hover {
+            border-color: #c49a45; /* 赭黄金 */
+            box-shadow: 0 6px 16px rgba(196, 154, 69, 0.12);
+        }
+        /* 佛教朱砂红与沉香金强调线 */
+        .border-cinnabar {
+            border-color: #991b1b;
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen selection:bg-[#991b1b] selection:text-white">
+
+    <!-- 顶部主视觉 / Hero Section -->
+    <header class="relative overflow-hidden py-24 border-b border-[#e7e2d6] bg-[#efebe1]">
+        <div class="relative z-10 max-w-5xl mx-auto px-6 text-center">
+            <div class="inline-block px-4 py-1 mb-6 text-xs font-semibold tracking-widest zen-seal rounded-sm">
+                萬法唯識 ‧ 凝神斷妄
+            </div>
+            <h1 class="text-4xl md:text-6xl font-black text-[#1f1a18] tracking-wider mb-6">
+                心智逆向工程 <span class="text-[#991b1b]">唯識極客指南</span>
+            </h1>
+            <p class="text-lg md:text-xl text-[#5c504a] max-w-3xl mx-auto leading-relaxed font-light">
+                将古老的唯识宗转化为现代人类的“底层操作系统”。权力与时间只是大脑的集体幻觉，现实是一场可以被 Debug、被重新渲染的沙盒游戏。
+            </p>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-6 py-16 space-y-20">
+
+        <!-- 模块 1：心智系统架构 / Mental System Architecture -->
+        <section>
+            <div class="flex items-center gap-3 mb-8 border-l-4 border-cinnabar pl-4">
+                <h2 class="text-2xl font-bold text-[#1f1a18]">一、 八识运作模型：人类心智的硬件拓扑</h2>
+                <span class="text-xs text-[#8c7a6b] font-mono tracking-widest">/ ARCHITECTURE</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- 前五识 -->
+                <div class="zen-card p-6 rounded-lg">
+                    <div class="text-[#b45309] font-bold text-sm tracking-widest mb-1">01. 根塵感官</div>
+                    <h3 class="text-[#1f1a18] font-bold text-lg mb-2">硬件传感器</h3>
+                    <p class="text-xs text-[#8c7a6b] mb-4 font-mono font-medium">前五识 (眼耳鼻舌身)</p>
+                    <p class="text-sm text-[#5c504a] leading-relaxed">纯粹的物理信息接收器。只负责接收光子、声波等数据流，无逻辑运算能力，不产生情绪判断。</p>
+                </div>
+                <!-- 第六识 -->
+                <div class="zen-card p-6 rounded-lg">
+                    <div class="text-[#b45309] font-bold text-sm tracking-widest mb-1">02. 分別作意</div>
+                    <h3 class="text-[#1f1a18] font-bold text-lg mb-2">中央处理器 (CPU)</h3>
+                    <p class="text-xs text-[#8c7a6b] mb-4 font-mono font-medium">第六识 (意识)</p>
+                    <p class="text-sm text-slate-600 leading-relaxed">负责对传感器传来的原始数据进行拼接、打标签、概念化。将屏幕上的像素点渲染为“危险”或“安全”的幻觉。</p>
+                </div>
+                <!-- 第七识 -->
+                <div class="zen-card p-6 rounded-lg">
+                    <div class="text-[#991b1b] font-bold text-sm tracking-widest mb-1">03. 恆審思量</div>
+                    <h3 class="text-[#1f1a18] font-bold text-lg mb-2">底层病毒进程</h3>
+                    <p class="text-xs text-[#8c7a6b] mb-4 font-mono font-medium">第七识 (末那识)</p>
+                    <p class="text-sm text-[#5c504a] leading-relaxed">系统最顽固的后台程序。死死抱住“自我”概念，是所有内耗、焦虑、面子与权力控制欲的核心病灶。</p>
+                </div>
+                <!-- 第八识 -->
+                <div class="zen-card p-6 rounded-lg">
+                    <div class="text-[#047857] font-bold text-sm tracking-widest mb-1">04. 藏識種子</div>
+                    <h3 class="text-[#1f1a18] font-bold text-lg mb-2">终极云端硬盘</h3>
+                    <p class="text-xs text-[#8c7a6b] mb-4 font-mono font-medium">第八识 (阿赖耶识)</p>
+                    <p class="text-sm text-[#5c504a] leading-relaxed">一切现实的“源代码库”。存储无始以来的行为数据（种子）。数据渲染出现实，现实反应再写回数据，形成死循环。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 模块 2：现实 Debug SOP / Debugging Reality -->
+        <section>
+            <div class="flex items-center gap-3 mb-8 border-l-4 border-cinnabar pl-4">
+                <h2 class="text-2xl font-bold text-[#1f1a18]">二、 现实 Debug 操作规范 (SOP)</h2>
+                <span class="text-xs text-[#8c7a6b] font-mono tracking-widest">/ DEBUGGING SOP</span>
+            </div>
+            <div class="bg-white rounded-lg p-8 border border-[#e7e2d6] shadow-sm">
+                <ol class="relative border-l border-[#d6cebf] space-y-8 ml-2">                  
+                    <li class="ml-6">
+                        <span class="absolute flex items-center justify-center w-7 h-7 bg-[#f7f4ed] rounded-full -left-3.5 border border-[#991b1b] text-[#991b1b] font-bold text-xs font-mono">1</span>
+                        <h3 class="font-bold text-[#1f1a18] text-lg mb-1">降级至传感器层 (阻断渲染)</h3>
+                        <p class="text-xs text-[#b45309] font-mono mb-2">照見五蘊皆空 ‧ 不隨妄動</p>
+                        <p class="text-[#5c504a] text-sm leading-relaxed">面对刺激（如老板责骂），意识到伤害并非网线传输的物理实体，而是自身第六识基于过往数据渲染出的“危险信号”。</p>
+                    </li>
+                    <li class="ml-6">
+                        <span class="absolute flex items-center justify-center w-7 h-7 bg-[#f7f4ed] rounded-full -left-3.5 border border-[#991b1b] text-[#991b1b] font-bold text-xs font-mono">2</span>
+                        <h3 class="font-bold text-[#1f1a18] text-lg mb-1">定位末那识病毒 (隔离自我)</h3>
+                        <p class="text-xs text-[#b45309] font-mono mb-2">我執伏斷 ‧ 審察我相</p>
+                        <p class="text-[#5c504a] text-sm leading-relaxed">观察痛苦的根源：第七识正在疯狂调用保护“自我面子”的代码。确认“自我”只是一段防御机制，剥离情绪与客观事件的绑定。</p>
+                    </li>
+                    <li class="ml-6">
+                        <span class="absolute flex items-center justify-center w-7 h-7 bg-[#f7f4ed] rounded-full -left-3.5 border border-[#991b1b] text-[#991b1b] font-bold text-xs font-mono">3</span>
+                        <h3 class="font-bold text-[#1f1a18] text-lg mb-1">设置断点 (切断恶意代码写入)</h3>
+                        <p class="text-xs text-[#b45309] font-mono mb-2">現行熏種 ‧ 截斷流注</p>
+                        <p class="text-[#5c504a] text-sm leading-relaxed">拦截“现行熏种子”的死循环。像盯着高占用的系统进程一样凝视愤怒，不压抑不跟随，任其能量耗尽，阻止垃圾代码写回第八识。</p>
+                    </li>
+                    <li class="ml-6">
+                        <span class="absolute flex items-center justify-center w-7 h-7 bg-[#f7f4ed] rounded-full -left-3.5 border border-[#991b1b] text-[#991b1b] font-bold text-xs font-mono">4</span>
+                        <h3 class="font-bold text-[#1f1a18] text-lg mb-1">重构高质量数据集 (环境优化)</h3>
+                        <p class="text-xs text-[#b45309] font-mono mb-2">清淨熏習 ‧ 轉識成智</p>
+                        <p class="text-[#5c504a] text-sm leading-relaxed">主动隔绝噪音，赚取生存资源以优化物理载具（活下去、活得好）。向系统输入专注、平静的高质量代码，夺回潜意识驾驶权。</p>
+                    </li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- 模块 3：唯识极客的四大杠杆 / The Geeks' Levers -->
+        <section>
+            <div class="flex flex-col md:flex-row justify-between items-end mb-8 border-l-4 border-cinnabar pl-4">
+                <h2 class="text-2xl font-bold text-[#1f1a18]">三、 极客生存杠杆：重构沙盒游戏</h2>
+                <p class="text-xs text-[#8c7a6b] max-w-md text-right hidden md:block">不陪世俗玩无聊的权力游戏，利用数字杠杆建立无噪音的高能效基地。</p>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Card 1 -->
+                <div class="zen-card rounded-lg p-6 relative overflow-hidden">
+                    <div class="text-[#b45309] text-xs font-mono font-bold tracking-widest mb-1">LEVER // 01</div>
+                    <h3 class="text-xl font-bold text-[#1f1a18] mb-3">视觉渲染牌 (前五识干预)</h3>
+                    <p class="text-[#5c504a] text-sm leading-relaxed">掌握 UI/UX 与交互逻辑。将冰冷的代码包装成人类最易接纳的幻觉体验，掌控产品表象的话语权。</p>
+                </div>
+                <!-- Card 2 -->
+                <div class="zen-card rounded-lg p-6 relative overflow-hidden">
+                    <div class="text-[#b45309] text-xs font-mono font-bold tracking-widest mb-1">LEVER // 02</div>
+                    <h3 class="text-xl font-bold text-[#1f1a18] mb-3">算力杠杆牌 (阿赖耶识基建)</h3>
+                    <p class="text-[#5c504a] text-sm leading-relaxed">调用大模型 API 与云端基建。让 AI 成为廉价、不知疲倦的数字分身，替代人类跑完枯燥的业力循环。</p>
+                </div>
+                <!-- Card 3 -->
+                <div class="zen-card rounded-lg p-6 relative overflow-hidden">
+                    <div class="text-[#b45309] text-xs font-mono font-bold tracking-widest mb-1">LEVER // 03</div>
+                    <h3 class="text-xl font-bold text-[#1f1a18] mb-3">系统控制牌 (依他起性调优)</h3>
+                    <p class="text-[#5c504a] text-sm leading-relaxed">利用任务管理与自动化脚本外包记忆。保持自身 CPU 算力冗余，永远处于清醒的观察者位。</p>
+                </div>
+                <!-- Card 4 -->
+                <div class="zen-card rounded-lg p-6 relative overflow-hidden">
+                    <div class="text-[#b45309] text-xs font-mono font-bold tracking-widest mb-1">LEVER // 04</div>
+                    <h3 class="text-xl font-bold text-[#1f1a18] mb-3">个体商业牌 (清净沙盒构建)</h3>
+                    <p class="text-[#5c504a] text-sm leading-relaxed">贯通前后端，打造微型超级个体商业闭环。将技术变现为生存资源，彻底夺回客观物理时间的支配权。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 模块 4：职业投影矩阵 / Job Matrix -->
+        <section>
+            <div class="flex items-center gap-3 mb-8 border-l-4 border-cinnabar pl-4">
+                <h2 class="text-2xl font-bold text-[#1f1a18]">四、 技术岗位的唯识映射矩阵</h2>
+                <span class="text-xs text-[#8c7a6b] font-mono tracking-widest">/ MAPPING MATRIX</span>
+            </div>
+            <div class="overflow-x-auto bg-white rounded-lg border border-[#e7e2d6] shadow-sm">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-[#efebe1] text-[#1f1a18] text-sm tracking-wider border-b border-[#e7e2d6]">
+                            <th class="p-4 font-bold">唯识图层</th>
+                            <th class="p-4 font-bold">系统职责</th>
+                            <th class="p-4 font-bold">核心岗位映射</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm text-[#5c504a] divide-y divide-[#f2eee6]">
+                        <tr class="hover:bg-[#fcfbf9] transition-colors">
+                            <td class="p-4 font-bold text-[#991b1b]">前六识<br><span class="text-xs text-[#8c7a6b] font-normal">感官与意识</span></td>
+                            <td class="p-4">负责控制信息输入与视觉幻觉生成，塑造用户认知。</td>
+                            <td class="p-4">AI 产品经理 / 原生交互设计师 (UI/UX) / 前端工程师 / 3D资产架构师</td>
+                        </tr>
+                        <tr class="hover:bg-[#fcfbf9] transition-colors">
+                            <td class="p-4 font-bold text-[#047857]">第八识<br><span class="text-xs text-[#8c7a6b] font-normal">阿赖耶识</span></td>
+                            <td class="p-4">维护“业力代码”和云端数据库，调度虚拟世界的底层算力。</td>
+                            <td class="p-4">大模型应用架构师 / 云端基建工程师 (GCP) / 深度学习调优师 / API 集成专家</td>
+                        </tr>
+                        <tr class="hover:bg-[#fcfbf9] transition-colors">
+                            <td class="p-4 font-bold text-[#b45309]">依他起性<br><span class="text-xs text-[#8c7a6b] font-normal">系统条件关联</span></td>
+                            <td class="p-4">编写触发器与脚本，打破物理劳作循环，实现无人值守的自动化。</td>
+                            <td class="p-4">自动化工作流工程师 / 插件脚本开发者 / 生产力架构师 / AI 提示词调优师</td>
+                        </tr>
+                        <tr class="hover:bg-[#fcfbf9] transition-colors">
+                            <td class="p-4 font-bold text-[#7c2d12]">清净沙盒<br><span class="text-xs text-[#8c7a6b] font-normal">转识成智</span></td>
+                            <td class="p-4">不依赖科层制系统，构建自给自足的“微型闭环”印钞机。</td>
+                            <td class="p-4">超级个体 (Solopreneur) / 独立电商操盘手 / AIGC 视觉创作者 / 技术顾问</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-[#e7e2d6] py-10 text-center bg-[#efebe1]">
+        <p class="text-[#5c504a] text-sm leading-relaxed">
+            “现实剥到最后也没有任何独立存在的客体，只有意识数据的流动。”<br>
+            <span class="text-[#8c7a6b] text-xs mt-2 inline-block font-serif">—— Generated based on Yogacara & Geek Cognitive Framework</span>
+        </p>
+    </footer>
+
+</body>
+</html>

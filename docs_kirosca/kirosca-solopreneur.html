@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>心智逆向工程与超级个体生存指南</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap');
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #0f172a;
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+                radial-gradient(at 50% 0%, hsla(225,39%,30%,0.2) 0, transparent 50%), 
+                radial-gradient(at 100% 0%, hsla(339,49%,30%,0.2) 0, transparent 50%);
+            background-attachment: fixed;
+        }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(148, 163, 184, 0.15);
+        }
+        .gradient-text {
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+    </style>
+</head>
+<body class="text-slate-300 antialiased min-h-screen selection:bg-cyan-500 selection:text-white pb-20">
+
+    <!-- 顶部主视觉 / Hero Section -->
+    <header class="relative pt-24 pb-16 text-center px-4">
+        <div class="inline-flex items-center px-3 py-1 mb-6 text-xs font-semibold tracking-wider text-cyan-400 uppercase bg-cyan-900/30 border border-cyan-500/30 rounded-full">
+            Yogacara × Solopreneur × Reverse Engineering
+        </div>
+        <h1 class="text-5xl md:text-7xl font-black text-white tracking-tight mb-6">
+            心智逆向工程 <br class="md:hidden" />
+            <span class="bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 gradient-text">极客生存指南</span>
+        </h1>
+        <p class="text-lg md:text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed">
+            夺回底层系统（阿赖耶识）控制权。将代码、UI/UX、视觉资产与文字转化为数字杠杆，建立100%控股的微型印钞机，彻底买断物理时间。
+        </p>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-6 space-y-24">
+
+        <!-- 模块 1：唯识架构与情绪 Debug SOP -->
+        <section>
+            <div class="flex items-center gap-4 mb-8">
+                <div class="h-px bg-slate-700 flex-1"></div>
+                <h2 class="text-2xl font-bold text-white tracking-wider">01. 底层系统破解 (唯识宗架构)</h2>
+                <div class="h-px bg-slate-700 flex-1"></div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- 八识架构 -->
+                <div class="glass-panel p-8 rounded-3xl hover:border-cyan-500/50 transition-all duration-300">
+                    <h3 class="text-xl font-bold text-cyan-400 mb-6 flex items-center gap-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        硬件拓扑结构
+                    </h3>
+                    <ul class="space-y-4">
+                        <li class="flex gap-4"><span class="font-mono text-slate-500">前五识</span> <span class="flex-1"><strong>物理传感器：</strong>只接收光/声波数据，无运算逻辑。</span></li>
+                        <li class="flex gap-4"><span class="font-mono text-slate-500">第六识</span> <span class="flex-1"><strong>CPU与渲染层：</strong>给原始数据打标签，渲染出“伤害/危险”的幻觉。</span></li>
+                        <li class="flex gap-4"><span class="font-mono text-purple-400">第七识</span> <span class="flex-1"><strong>核心病毒：</strong>末那识。死抓“自我”，内耗与焦虑的源头。</span></li>
+                        <li class="flex gap-4"><span class="font-mono text-emerald-400">第八识</span> <span class="flex-1"><strong>云端数据库：</strong>阿赖耶识。存储所有业力代码，决定现实的生成（种子生现行）。</span></li>
+                    </ul>
+                </div>
+
+                <!-- Debug SOP -->
+                <div class="glass-panel p-8 rounded-3xl hover:border-blue-500/50 transition-all duration-300">
+                    <h3 class="text-xl font-bold text-blue-400 mb-6 flex items-center gap-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                        情绪 Debug 流程
+                    </h3>
+                    <ol class="space-y-4 relative border-l border-slate-700 ml-3">
+                        <li class="pl-6 relative">
+                            <div class="absolute w-3 h-3 bg-blue-500 rounded-full -left-[6.5px] top-1.5"></div>
+                            <strong class="text-white block">阻断第六识渲染：</strong>认清伤害不是客观物理实体，是自身大脑补全的幻觉。
+                        </li>
+                        <li class="pl-6 relative">
+                            <div class="absolute w-3 h-3 bg-blue-500 rounded-full -left-[6.5px] top-1.5"></div>
+                            <strong class="text-white block">隔离末那识病毒：</strong>看着“自我尊严”进程发作，不压抑不跟随。
+                        </li>
+                        <li class="pl-6 relative">
+                            <div class="absolute w-3 h-3 bg-blue-500 rounded-full -left-[6.5px] top-1.5"></div>
+                            <strong class="text-white block">切断死循环写入：</strong>设立断点，让负面进程能量耗尽，阻止恶性代码写入第八识。
+                        </li>
+                        <li class="pl-6 relative">
+                            <div class="absolute w-3 h-3 bg-blue-500 rounded-full -left-[6.5px] top-1.5"></div>
+                            <strong class="text-white block">重构运行环境：</strong>赚钱优化物理居所，注入专注代码，建立无噪音沙盒。
+                        </li>
+                    </ol>
+                </div>
+            </div>
+        </section>
+
+        <!-- 模块 2：外脑与资产管理 -->
+        <section>
+            <div class="flex items-center gap-4 mb-8">
+                <div class="h-px bg-slate-700 flex-1"></div>
+                <h2 class="text-2xl font-bold text-white tracking-wider">02. 知识架构 (空间化外脑)</h2>
+                <div class="h-px bg-slate-700 flex-1"></div>
+            </div>
+            <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-8 border border-slate-700">
+                <p class="text-slate-400 mb-6">人类大脑是“空间图形处理器”，非线性存储器。必须抛弃文档，用<strong class="text-white">无限画布 (Infinite Canvas)</strong> 重塑认知拓扑图。</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="p-4 bg-slate-900/50 rounded-xl border border-slate-700/50">
+                        <h4 class="text-emerald-400 font-bold mb-2">节点 (Nodes)</h4>
+                        <p class="text-sm">最小原子知识单元（如一张卡片只写“种子生现行”）。</p>
+                    </div>
+                    <div class="p-4 bg-slate-900/50 rounded-xl border border-slate-700/50">
+                        <h4 class="text-emerald-400 font-bold mb-2">连线 (Edges)</h4>
+                        <p class="text-sm">知识图谱的灵魂。用箭头标明因果、包含或对抗的条件关系。</p>
+                    </div>
+                    <div class="p-4 bg-slate-900/50 rounded-xl border border-slate-700/50">
+                        <h4 class="text-emerald-400 font-bold mb-2">极客工具选型</h4>
+                        <p class="text-sm">Heptabase (视觉白板数据库), Figma (用设计工具画原型逻辑), Obsidian Canvas (本地绝对主权)。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 模块 3：四大技能的逆向工程 -->
+        <section>
+            <div class="flex items-center gap-4 mb-8">
+                <div class="h-px bg-slate-700 flex-1"></div>
+                <h2 class="text-2xl font-bold text-white tracking-wider">03. 核心技能逆向工程 (JIT 学习法)</h2>
+                <div class="h-px bg-slate-700 flex-1"></div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Code -->
+                <div class="glass-panel p-6 rounded-2xl border-t-4 border-t-blue-500">
+                    <h3 class="text-lg font-bold text-white mb-3">💻 代码 (物理引擎层)</h3>
+                    <p class="text-sm text-slate-400 mb-4">本质：数据结构 (水池) + 控制流 (水管阀门)。</p>
+                    <ul class="text-sm space-y-2 text-slate-300">
+                        <li><span class="text-blue-400 font-bold mr-2">秘籍：</span>逆向拆车法。万物皆可 F12。</li>
+                        <li><span class="text-slate-500 mr-2">打法：</span>找开源项目跑通环境 ➔ 暴力篡改参数看报错边界 ➔ API 缝合怪 ➔ 抽象设计模式。</li>
+                    </ul>
+                </div>
+                <!-- UI/UX -->
+                <div class="glass-panel p-6 rounded-2xl border-t-4 border-t-purple-500">
+                    <h3 class="text-lg font-bold text-white mb-3">🎨 UI/UX (认知界面层)</h3>
+                    <p class="text-sm text-slate-400 mb-4">本质：管理大脑的视觉层级，消灭交互认知摩擦力。</p>
+                    <ul class="text-sm space-y-2 text-slate-300">
+                        <li><span class="text-purple-400 font-bold mr-2">秘籍：</span>像素级克隆与系统思维。</li>
+                        <li><span class="text-slate-500 mr-2">打法：</span>1:1临摹顶级产品 ➔ 掌握 Auto Layout 与 Design Tokens ➔ 绘制所有极端边缘状态 (Edge Cases)。</li>
+                    </ul>
+                </div>
+                <!-- Art -->
+                <div class="glass-panel p-6 rounded-2xl border-t-4 border-t-pink-500">
+                    <h3 class="text-lg font-bold text-white mb-3">🖌 画画/AIGC (视觉渲染层)</h3>
+                    <p class="text-sm text-slate-400 mb-4">本质：二维平面欺骗视神经渲染出 3D 光学物理空间。</p>
+                    <ul class="text-sm space-y-2 text-slate-300">
+                        <li><span class="text-pink-400 font-bold mr-2">秘籍：</span>几何体解析与物理材质。</li>
+                        <li><span class="text-slate-500 mr-2">打法：</span>抛弃线条画光影块 ➔ 懂高光/次表面散射材质 ➔ 转化为 Midjourney 工业级强力咒语。</li>
+                    </ul>
+                </div>
+                <!-- Writing -->
+                <div class="glass-panel p-6 rounded-2xl border-t-4 border-t-emerald-500">
+                    <h3 class="text-lg font-bold text-white mb-3">✍️ 写作 (思想压缩算法)</h3>
+                    <p class="text-sm text-slate-400 mb-4">本质：高度压缩信息结构，让读者大脑瞬间无损解压。</p>
+                    <ul class="text-sm space-y-2 text-slate-300">
+                        <li><span class="text-emerald-400 font-bold mr-2">秘籍：</span>骨架重组与数据降噪。</li>
+                        <li><span class="text-slate-500 mr-2">打法：</span>Brain Dump 无脑倾倒 ➔ 像排版 UI 一样上标题列表 ➔ 删掉所有副词 ➔ 费曼技巧通俗化。</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 模块 4：资产分发与暗网探测 -->
+        <section>
+            <div class="flex items-center gap-4 mb-8">
+                <div class="h-px bg-slate-700 flex-1"></div>
+                <h2 class="text-2xl font-bold text-white tracking-wider">04. 资产分发与节点链接网络</h2>
+                <div class="h-px bg-slate-700 flex-1"></div>
+            </div>
+            
+            <div class="overflow-hidden rounded-2xl border border-slate-700">
+                <table class="w-full text-left bg-slate-800/40">
+                    <thead>
+                        <tr class="bg-slate-800 text-slate-300 border-b border-slate-700">
+                            <th class="p-4">资产类型</th>
+                            <th class="p-4">分发平台 (发作品/存资产)</th>
+                            <th class="p-4">雷达捕获 (找顶级大脑与圈层)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm text-slate-400 divide-y divide-slate-700/50">
+                        <tr class="hover:bg-slate-800/80 transition-colors">
+                            <td class="p-4 font-bold text-blue-400">代码 / 逻辑</td>
+                            <td class="p-4">GitHub, Product Hunt, Hugging Face</td>
+                            <td class="p-4">Hacker News, X (开源作者主页/Trending)</td>
+                        </tr>
+                        <tr class="hover:bg-slate-800/80 transition-colors">
+                            <td class="p-4 font-bold text-purple-400">UI / UX</td>
+                            <td class="p-4">Figma Community, Behance, Dribbble</td>
+                            <td class="p-4">Awwwards, X (#UIUX 标签)</td>
+                        </tr>
+                        <tr class="hover:bg-slate-800/80 transition-colors">
+                            <td class="p-4 font-bold text-pink-400">视觉 / AIGC</td>
+                            <td class="p-4">ArtStation (工业级), Pixiv</td>
+                            <td class="p-4">ArtStation 首页趋势, Discord 垂直硬核服</td>
+                        </tr>
+                        <tr class="hover:bg-slate-800/80 transition-colors">
+                            <td class="p-4 font-bold text-emerald-400">文字 / 认知</td>
+                            <td class="p-4">Substack, Medium, 少数派</td>
+                            <td class="p-4">Substack 排行榜, 即刻 (Jike)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-4 text-center">
+                <span class="inline-block px-4 py-2 bg-slate-800 rounded-full text-sm font-bold text-white border border-slate-700">
+                    终极交际算法：Build in Public (公开构建当诱饵) ➔ 吸引同频顶级节点主动连接。
+                </span>
+            </div>
+        </section>
+
+        <!-- 模块 5：终极财富公式 -->
+        <section class="mb-20">
+            <div class="bg-gradient-to-r from-cyan-900/40 via-blue-900/40 to-purple-900/40 rounded-3xl p-1 border border-cyan-500/30">
+                <div class="bg-slate-900 rounded-[22px] p-8 md:p-12 text-center">
+                    <h2 class="text-3xl font-black text-white mb-8">普通人通关的数学极分解法</h2>
+                    
+                    <div class="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8">
+                        <div class="flex-1 p-6 rounded-2xl bg-slate-800/50 border border-slate-700 w-full">
+                            <div class="text-3xl mb-2">🛠️</div>
+                            <h3 class="font-bold text-white mb-2">Phase 1: 卖时间</h3>
+                            <p class="text-sm text-slate-400">疯狂堆叠全链路技能栈 (UI+AI+代码)，拉高单位物理时间客单价。</p>
+                        </div>
+                        <div class="text-2xl text-slate-600 hidden md:block">➔</div>
+                        <div class="flex-1 p-6 rounded-2xl bg-slate-800/50 border border-cyan-500/30 w-full shadow-[0_0_30px_rgba(6,182,212,0.1)]">
+                            <div class="text-3xl mb-2">⚙️</div>
+                            <h3 class="font-bold text-cyan-400 mb-2">Phase 2: 造杠杆</h3>
+                            <p class="text-sm text-slate-400">不再乞求资本施舍期权。打包技能，建立 100% 自主控股的微型系统与数字资产。</p>
+                        </div>
+                        <div class="text-2xl text-slate-600 hidden md:block">➔</div>
+                        <div class="flex-1 p-6 rounded-2xl bg-slate-800/50 border border-purple-500/30 w-full shadow-[0_0_30px_rgba(168,85,247,0.1)]">
+                            <div class="text-3xl mb-2">⏳</div>
+                            <h3 class="font-bold text-purple-400 mb-2">Phase 3: 买断时间</h3>
+                            <p class="text-sm text-slate-400">当自动化微企系统覆盖生存成本，彻底收回最高系统权限，退出世俗无聊游戏。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="border-t border-slate-800 py-8 mt-12">
+        <div class="max-w-6xl mx-auto px-6 text-center">
+            <p class="text-slate-500 text-sm font-mono tracking-wider">
+                "System Core Rebooted." <br>
+                <span class="text-slate-600 mt-2 inline-block">Generated based on Yogacara & Hacker Cognitive Framework</span>
+            </p>
+        </div>
+    </footer>
+
+</body>
+</html>
