@@ -65,13 +65,13 @@
         </h1>
         <div class="flex flex-wrap gap-2 text-xs font-semibold">
           <span class="px-3 py-1 rounded-full bg-white/90 border border-slate-200 text-slate-600">
-            版本 v3.0.0
+            版本 v3.1.0
           </span>
           <span class="px-3 py-1 rounded-full bg-white/90 border border-slate-200 text-bili font-mono">
             bilibili-search-cleaner-v2.1.0.user手搓.js
           </span>
           <span class="px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-600">
-            杀戮尖塔式三层模型
+            分级锚定三层评分模型
           </span>
         </div>
       </div>
@@ -91,7 +91,7 @@
           <span class="font-bold text-slate-800">总分公式：</span>
           <code class="text-bili font-semibold">综合参考分 = clamp( 品级基础底分 + 赛道表现浮动分 + 结算词条净加分, min, max )</code>
         </div>
-        <span class="text-xs text-slate-500">悬停封面胶囊即可查看完整拆解明细</span>
+        <span class="text-xs text-slate-500">悬停封面胶囊可查看完整拆解明细（触及词条上限或品级封顶时自动标注）</span>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
@@ -137,7 +137,7 @@
         </div>
         <div class="rounded-lg bg-sky-500/5 border border-sky-500/20 px-3 py-2.5">
           <div class="font-bold text-sky-600 mb-0.5">✅ 跨级有协同</div>
-          <div class="text-slate-600">满词条蓝卡可反超擦线金卡</div>
+          <div class="text-slate-600">高配佳作可反超擦线神作</div>
         </div>
         <div class="rounded-lg bg-amber-500/5 border border-amber-500/20 px-3 py-2.5">
           <div class="font-bold text-amber-600 mb-0.5">✅ 完全可解释</div>
@@ -161,7 +161,7 @@
         </div>
       </div>
       <p class="text-sm text-slate-600 mb-6">
-        下图按 <code>0~100</code> 绝对刻度对齐展示各品级区间：<strong>避坑区 (0~20) 与稳健区 (22~54) 严格物理隔离</strong>；<strong>四档佳作均守住 60 及格线</strong>；中高品级采用<strong>阶梯交叉包裹</strong>（顶级蓝卡 <code>80~90</code> 可反超擦线金卡 <code>68~76</code>，而 <code>91~98</code> 为殿堂神作独享天花板）。
+        下图按 <code>0~100</code> 绝对刻度对齐展示各品级区间：<strong>避坑区 (0~20) 与稳健区 (22~58) 严格物理隔离</strong>；<strong>四档佳作均守住 60 及格线</strong>；中高品级采用<strong>阶梯交叉包裹</strong>（顶级高配佳作 <code>80~90</code> 可反超擦线神作 <code>68~76</code>，而 <code>91~98</code> 为殿堂神作独享天花板）。
       </p>
 
       <!-- Scale Axis -->
@@ -186,12 +186,12 @@
       <!-- Overlap Insights -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-5 border-t border-slate-100 text-xs">
         <div class="rounded-xl bg-rose-500/5 border border-rose-500/20 p-3.5">
-          <div class="font-bold text-rose-600 mb-1">🛡️ 诅咒硬隔离（0~20 vs 22~54）</div>
+          <div class="font-bold text-rose-600 mb-1">🛡️ 低质硬隔离（0~20 vs 22~58）</div>
           <p class="text-slate-600"><code>⚠️ 谨慎观看</code> 封顶 20 分，<code>🍀 稳健良作</code> 保底 22 分，两者之间存在不可跨越的防线，杜绝低质视频反超良作。</p>
         </div>
         <div class="rounded-xl bg-sky-500/5 border border-sky-500/20 p-3.5">
-          <div class="font-bold text-sky-600 mb-1">🃏 蓝卡与金卡的交叉包裹（60~90 vs 68~98）</div>
-          <p class="text-slate-600">擦线 <code>🏆 殿堂神作</code>（<code>68~76</code>）会被集齐稀有词条的顶级 <code>💡 硬核干货</code>/<code>🏅 综合标杆</code>（<code>82~90</code>）反超，符合杀戮尖塔哲学。</p>
+          <div class="font-bold text-sky-600 mb-1">⚖️ 中高档交叉包裹（60~90 vs 68~98）</div>
+          <p class="text-slate-600">擦线 <code>🏆 殿堂神作</code>（<code>68~76</code>）会被集齐稀有词条的顶级 <code>💡 硬核干货</code>/<code>🏅 综合标杆</code>（<code>82~90</code>）反超，实现跨档动态均衡。</p>
         </div>
         <div class="rounded-xl bg-amber-500/5 border border-amber-500/20 p-3.5">
           <div class="font-bold text-amber-600 mb-1">👑 专属传世天花板（91 ~ 98）</div>
@@ -291,7 +291,7 @@
         </div>
         <div class="rounded-xl bg-slate-50 border border-slate-200 p-4">
           <div class="font-bold text-sm mb-1.5">▶️ 播放量权重 <code>playFactor</code></div>
-          <p class="text-xs text-slate-600">5 万以下 <code>1.0x</code>；超过 5 万按 <code>min(1.4, 1.0 + 0.2 * log10(播 / 50000))</code> 对数补偿，500 万封顶 <code>1.4x</code>。</p>
+          <p class="text-xs text-slate-600">5 万以下 <code>1.0x</code>；超过 5 万按 <code>min(1.6, 1.0 + 0.2 * log10(播 / 50000))</code> 对数补偿，500 万 <code>1.4x</code>，5000 万封顶 <code>1.6x</code>。</p>
         </div>
       </div>
 
@@ -316,7 +316,7 @@
               <td class="py-2.5 px-3 font-mono text-slate-400">02</td>
               <td class="py-2.5 px-3 whitespace-nowrap"><span class="bili-pill q-low-sample">🌱 样本较少</span></td>
               <td class="py-2.5 px-3"><code>播放 &lt; 3000</code>（未破格）</td>
-              <td class="py-2.5 px-3 text-slate-500">胶囊不露分；精选模式默认隐藏。</td>
+              <td class="py-2.5 px-3 text-slate-500">胶囊不露分；默认展示，“仅精选”模式下隐藏。</td>
             </tr>
             <tr>
               <td class="py-2.5 px-3 font-mono text-slate-400">03</td>
@@ -370,7 +370,7 @@
               <td class="py-2.5 px-3 font-mono text-slate-400">13</td>
               <td class="py-2.5 px-3 whitespace-nowrap"><span class="bili-pill q-routine">🍀 稳健良作</span></td>
               <td class="py-2.5 px-3"><code>播≥3000</code> 且未触碰上述条件</td>
-              <td class="py-2.5 px-3 text-slate-500">精选模式默认隐藏。</td>
+              <td class="py-2.5 px-3 text-slate-500">默认展示，“仅精选”模式下隐藏。</td>
             </tr>
           </tbody>
         </table>
@@ -381,7 +381,7 @@
     <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
       <h2 class="text-lg sm:text-xl font-bold flex items-center gap-2.5 mb-2">
         <span class="w-7 h-7 rounded-lg bg-bili/15 text-bili text-sm font-bold inline-flex items-center justify-center">4</span>
-        杀戮尖塔式结算词条清单（正向净加分封顶 +12）
+        明码结算词条清单（正向净加分封顶 +12）
       </h2>
       <p class="text-sm text-slate-600 mb-4">同维度内严格互斥（取最高档），悬停封面胶囊可查看每条明细。</p>
 
@@ -396,7 +396,7 @@
         </div>
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
           <div class="font-bold text-slate-800 mb-1.5">👑 现象级破圈 <span class="text-emerald-600">+4</span> / 🌊 百万 <span class="text-emerald-600">+3</span></div>
-          <p class="text-slate-500"><code>300万+双高</code> / <code>100万+赞播≥5%</code>（免娱乐扣分）</p>
+          <p class="text-slate-500"><code>300万+播放加权双高</code> / <code>100万+加权赞播≥5%</code>（免娱乐扣分）</p>
         </div>
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
           <div class="font-bold text-slate-800 mb-1.5">🎬 超长 <span class="text-emerald-600">+3</span> / ⏱️ 长篇 <span class="text-emerald-600">+2</span> / ⚡ 短精 <span class="text-emerald-600">+2</span> / 📑 合集 <span class="text-emerald-600">+1</span></div>
@@ -404,7 +404,7 @@
         </div>
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
           <div class="font-bold text-slate-800 mb-1.5">🏛️ 三年 <span class="text-emerald-600">+4</span> / 跨年 <span class="text-emerald-600">+2</span> / ⏳ 新片 <span class="text-rose-500">-3</span></div>
-          <p class="text-slate-500"><code>≥1095天</code> / <code>≥365天</code>（需高转化）；<code>&lt;2天</code> 高分段冷静</p>
+          <p class="text-slate-500"><code>≥1095天</code> / <code>≥365天</code>（按播放加权校验）；<code>&lt;2天</code> 高分段冷静</p>
         </div>
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
           <div class="font-bold text-slate-800 mb-1.5">⚖️ 平衡 <span class="text-emerald-600">+2</span> · 💬 满屏 <span class="text-emerald-600">+2</span> / 🔇 纯享 <span class="text-emerald-600">+1</span> · 💬 热评 <span class="text-emerald-600">+3</span> / 🗣️ 共鸣 <span class="text-emerald-600">+2</span></div>
@@ -434,7 +434,7 @@
       { key: 'q-high-reputation',      name: '⭐ 高口碑佳作', base: 60, floatMax: 22, min: 60, max: 88, perfFloor: 0.32, perfCeil: 0.88, barColor: 'bg-sky-500',     note: '守住60 · 跨度28' },
       { key: 'q-hidden-gem',           name: '💎 冷门宝藏', base: 60, floatMax: 22, min: 60, max: 88, perfFloor: 0.32, perfCeil: 0.88, barColor: 'bg-purple-500',  note: '守住60 · 跨度28' },
       { key: 'q-viral-short',          name: '⚡ 爆款短片', base: 60, floatMax: 22, min: 60, max: 88, perfFloor: 0.32, perfCeil: 0.88, barColor: 'bg-cyan-500',    note: '无时长惩罚' },
-      { key: 'q-balanced-masterpiece', name: '🏅 综合标杆', base: 62, floatMax: 22, min: 62, max: 90, perfFloor: 0.36, perfCeil: 0.90, barColor: 'bg-indigo-500',  note: '蓝卡旗舰' },
+      { key: 'q-balanced-masterpiece', name: '🏅 综合标杆', base: 62, floatMax: 22, min: 62, max: 90, perfFloor: 0.36, perfCeil: 0.90, barColor: 'bg-indigo-500',  note: '全能佳作旗舰' },
       { key: 'q-hall-of-fame',         name: '🏆 殿堂神作', base: 68, floatMax: 22, min: 68, max: 98, perfFloor: 0.50, perfCeil: 0.96, barColor: 'bg-amber-400',   note: '独享91~98' }
     ];
 
