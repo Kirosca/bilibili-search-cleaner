@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bilibili 去掉搜索无关视频
 // @namespace    http://tampermonkey.net/
-// @version      3.0.0
+// @version      3.1.0
 // @description  去掉搜索无关视频/12维视频品质分类/自动翻页：1.支持用【标题、-标题排除、#标签和@UP主】筛选视频 2.视频品质（神作/干货/宝藏/避坑等） 3.无缝瀑布流与筛选常驻（支持简繁）。
 // @author       Kirosca
 // @match        *://search.bilibili.com/*
@@ -30,11 +30,11 @@
     // ==========================================
     let isDimmed = localStorage.getItem('bili_cleaner_dimmed') === 'true';
     let isFilterSticky = localStorage.getItem('bili_cleaner_sticky_filter') !== 'false';
-    let isWaterfall = localStorage.getItem('bili_cleaner_waterfall') === 'true';
+    let isWaterfall = localStorage.getItem('bili_cleaner_waterfall') !== 'false';
     let isEvaluationBadge = localStorage.getItem('bili_cleaner_eval_badge') !== 'false';
-    let isEvalFullMode = localStorage.getItem('bili_cleaner_eval_full_mode') === 'true';
+    let isEvalFullMode = localStorage.getItem('bili_cleaner_eval_full_mode') !== 'false';
     let isEvalScoreEnabled = localStorage.getItem('bili_cleaner_eval_score') !== 'false';
-    let isSyntaxFilter = localStorage.getItem('bili_cleaner_syntax_filter') !== 'false';
+    let isSyntaxFilter = localStorage.getItem('bili_cleaner_syntax_filter') === 'true';
     // 选中的品质标签筛选集合（多选，空集合代表全部/不限）
     let activeQualityFilters = new Set();
     try {
@@ -123,7 +123,7 @@
         }
     }
 
-    // 切换搜索语法过滤状态并持久化配置（默认开启；关闭后停止接口脱壳并保留广告剔除与品质筛选）
+    // 切换搜索语法过滤状态并持久化配置（默认关闭；关闭后停止接口脱壳并保留广告剔除与品质筛选）
     function toggleSyntaxFilter() {
         isSyntaxFilter = !isSyntaxFilter;
         localStorage.setItem('bili_cleaner_syntax_filter', String(isSyntaxFilter));
@@ -3668,5 +3668,5 @@
         if (newPill) newPill.title = tip;
     }
 
-    console.log('[Bilibili 搜索净化] 3.0.0 已启动。');
+    console.log('[Bilibili 搜索净化] 3.1.0 已启动。');
 })();
