@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bilibili 搜索净化 — v3.0.0 到 v3.1.0 升级说明</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            bili: '#00aeec',
+            bilipink: '#fb7299'
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    .tabular-nums { font-variant-numeric: tabular-nums; }
+    .bili-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2.5px 8px;
+      border-radius: 10px;
+      font-size: 11.5px;
+      font-weight: 700;
+      line-height: 1.25;
+      color: #ffffff;
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+      user-select: none;
+    }
+    .bili-pill-score {
+      font-size: 10.5px;
+      font-weight: 600;
+      opacity: 0.92;
+      font-variant-numeric: tabular-nums;
+    }
+    .bili-pill.q-hall-of-fame { background: linear-gradient(135deg, rgba(255, 170, 0, 0.96), rgba(255, 102, 0, 0.96)); border: 1px solid rgba(255, 235, 180, 0.7); }
+    .bili-pill.q-viral-short { background: linear-gradient(135deg, rgba(6, 182, 212, 0.96), rgba(16, 185, 129, 0.96)); border: 1px solid rgba(165, 243, 252, 0.7); }
+    .bili-pill.q-hardcore { background: linear-gradient(135deg, rgba(245, 158, 11, 0.94), rgba(217, 119, 6, 0.94)); border: 1px solid rgba(255, 215, 0, 0.5); }
+    .bili-pill.q-high-reputation { background: linear-gradient(135deg, rgba(0, 174, 236, 0.94), rgba(0, 120, 215, 0.94)); border: 1px solid rgba(180, 230, 255, 0.5); }
+    .bili-pill.q-hidden-gem { background: linear-gradient(135deg, rgba(147, 51, 234, 0.94), rgba(99, 102, 241, 0.94)); border: 1px solid rgba(220, 180, 255, 0.5); }
+    .bili-pill.q-balanced-masterpiece { background: linear-gradient(135deg, rgba(71, 85, 105, 0.96), rgba(30, 41, 59, 0.98)); color: #f8fafc; border: 1px solid rgba(226, 232, 240, 0.75); }
+    .bili-pill.q-opinion-storm { background: linear-gradient(135deg, rgba(236, 72, 153, 0.96), rgba(168, 85, 247, 0.96)); border: 1px solid rgba(251, 207, 232, 0.7); }
+    .bili-pill.q-heated-debate { background: linear-gradient(135deg, rgba(37, 99, 235, 0.96), rgba(79, 70, 229, 0.96)); border: 1px solid rgba(191, 219, 254, 0.7); }
+    .bili-pill.q-danmaku-carnival { background: linear-gradient(135deg, rgba(255, 68, 102, 0.94), rgba(255, 120, 40, 0.94)); border: 1px solid rgba(255, 200, 210, 0.5); }
+    .bili-pill.q-warning { background: linear-gradient(135deg, rgba(220, 38, 38, 0.94), rgba(153, 27, 27, 0.94)); border: 1px solid rgba(254, 202, 202, 0.5); }
+    .bili-pill.q-routine { background: linear-gradient(135deg, rgba(16, 110, 75, 0.92), rgba(10, 70, 50, 0.95)); border: 1px solid rgba(74, 222, 128, 0.35); }
+    .bili-pill.q-low-sample { background: rgba(30, 41, 59, 0.88); color: rgba(203, 213, 225, 0.95); border: 1px solid rgba(148, 163, 184, 0.3); }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 antialiased selection:bg-bili/20">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-8">
+
+    <!-- Hero -->
+    <header class="rounded-2xl border border-slate-200 bg-gradient-to-br from-sky-500/10 via-white to-pink-500/10 p-6 sm:p-8 shadow-sm">
+      <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+        <div>
+          <div class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-bili mb-1.5">
+            <span>Release Upgrade Guide</span>
+            <span class="text-slate-300">/</span>
+            <span>Changelog</span>
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+            Bilibili 搜索净化 — v3.0.0 到 v3.1.0 升级说明
+          </h1>
+        </div>
+        <div class="flex flex-wrap gap-2 text-xs font-semibold">
+          <span class="px-3 py-1 rounded-full bg-white/90 border border-slate-200 text-slate-500 font-mono">
+            v3.0.0 (3,169 行)
+          </span>
+          <span class="px-2 py-1 text-slate-400">→</span>
+          <span class="px-3 py-1 rounded-full bg-bili/10 border border-bili/30 text-bili font-mono">
+            v3.1.0 (3,672 行)
+          </span>
+        </div>
+      </div>
+
+      <p class="text-sm text-slate-600 leading-relaxed max-w-4xl mb-6">
+        本次升级从 <strong>v3.0.0</strong> 演进至 <strong>v3.1.0</strong>，重点引入 <strong>0~100 封面显性综合参考分</strong> 与 <strong>三层算分模型</strong>，精调多维度品级判定规则，调整默认开关策略，并针对高频瀑布流滚动与 SPA 渲染进行了系统性性能优化。
+      </p>
+
+      <!-- 4 Highlights -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <div class="rounded-xl bg-white/90 border border-slate-200 p-4">
+          <div class="text-xs font-bold text-bili mb-1">01 · 封面显性评分</div>
+          <div class="text-sm font-semibold text-slate-800 mb-1">三层打分模型上线</div>
+          <p class="text-xs text-slate-500 leading-relaxed">品级底分 + 赛道浮动 + 明码词条加减，支持独立开关控制显隐。</p>
+        </div>
+        <div class="rounded-xl bg-white/90 border border-slate-200 p-4">
+          <div class="text-xs font-bold text-amber-600 mb-1">02 · 判定规则精调</div>
+          <div class="text-sm font-semibold text-slate-800 mb-1">分区权重与防误判</div>
+          <p class="text-xs text-slate-500 leading-relaxed">干货/娱乐分区微调、干货藏赞比隔离、长视频避坑放宽、新增样本较少筛选。</p>
+        </div>
+        <div class="rounded-xl bg-white/90 border border-slate-200 p-4">
+          <div class="text-xs font-bold text-emerald-600 mb-1">03 · 性能与内存治理</div>
+          <div class="text-sm font-semibold text-slate-800 mb-1">增量监听 + 有界缓存</div>
+          <p class="text-xs text-slate-500 leading-relaxed">增量 MutationObserver、5000 条 Map 上限、行号与关键词缓存。</p>
+        </div>
+        <div class="rounded-xl bg-white/90 border border-slate-200 p-4">
+          <div class="text-xs font-bold text-bilipink mb-1">04 · 默认配置重塑</div>
+          <div class="text-sm font-semibold text-slate-800 mb-1">开箱体验调整</div>
+          <p class="text-xs text-slate-500 leading-relaxed">默认开启瀑布流、虚化与全部标签展示；搜索语法过滤改为默认关闭。</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Section 1: Default Config Changes -->
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <h2 class="text-lg sm:text-xl font-bold flex items-center gap-2.5">
+          <span class="w-7 h-7 rounded-lg bg-bilipink/15 text-bilipink text-sm font-bold inline-flex items-center justify-center">1</span>
+          默认开关策略变更
+        </h2>
+        <span class="text-xs text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md">仅影响首次安装或清空存储的用户；已有 localStorage 记录会保留</span>
+      </div>
+
+      <div class="overflow-x-auto rounded-xl border border-slate-200">
+        <table class="w-full text-left border-collapse text-sm">
+          <thead>
+            <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-600 whitespace-nowrap">
+              <th class="py-3 px-4">功能开关</th>
+              <th class="py-3 px-4">localStorage 键名</th>
+              <th class="py-3 px-4">v3.0.0 默认值</th>
+              <th class="py-3 px-4">v3.1.0 默认值</th>
+              <th class="py-3 px-4">说明</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 text-xs sm:text-sm">
+            <tr class="hover:bg-slate-50/70">
+              <td class="py-3 px-4 font-semibold text-slate-800 whitespace-nowrap">🌊 无缝瀑布流</td>
+              <td class="py-3 px-4 font-mono text-xs text-slate-500 whitespace-nowrap">bili_cleaner_waterfall</td>
+              <td class="py-3 px-4 whitespace-nowrap"><span class="inline-block whitespace-nowrap px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-medium">关闭</span></td>
+              <td class="py-3 px-4 whitespace-nowrap"><span class="inline-block whitespace-nowrap px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">开启</span></td>
+              <td class="py-3 px-4 text-slate-600">判断条件由 <code class="font-mono text-xs">=== 'true'</code> 改为 <code class="font-mono text-xs">!== 'false'</code></td>
+            </tr>
+            <tr class="hover:bg-slate-50/70">
+              <td class="py-3 px-4 font-semibold text-slate-800 whitespace-nowrap">虚化显示模糊内容</td>
+              <td class="py-3 px-4 font-mono text-xs text-slate-500 whitespace-nowrap">bili_cleaner_dimmed</td>
+              <td class="py-3 px-4 whitespace-nowrap"><span class="inline-block whitespace-nowrap px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-medium">关闭</span></td>
+              <td class="py-3 px-4 whitespace-nowrap"><span class="inline-block whitespace-nowrap px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">开启</span></td>
+              <td class="py-3 px-4 text-slate-600">开启搜索语法过滤后，未精确命中项默认以半透明虚化展示</td>
+            </tr>
+            <tr class="hover:bg-slate-50/70">
+              <td class="py-3 px-4 font-semibold text-slate-800 whitespace-nowrap">📑 标签可见范围</td>
+              <td class="py-3 px-4 font-mono text-xs text-slate-500 whitespace-nowrap">bili_cleaner_eval_full_mode</td>
+              <td class="py-3 px-4 whitespace-nowrap"><span class="inline-block whitespace-nowrap px-2 py-0.5 rounded bg-amber-50 text-amber-700 font-medium">仅精选</span></td>
+              <td class="py-3 px-4 whitespace-nowrap"><span class="inline-block whitespace-nowrap px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">全部展示</span></td>
+              <td class="py-3 px-4 text-slate-600">默认完整展示包括常规良作、样本较少在内的全部 12 维标签</td>
+            </tr>
+            <tr class="hover:bg-slate-50/70">
+              <td class="py-3 px-4 font-semibold text-slate-800 whitespace-nowrap">🗝️ 搜索语法过滤 (Alt+Q)</td>
+              <td class="py-3 px-4 font-mono text-xs text-slate-500 whitespace-nowrap">bili_cleaner_syntax_filter</td>
+              <td class="py-3 px-4 whitespace-nowrap"><span class="inline-block whitespace-nowrap px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-medium">开启</span></td>
+              <td class="py-3 px-4 whitespace-nowrap"><span class="inline-block whitespace-nowrap px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200 font-semibold">关闭</span></td>
+              <td class="py-3 px-4 text-slate-600">默认不启用语法过滤，保留广告剔除与品质标签；可按 Alt+Q 随时开启</td>
+            </tr>
+            <tr class="hover:bg-sky-50/40 bg-sky-50/20">
+              <td class="py-3 px-4 font-semibold text-bili whitespace-nowrap">🔢 封面显性评分 <span class="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-bili/15 text-bili">NEW</span></td>
+              <td class="py-3 px-4 font-mono text-xs text-slate-500 whitespace-nowrap">bili_cleaner_eval_score</td>
+              <td class="py-3 px-4 text-slate-400 whitespace-nowrap">—（无此项）</td>
+              <td class="py-3 px-4 whitespace-nowrap"><span class="inline-block whitespace-nowrap px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">开启</span></td>
+              <td class="py-3 px-4 text-slate-600">油猴菜单「视频品质标签」下新增二级子菜单，控制胶囊内数字评分显隐</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Section 2: Scoring System -->
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-5">
+      <h2 class="text-lg sm:text-xl font-bold flex items-center gap-2.5">
+        <span class="w-7 h-7 rounded-lg bg-bili/15 text-bili text-sm font-bold inline-flex items-center justify-center">2</span>
+        核心新增：封面显性评分与三层算分模型
+      </h2>
+
+      <div class="rounded-xl bg-slate-50 border border-slate-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="space-y-1.5">
+          <div class="text-xs font-bold text-slate-700">胶囊展示对比（右侧新增 <code class="text-bili">.bili-cleaner-badge-score</code>）</div>
+          <div class="text-xs text-slate-500">除 <code class="font-mono">q-low-sample</code>（样本较少）外，其余 11 个品级均支持在胶囊内直接展示 0~100 综合参考分。</div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 shrink-0">
+          <span class="bili-pill q-hall-of-fame">👑 镇站神作 <span class="bili-pill-score">94</span></span>
+          <span class="bili-pill q-hardcore">📚 一流干货 <span class="bili-pill-score">78</span></span>
+          <span class="bili-pill q-hidden-gem">💎 冷门宝藏 <span class="bili-pill-score">74</span></span>
+          <span class="bili-pill q-low-sample">🌱 样本较少</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="rounded-xl border border-slate-200 p-4 bg-slate-50/60">
+          <div class="text-xs font-bold text-indigo-600 mb-1.5">第一层 · 品级基础底分</div>
+          <div class="text-sm font-bold text-slate-800 mb-1"><code>SCORE_TIER_BANDS</code></div>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            为 12 个品级设定独立的底分 <code class="font-mono">base</code> 与分数上下限 <code class="font-mono">[min, max]</code>（如避坑 0~20、常规 22~58、佳作 60~88、神作 68~98），防止不同品级分数倒挂。
+          </p>
+        </div>
+        <div class="rounded-xl border border-slate-200 p-4 bg-slate-50/60">
+          <div class="text-xs font-bold text-sky-600 mb-1.5">第二层 · 赛道表现浮动分</div>
+          <div class="text-sm font-bold text-slate-800 mb-1"><code>HEALTH_SCORE_TRACKS</code></div>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            按赛道（干货重收藏 55%、短片重赞 55% 且无时长惩罚、弹幕重密度 55%、论战重评论 55%）计算表现分，并通过 <code class="font-mono">[perfFloor, perfCeil]</code> 拉伸同品级内部跨度。
+          </p>
+        </div>
+        <div class="rounded-xl border border-slate-200 p-4 bg-slate-50/60">
+          <div class="text-xs font-bold text-amber-600 mb-1.5">第三层 · 明码词条加减分</div>
+          <div class="text-sm font-bold text-slate-800 mb-1"><code>computeScoreBreakdown</code></div>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            叠加 20 余项明码词条（如三连拉满 +3、压箱宝典 +4、现象级破圈 +4、三年经典 +4、新片冷静 -3、标题党预警 -3 等），正向词条净加分封顶 +12。
+          </p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+        <div class="rounded-xl border border-slate-200 p-4">
+          <div class="font-bold text-slate-800 mb-1.5">📐 高播放量稀释修正（<code>playFactor</code>）</div>
+          <p class="text-slate-600 leading-relaxed">
+            新增于 <code class="font-mono">computeQualityMetrics</code>：播放量 ≤ 5 万权重为 <code class="font-mono">1.0x</code>；超过 5 万后按对数平滑补偿破圈稀释（50 万约 <code class="font-mono">1.20x</code>、500 万约 <code class="font-mono">1.40x</code>，5000 万封顶 <code class="font-mono">1.60x</code>），与时长修正 <code class="font-mono">durFactor</code>（0.4~2.0x）共同参与归一化指标计算。
+          </p>
+        </div>
+        <div class="rounded-xl border border-slate-200 p-4">
+          <div class="font-bold text-slate-800 mb-1.5">💬 悬浮明细与元数据扩展</div>
+          <p class="text-slate-600 leading-relaxed">
+            <code class="font-mono">videoStatMap</code> 新增记录 <code class="font-mono">typename</code>（分区）与 <code class="font-mono">pubdate</code>（发布时间）。悬停封面胶囊可查看分区、播放权重、发布日期及完整评分拆解；且改用 DOM <code class="font-mono">element.title</code> 属性写入，修复长文本中引号截断提示的问题。
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: Quality Rules Refinement -->
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-4">
+      <h2 class="text-lg sm:text-xl font-bold flex items-center gap-2.5">
+        <span class="w-7 h-7 rounded-lg bg-amber-500/15 text-amber-600 text-sm font-bold inline-flex items-center justify-center">3</span>
+        12 维品质判定与筛选栏精调
+      </h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm">
+        <div class="rounded-xl border border-slate-200 p-4 space-y-2">
+          <div class="font-bold text-slate-800">1. 分区与教程意图轻量微调</div>
+          <ul class="list-disc list-inside text-slate-600 space-y-1 text-xs leading-relaxed">
+            <li>识别干货分区（<code class="font-mono">HARDCORE_BOOST_ZONE_RE</code>）、教程关键词（<code class="font-mono">TUTORIAL_INTENT_RE</code>）与纯娱乐分区（<code class="font-mono">ENTERTAINMENT_ZONE_RE</code>）。</li>
+            <li>干货/教程向门槛放宽为 <code class="font-mono">0.85x</code>，纯娱乐区收紧为 <code class="font-mono">1.15x</code>。</li>
+            <li>干货/教程区评论区多为求资源或问报错，争议对线判定阈值从 <code class="font-mono">10%</code> 提高至 <code class="font-mono">18%</code>；娱乐区弹幕密度门槛上调 <code class="font-mono">15%</code>。</li>
+          </ul>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 p-4 space-y-2">
+          <div class="font-bold text-slate-800">2. 一流干货（<code>q-hardcore</code>）藏赞比隔离</div>
+          <ul class="list-disc list-inside text-slate-600 space-y-1 text-xs leading-relaxed">
+            <li>新增 <code class="font-mono">favLikeRatio</code>（收藏/点赞比）校验，常规分区要求 ≥ <code class="font-mono">0.40</code>，干货区放宽至 <code class="font-mono">0.30</code>，娱乐区收紧至 <code class="font-mono">0.55</code>。</li>
+            <li>避免高赞低收藏的纯娱乐/擦边视频误入「一流干货」分类。</li>
+          </ul>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 p-4 space-y-2">
+          <div class="font-bold text-slate-800">3. 长视频避坑线（<code>q-warning</code>）放宽</div>
+          <ul class="list-disc list-inside text-slate-600 space-y-1 text-xs leading-relaxed">
+            <li>时长 ≤ 15 分钟维持原标准（赞播比 &lt; <code class="font-mono">1.2%</code> 且 藏播比 &lt; <code class="font-mono">0.5%</code>）。</li>
+            <li>时长 &gt; 15 分钟的长视频放宽至赞播比 &lt; <code class="font-mono">0.5%</code> 且 藏播比 &lt; <code class="font-mono">0.2%</code> 才触发避坑预警，减少长教程或录播被误判。</li>
+          </ul>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 p-4 space-y-2">
+          <div class="font-bold text-slate-800">4. 冷门宝藏下探与筛选栏补全</div>
+          <ul class="list-disc list-inside text-slate-600 space-y-1 text-xs leading-relaxed">
+            <li><code class="font-mono">q-hidden-gem</code> 新增 <code class="font-mono">1000 ~ 3000</code> 播放量且高赞/高藏高纯度的极小样本破格通道。</li>
+            <li>顶部品质筛选栏（<code class="font-mono">QUALITY_CATEGORY_KEYS</code>）新增 <span class="font-semibold text-slate-800">🌱 样本较少</span>（<code class="font-mono">q-low-sample</code>）选项，并在各筛选按钮悬浮提示中附带对应赛道的【参考分权重】。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 4: Performance & Engineering -->
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-4">
+      <h2 class="text-lg sm:text-xl font-bold flex items-center gap-2.5">
+        <span class="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-600 text-sm font-bold inline-flex items-center justify-center">4</span>
+        性能优化与工程稳定性改进
+      </h2>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+        <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+          <div class="font-bold text-slate-800 mb-1.5">⚡ 增量 MutationObserver</div>
+          <p class="text-slate-600 leading-relaxed">
+            新增 <code class="font-mono">isCleanerOwnNode</code> 跳过脚本自身注入的 Toast、悬浮徽标、筛选栏等节点；仅收集新增卡片节点传入 <code class="font-mono">filterDOMElements(addedNodes)</code> 做增量处理，并配合 <code class="font-mono">seenBatchCards</code> 去重。
+          </p>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+          <div class="font-bold text-slate-800 mb-1.5">🧠 有界缓存防内存泄漏</div>
+          <p class="text-slate-600 leading-relaxed">
+            新增 <code class="font-mono">setBoundedMap</code>（上限 <code class="font-mono">MAX_CACHE_MAP_SIZE = 5000</code>），约束 <code class="font-mono">videoTagMap</code> 与 <code class="font-mono">videoStatMap</code> 体积，长时间瀑布流无限滚动后自动淘汰最旧条目。
+          </p>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+          <div class="font-bold text-slate-800 mb-1.5">📏 卡片行号与页码缓存</div>
+          <p class="text-slate-600 leading-relaxed">
+            新增 <code class="font-mono">recomputeCardRows</code> 与 <code class="font-mono">cachedVisibleCards</code>，仅在 DOM 增删、筛选切换或窗口缩放时重算卡片物理行号 <code class="font-mono">_wfRow</code>，滚动期间不再全量读取离屏节点几何属性。
+          </p>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+          <div class="font-bold text-slate-800 mb-1.5">🔍 搜索词与繁简转换缓存</div>
+          <p class="text-slate-600 leading-relaxed">
+            <code class="font-mono">getSearchKeywords</code> 增加基于 <code class="font-mono">search + hash</code> 的结果缓存；<code class="font-mono">toSimplified</code> 增加纯 ASCII 快速通道，英文/数字文本直接返回，跳过 OpenCC 开销。
+          </p>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+          <div class="font-bold text-slate-800 mb-1.5">🔑 WBI 签名与筛选切换提速</div>
+          <p class="text-slate-600 leading-relaxed">
+            <code class="font-mono">cachedWbiKeys</code> 预计算并缓存 <code class="font-mono">mixin_key</code>；点击品质筛选标签时优先基于已缓存的分类直接切换卡片显隐，仅对未就绪卡片补跑增量安检。
+          </p>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+          <div class="font-bold text-slate-800 mb-1.5">🧹 细节清理与日志收敛</div>
+          <p class="text-slate-600 leading-relaxed">
+            广告剔除逻辑增加 <code class="font-mono">hasAdRemoved</code> 守卫，仅实际移除广告时打印日志；瀑布流克隆卡片移除了原 <code class="font-mono">v3.0.0</code> 中针对 <code class="font-mono">sponsorThumbnailLabel</code> 的额外移除逻辑。
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="text-center text-xs text-slate-400 pt-2 pb-4">
+      基于 v3.0.0 与 v3.1.0 实际源码差异生成
+    </footer>
+  </div>
+</body>
+</html>
