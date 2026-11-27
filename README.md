@@ -36,3 +36,10 @@
 
 通过 Tampermonkey / Violentmonkey 等油猴插件直接安装加载：
 - [bilibili-search-cleaner-v3.0.0.user.js](./bilibili-search-cleaner-v3.0.0.user.js)
+
+---
+
+## 在线说明文档 (v3.1.0)
+
+- **v3.0.0 到 v3.1.0 升级说明**：https://bili-cleaner-v3_1.surge.sh
+- **v3.1 视频品级与打分体系说明文档**：https://bili-cleaner-scoring-v3_1.surge.sh
