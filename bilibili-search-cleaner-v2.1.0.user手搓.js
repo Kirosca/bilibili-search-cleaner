@@ -28,7 +28,7 @@
     // ==========================================
     // 菜单管理与持久化配置（虚化显示 & 筛选常驻 & 无缝瀑布流 & 评价体系）
     // ==========================================
-    let isDimmed = localStorage.getItem('bili_cleaner_dimmed') === 'true';
+    let isDimmed = localStorage.getItem('bili_cleaner_dimmed') !== 'false';
     let isFilterSticky = localStorage.getItem('bili_cleaner_sticky_filter') !== 'false';
     let isWaterfall = localStorage.getItem('bili_cleaner_waterfall') !== 'false';
     let isEvaluationBadge = localStorage.getItem('bili_cleaner_eval_badge') !== 'false';
