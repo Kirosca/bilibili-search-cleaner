@@ -1191,9 +1191,9 @@
                     card.dataset.purifiedQuery = currentQueryKey;
                 }
 
-                // 第五道安检关卡：品质药丸多选筛选过滤（仅在开启【视频品质标签】时生效）
+                // 第五道安检关卡：品质药丸多选筛选过滤（仅在开启【视频品质标签】且处于视频搜索路径时生效）
                 let isQualityFail = false;
-                if (isEvaluationBadge && activeQualityFilters.size > 0) {
+                if (isEvaluationBadge && isVideoSearchPath() && activeQualityFilters.size > 0) {
                     const qClass = quadrant?.className;
                     // 正向多选品质白名单检查：只有命中目标品质的卡片才能保留；无品质评级或非目标品质严格淘汰隐藏
                     if (!qClass || !activeQualityFilters.has(qClass)) {
