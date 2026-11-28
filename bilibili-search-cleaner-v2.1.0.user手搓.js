@@ -941,6 +941,7 @@
         bindStickyObserver();
     });
 
+    const internalFetchSignals = new WeakSet();
     const originFetch = targetWindow.fetch;
     targetWindow.fetch = async function(...args) {
         let urlStr = '';
@@ -949,18 +950,47 @@
         } else if (args[0] && typeof args[0] === 'object') {
             urlStr = args[0].url || '';
         }
- 
+
+        const isInternalReq = Boolean(
+            (args[1] && args[1].signal && internalFetchSignals.has(args[1].signal)) ||
+            (args[0] && typeof args[0] === 'object' && args[0].signal && internalFetchSignals.has(args[0].signal))
+        );
         const isSearchReq = urlStr.includes('/wbi/search') || urlStr.includes('/search/type') || urlStr.includes('/search/all');
- 
-        if (isSearchReq && isSyntaxFilter) {
+
+        if (isSearchReq && isSyntaxFilter && !isInternalReq) {
             const apiKeyword = getCleanApiKeyword();
             if (apiKeyword) {
-                urlStr = urlStr.replace(/([?&]keyword=)[^&]+/, `$1${encodeURIComponent(apiKeyword)}`);
-                if (typeof args[0] === 'string') {
-                    args[0] = urlStr;
-                } else if (args[0] && typeof args[0] === 'object') {
-                    args[0] = new Request(urlStr, args[0]);
-                }
+                try {
+                    const urlObj = new URL(urlStr, window.location.origin);
+                    if (urlObj.searchParams.has('keyword') && urlObj.searchParams.get('keyword') !== apiKeyword) {
+                        const isWbiSigned = urlStr.includes('/wbi/') || urlObj.searchParams.has('w_rid');
+                        let nextUrlStr = '';
+                        if (isWbiSigned) {
+                            const keys = await getWbiKeys();
+                            if (keys) {
+                                const paramsObj = {};
+                                urlObj.searchParams.forEach((v, k) => {
+                                    if (k !== 'w_rid' && k !== 'wts') {
+                                        paramsObj[k] = v;
+                                    }
+                                });
+                                paramsObj.keyword = apiKeyword;
+                                const signedQs = signWbi(paramsObj, keys.img_key, keys.sub_key, keys.mixin_key);
+                                nextUrlStr = `${urlObj.origin}${urlObj.pathname}?${signedQs}`;
+                            }
+                        } else {
+                            urlObj.searchParams.set('keyword', apiKeyword);
+                            nextUrlStr = urlObj.toString();
+                        }
+                        if (nextUrlStr) {
+                            if (typeof args[0] === 'string') {
+                                args[0] = nextUrlStr;
+                            } else if (args[0] && typeof args[0] === 'object') {
+                                args[0] = new Request(nextUrlStr, args[0]);
+                            }
+                        }
+                    }
+                } catch {}
             }
         }
  
@@ -2349,6 +2379,7 @@
                 };
 
                 const signedQs = signWbi(queryObj, keys.img_key, keys.sub_key, keys.mixin_key);
+                internalFetchSignals.add(controller.signal);
                 const res = await targetWindow.fetch(`${apiBase}?${signedQs}`, {
                     headers: { 'Referer': 'https://search.bilibili.com/' },
                     signal: controller.signal
