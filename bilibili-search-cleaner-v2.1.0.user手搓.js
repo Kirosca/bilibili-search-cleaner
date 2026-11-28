@@ -2129,7 +2129,7 @@
 
             const titEl = col.querySelector('.bili-video-card__info--tit, h3');
             if (titEl) {
-                titEl.innerHTML = item.title;
+                titEl.innerHTML = item.title || '';
                 titEl.setAttribute('title', cleanTit);
                 titEl.title = cleanTit;
                 const parentA = titEl.closest('a');
@@ -2232,7 +2232,7 @@
                         </a>
                         <div class="bili-video-card__info--right">
                             <a href="//www.bilibili.com/video/${item.bvid}" target="_blank" title="${cleanTit}">
-                                <h3 class="bili-video-card__info--tit">${item.title}</h3>
+                                <h3 class="bili-video-card__info--tit">${item.title || ''}</h3>
                             </a>
                             <div class="bili-video-card__info--bottom">
                                 <a class="bili-video-card__info--author" href="//space.bilibili.com/${item.mid}" target="_blank">
