@@ -31,6 +31,15 @@
     let isDimmed = localStorage.getItem('bili_cleaner_dimmed') !== 'false';
     let isFilterSticky = localStorage.getItem('bili_cleaner_sticky_filter') !== 'false';
     let isWaterfall = localStorage.getItem('bili_cleaner_waterfall') !== 'false';
+
+    // 仅限综合/视频搜索路径（/all、/video）
+    function isVideoSearchPath() {
+        try {
+            return /^\/(all|video)\/?$/i.test(window.location.pathname || '');
+        } catch (e) {
+            return false;
+        }
+    }
     let isEvaluationBadge = localStorage.getItem('bili_cleaner_eval_badge') !== 'false';
     let isEvalFullMode = localStorage.getItem('bili_cleaner_eval_full_mode') !== 'false';
     let isEvalScoreEnabled = localStorage.getItem('bili_cleaner_eval_score') !== 'false';
@@ -2672,10 +2681,8 @@
     const WaterfallLifecycle = {
         // 唯一准入守卫：菜单开启 && 仅视频搜索路径（/all、/video） && URL 含有效 keyword 参数
         shouldMount() {
-            if (!isWaterfall) return false;
+            if (!isWaterfall || !isVideoSearchPath()) return false;
             try {
-                const path = window.location.pathname || '';
-                if (!/^\/(all|video)\/?$/i.test(path)) return false;
                 const kw = new URLSearchParams(window.location.search).get('keyword');
                 return Boolean(kw && kw.trim());
             } catch (e) {
@@ -2850,7 +2857,10 @@
         if (originPushState) {
             targetWindow.history.pushState = function(...args) {
                 const res = originPushState.apply(this, args);
-                setTimeout(() => WaterfallLifecycle.sync('route'), 50);
+                setTimeout(() => {
+                    WaterfallLifecycle.sync('route');
+                    bindStickyObserver();
+                }, 50);
                 return res;
             };
         }
@@ -2858,12 +2868,18 @@
         if (originReplaceState) {
             targetWindow.history.replaceState = function(...args) {
                 const res = originReplaceState.apply(this, args);
-                setTimeout(() => WaterfallLifecycle.sync('route'), 50);
+                setTimeout(() => {
+                    WaterfallLifecycle.sync('route');
+                    bindStickyObserver();
+                }, 50);
                 return res;
             };
         }
         targetWindow.addEventListener('popstate', () => {
-            setTimeout(() => WaterfallLifecycle.sync('route'), 50);
+            setTimeout(() => {
+                WaterfallLifecycle.sync('route');
+                bindStickyObserver();
+            }, 50);
         });
 
         // 委托监听分页按钮点击，单页切页时实时校准瀑布流页码
@@ -2986,7 +3002,7 @@
 
     function injectQualityFilterRow(container) {
         if (!container || !container.isConnected) return;
-        if (!isEvaluationBadge) {
+        if (!isEvaluationBadge || !isVideoSearchPath()) {
             const oldRow = container.querySelector('.bili-cleaner-quality-filter-row');
             if (oldRow) oldRow.remove();
             return;
