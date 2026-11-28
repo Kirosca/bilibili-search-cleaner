@@ -338,7 +338,10 @@
 
     registerMenu();
     applyDimmedState();
-    applyFilterStickyState();
+    if (document.documentElement) {
+        document.documentElement.classList.toggle('bili-filter-sticky-enabled', isFilterSticky);
+    }
+    queueMicrotask(applyFilterStickyState);
     applyEvaluationBadgeState();
     applyEvalScoreState();
  
