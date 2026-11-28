@@ -2941,12 +2941,16 @@
     // 劫持单页路由与搜索操作，统一转发至 WaterfallLifecycle.sync()
     try {
         let routeSyncTimer = null;
+        let pendingWithSticky = false;
         const scheduleRouteSync = (reason, delay = 150, withSticky = false) => {
             if (routeSyncTimer) clearTimeout(routeSyncTimer);
+            if (withSticky) pendingWithSticky = true;
             routeSyncTimer = setTimeout(() => {
+                const shouldBindSticky = pendingWithSticky;
                 routeSyncTimer = null;
+                pendingWithSticky = false;
                 WaterfallLifecycle.sync(reason);
-                if (withSticky) bindStickyObserver();
+                if (shouldBindSticky) bindStickyObserver();
             }, delay);
         };
 
@@ -2972,7 +2976,7 @@
 
         // 委托监听分页按钮点击，单页切页时实时校准瀑布流页码
         document.addEventListener('click', (e) => {
-            const btn = e.target.closest('button.vui_pagenation--btn, button.vui_pagenation--btn-num');
+            const btn = e.target && e.target.closest ? e.target.closest('button.vui_pagenation--btn, button.vui_pagenation--btn-num') : null;
             if (btn) {
                 scheduleRouteSync('route', 180, false);
             }
@@ -2980,16 +2984,16 @@
 
         // 监听搜索框回车与搜索按钮点击，前置触发瀑布流状态同步
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
+            if (e.key === 'Enter' && !e.isComposing) {
                 const active = document.activeElement;
-                if (active && active.matches('input.search-input-el, input.search-input, .search-input-wrap input, .nav-search-input, input[type="search"], input[class*="search"]')) {
+                if (active && active.matches && active.matches('input.search-input-el, input.search-input, .search-input-wrap input, .nav-search-input, input[type="search"], input[class*="search"]')) {
                     scheduleRouteSync('search-trigger', 250, false);
                 }
             }
         }, true);
 
         document.addEventListener('click', (e) => {
-            const searchBtn = e.target.closest('.search-button, .search-btn, .nav-search-btn');
+            const searchBtn = e.target && e.target.closest ? e.target.closest('.search-button, .search-btn, .nav-search-btn') : null;
             if (searchBtn) {
                 scheduleRouteSync('search-trigger', 250, false);
             }
