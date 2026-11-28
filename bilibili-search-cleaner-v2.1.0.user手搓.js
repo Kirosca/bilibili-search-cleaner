@@ -836,13 +836,13 @@
             const tagText = [v.tag, v.keywords, v.tags, v.typename].filter(Boolean).join(',');
             const rawTags = cleanText(tagText);
 
-            if (v.bvid) setBoundedMap(videoTagMap, String(v.bvid), rawTags);
+            if (v.bvid) setBoundedMap(videoTagMap, String(v.bvid).toLowerCase(), rawTags);
             if (v.aid) {
                 setBoundedMap(videoTagMap, String(v.aid), rawTags);
                 setBoundedMap(videoTagMap, "av" + v.aid, rawTags);
             }
-            if (v.id) setBoundedMap(videoTagMap, String(v.id), rawTags);
-            if (v.season_id) setBoundedMap(videoTagMap, String(v.season_id), rawTags);
+            if (v.id) setBoundedMap(videoTagMap, String(v.id).toLowerCase(), rawTags);
+            if (v.season_id) setBoundedMap(videoTagMap, String(v.season_id).toLowerCase(), rawTags);
             if (v.roomid) setBoundedMap(videoTagMap, String(v.roomid), rawTags);
 
             // 存储量化统计数据（播放、点赞、收藏、弹幕等），供封面评价勋章计算（跳过直播间条目）
@@ -1130,7 +1130,7 @@
                 if (matchVideo) id = matchVideo[1];
                 else if (matchLive) id = matchLive[1];
  
-                const videoTags = videoTagMap.get(id) || '';
+                const videoTags = id ? (videoTagMap.get(id.toLowerCase()) || videoTagMap.get(id) || '') : '';
  
                 // 纯净提取作者名字（提取第一署名作者）
                 const authorEl = card.querySelector('a[href*="space.bilibili.com"], .bili-video-card__info--author, .up-name, .bili-live-card__info--uname');
@@ -2266,7 +2266,7 @@
             const rawTagText = [item.tag, item.keywords, item.tags, item.typename].filter(Boolean).join(',');
             if (rawTagText) {
                 const cleanedTagText = cleanText(rawTagText);
-                setBoundedMap(videoTagMap, item.bvid, cleanedTagText);
+                setBoundedMap(videoTagMap, String(item.bvid).toLowerCase(), cleanedTagText);
                 if (item.aid) {
                     setBoundedMap(videoTagMap, String(item.aid), cleanedTagText);
                     setBoundedMap(videoTagMap, 'av' + item.aid, cleanedTagText);
