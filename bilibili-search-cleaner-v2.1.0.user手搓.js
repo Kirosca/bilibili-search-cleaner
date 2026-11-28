@@ -2934,14 +2934,21 @@
 
     // 劫持单页路由与搜索操作，统一转发至 WaterfallLifecycle.sync()
     try {
+        let routeSyncTimer = null;
+        const scheduleRouteSync = (reason, delay = 150, withSticky = false) => {
+            if (routeSyncTimer) clearTimeout(routeSyncTimer);
+            routeSyncTimer = setTimeout(() => {
+                routeSyncTimer = null;
+                WaterfallLifecycle.sync(reason);
+                if (withSticky) bindStickyObserver();
+            }, delay);
+        };
+
         const originPushState = targetWindow.history.pushState;
         if (originPushState) {
             targetWindow.history.pushState = function(...args) {
                 const res = originPushState.apply(this, args);
-                setTimeout(() => {
-                    WaterfallLifecycle.sync('route');
-                    bindStickyObserver();
-                }, 50);
+                scheduleRouteSync('route', 150, true);
                 return res;
             };
         }
@@ -2949,25 +2956,19 @@
         if (originReplaceState) {
             targetWindow.history.replaceState = function(...args) {
                 const res = originReplaceState.apply(this, args);
-                setTimeout(() => {
-                    WaterfallLifecycle.sync('route');
-                    bindStickyObserver();
-                }, 50);
+                scheduleRouteSync('route', 150, true);
                 return res;
             };
         }
         targetWindow.addEventListener('popstate', () => {
-            setTimeout(() => {
-                WaterfallLifecycle.sync('route');
-                bindStickyObserver();
-            }, 50);
+            scheduleRouteSync('route', 150, true);
         });
 
         // 委托监听分页按钮点击，单页切页时实时校准瀑布流页码
         document.addEventListener('click', (e) => {
             const btn = e.target.closest('button.vui_pagenation--btn, button.vui_pagenation--btn-num');
             if (btn) {
-                setTimeout(() => WaterfallLifecycle.sync('route'), 80);
+                scheduleRouteSync('route', 180, false);
             }
         }, true);
 
@@ -2975,16 +2976,16 @@
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 const active = document.activeElement;
-                if (active && (active.tagName === 'INPUT' || active.classList.contains('search-input'))) {
-                    setTimeout(() => WaterfallLifecycle.sync('search-trigger'), 100);
+                if (active && active.matches('input.search-input-el, input.search-input, .search-input-wrap input, .nav-search-input, input[type="search"], input[class*="search"]')) {
+                    scheduleRouteSync('search-trigger', 250, false);
                 }
             }
         }, true);
 
         document.addEventListener('click', (e) => {
-            const searchBtn = e.target.closest('.search-button, .search-btn, .nav-search-btn, button[class*="search"]');
+            const searchBtn = e.target.closest('.search-button, .search-btn, .nav-search-btn');
             if (searchBtn) {
-                setTimeout(() => WaterfallLifecycle.sync('search-trigger'), 100);
+                scheduleRouteSync('search-trigger', 250, false);
             }
         }, true);
     } catch (e) {}
