@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bilibili 去掉搜索无关视频
 // @namespace    http://tampermonkey.net/
-// @version      3.1.0
+// @version      3.1.1
 // @description  去掉搜索无关视频/12维视频品质分类/自动翻页：1.支持用【标题、-标题排除、#标签和@UP主】筛选视频 2.视频品质（神作/干货/宝藏/避坑等） 3.无缝瀑布流与筛选常驻（支持简繁）。
 // @author       Kirosca
 // @match        *://search.bilibili.com/*
@@ -3882,5 +3882,5 @@
         if (newPill) newPill.title = tip;
     }
 
-    console.log('[Bilibili 搜索净化] 3.1.0 已启动。');
+    console.log('[Bilibili 搜索净化] 3.1.1 已启动。');
 })();
