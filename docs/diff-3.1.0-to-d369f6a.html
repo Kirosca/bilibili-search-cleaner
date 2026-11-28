@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>版本对比说明：v3.1.0 (bdae9a6) → 当前版本 (d369f6a)</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --surface: #121a2e;
+      --surface-2: #18223c;
+      --border: #273454;
+      --text: #e6ecf8;
+      --muted: #98a6c7;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.14);
+      --green: #34d399;
+      --green-soft: rgba(52, 211, 153, 0.14);
+      --amber: #fbbf24;
+      --amber-soft: rgba(251, 191, 36, 0.14);
+      --red: #f87171;
+      --red-soft: rgba(248, 113, 113, 0.14);
+      --purple: #a78bfa;
+      --purple-soft: rgba(167, 139, 250, 0.14);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: radial-gradient(circle at top right, #172546 0%, var(--bg) 52%);
+      color: var(--text);
+      line-height: 1.65;
+    }
+
+    .container {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 36px 20px 64px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(167, 139, 250, 0.1));
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 28px 30px;
+      margin-bottom: 24px;
+    }
+
+    .hero-top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .badge-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .badge.old { color: var(--amber); border-color: rgba(251, 191, 36, 0.35); background: var(--amber-soft); }
+    .badge.new { color: var(--green); border-color: rgba(52, 211, 153, 0.35); background: var(--green-soft); }
+    .badge.info { color: var(--accent); border-color: rgba(56, 189, 248, 0.35); background: var(--accent-soft); }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 26px;
+      letter-spacing: 0.2px;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 14px;
+      margin-bottom: 26px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px 18px;
+    }
+
+    .stat-label {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .stat-desc {
+      margin-top: 4px;
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tab-btn {
+      cursor: pointer;
+      background: var(--surface);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-size: 13.5px;
+      font-weight: 500;
+      transition: all 0.18s ease;
+    }
+
+    .tab-btn:hover {
+      color: var(--text);
+      border-color: var(--accent);
+    }
+
+    .tab-btn.active {
+      color: #061322;
+      background: var(--accent);
+      border-color: var(--accent);
+      font-weight: 600;
+    }
+
+    .search-input {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-size: 13.5px;
+      min-width: 240px;
+      outline: none;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent);
+    }
+
+    .section-title {
+      font-size: 18px;
+      margin: 28px 0 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    .diff-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px 22px;
+      transition: border-color 0.18s ease;
+    }
+
+    .diff-card:hover {
+      border-color: rgba(56, 189, 248, 0.5);
+    }
+
+    .diff-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .diff-title {
+      font-size: 16.5px;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .commit-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .pill {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: var(--surface-2);
+      color: var(--accent);
+      border: 1px solid var(--border);
+    }
+
+    .tag-cat {
+      font-size: 12px;
+      padding: 2px 9px;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+
+    .cat-arch { background: var(--purple-soft); color: var(--purple); }
+    .cat-sec { background: var(--red-soft); color: var(--red); }
+    .cat-data { background: var(--accent-soft); color: var(--accent); }
+    .cat-ui { background: var(--green-soft); color: var(--green); }
+    .cat-chore { background: var(--amber-soft); color: var(--amber); }
+
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .box {
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 13.5px;
+      border: 1px solid var(--border);
+    }
+
+    .box.before {
+      background: rgba(248, 113, 113, 0.06);
+      border-color: rgba(248, 113, 113, 0.25);
+    }
+
+    .box.after {
+      background: rgba(52, 211, 153, 0.06);
+      border-color: rgba(52, 211, 153, 0.25);
+    }
+
+    .box-label {
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .box.before .box-label { color: var(--red); }
+    .box.after .box-label { color: var(--green); }
+
+    ul.clean-list {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    ul.clean-list li {
+      margin-bottom: 4px;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12.5px;
+      background: var(--surface-2);
+      padding: 1px 5px;
+      border-radius: 4px;
+      color: #cfe8ff;
+    }
+
+    .timeline-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+
+    th, td {
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--surface-2);
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 12.5px;
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    .hash {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    .empty-hint {
+      display: none;
+      text-align: center;
+      padding: 28px;
+      color: var(--muted);
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+    }
+
+    .ux-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+
+    .ux-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px 18px;
+    }
+
+    .ux-card h3 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      color: var(--accent);
+    }
+
+    .ux-row {
+      font-size: 13.5px;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+
+    .ux-row:last-child { margin-bottom: 0; }
+
+    .ux-old { color: var(--red); font-weight: 600; }
+    .ux-new { color: var(--green); font-weight: 600; }
+
+    @media (max-width: 640px) {
+      .hero { padding: 20px; }
+      h1 { font-size: 21px; }
+      .search-input { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="hero">
+      <div class="hero-top">
+        <div class="badge-group">
+          <span class="badge old">基线版本：Tag 3.1.0 (bdae9a6)</span>
+          <span>→</span>
+          <span class="badge new">当前版本：d369f6a</span>
+        </div>
+        <span class="badge info">共 21 次增量提交</span>
+      </div>
+      <h1>版本演进与差异说明文档</h1>
+      <p class="subtitle">
+        对比基线 <strong>v3.1.0</strong>（提交 <code>bdae9a6</code>）与当前最新实现（提交 <code>d369f6a</code>）之间的架构收敛、关键缺陷修复、边界加固及文档仓库精简情况。
+      </p>
+    </header>
+
+    <section class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">核心生命周期重构</div>
+        <div class="stat-value">4 项</div>
+        <div class="stat-desc">瀑布流与品质筛选收口为视频搜索路径及 Vue 风格生命周期</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">安全性与请求修复</div>
+        <div class="stat-value">3 项</div>
+        <div class="stat-desc">URL 二次解码崩溃修复、Wbi 重签与内部请求放行</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">状态、缓存与交互修复</div>
+        <div class="stat-value">11 项</div>
+        <div class="stat-desc">TDZ 风险消除、SPA 防抖、输入法防误触、缓存键与 DOM 兜底</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">文档同步与仓库清理</div>
+        <div class="stat-value">3 项</div>
+        <div class="stat-desc">README 与 v3.1.0 同步，清理 12 个历史冗余与临时脚本</div>
+      </div>
+    </section>
+
+    <h2 class="section-title">用户使用体感区别（v3.1.0 vs 当前版本）</h2>
+    <section class="ux-grid">
+      <div class="ux-card">
+        <h3>1. 搜特殊字符不再卡死或搜偏</h3>
+        <div class="ux-row"><span class="ux-old">v3.1.0 体感：</span>搜索 <code>C++</code> 会变成 <code>C  </code>；搜 <code>100%</code> 等含百分号的词会直接报错中断过滤；含 <code>!()*</code> 的词可能因签名不一致导致请求异常。</div>
+        <div class="ux-row"><span class="ux-new">当前版本体感：</span><code>C++</code>、<code>100%</code>、<code>#Tag</code> 及特殊符号均能原样识别，接口脱壳与本地过滤结果一致，不再报错中断。</div>
+      </div>
+      <div class="ux-card">
+        <h3>2. 切换直播/番剧/专栏 Tab 不再误藏卡片</h3>
+        <div class="ux-row"><span class="ux-old">v3.1.0 体感：</span>在视频页勾选【视频品质】筛选后切到直播、番剧等非视频 Tab，卡片可能被全部隐藏或沿用旧页缓存结果。</div>
+        <div class="ux-row"><span class="ux-new">当前版本体感：</span>品质筛选与品质栏严格限定仅在 <code>综合(/all)</code> 与 <code>视频(/video)</code> 生效，切换非视频 Tab 自动放行且不串用旧缓存。</div>
+      </div>
+      <div class="ux-card">
+        <h3>3. 关闭“虚化过滤”后瀑布流继续正常补页</h3>
+        <div class="ux-row"><span class="ux-old">v3.1.0 体感：</span>关闭虚化改为“直接隐藏”后，即使满屏大部分视频都被过滤掉了，瀑布流仍以为屏幕很满而不自动加载下一页。</div>
+        <div class="ux-row"><span class="ux-new">当前版本体感：</span>改为按实际可见高度计数，屏幕真实留存卡片不足 10 张时即自动抓取下一页补齐。</div>
+      </div>
+      <div class="ux-card">
+        <h3>4. 中文输入法选词与页码跳转不再误触发重置</h3>
+        <div class="ux-row"><span class="ux-old">v3.1.0 体感：</span>在页码框输数字按回车、或中文输入法敲回车选词时，可能误触发搜索重置或吸顶监听丢失。</div>
+        <div class="ux-row"><span class="ux-new">当前版本体感：</span>仅搜索框非输入法合成状态的回车才会触发同步，翻页/切路由防抖合并更稳，吸顶状态不会丢。</div>
+      </div>
+      <div class="ux-card">
+        <h3>5. 综合页广告清理与弱网重试更稳</h3>
+        <div class="ux-row"><span class="ux-old">v3.1.0 体感：</span>部分 <code>/search/all</code> 混合结果页首栏非视频时广告清理易漏网；断网重试按钮多次点击会重复绑事件；极少数异常卡标题可能显示 <code>undefined</code>。</div>
+        <div class="ux-row"><span class="ux-new">当前版本体感：</span>各分类逐一清理广告，重试按钮只响应一次点击，缺标题异常数据兜底为空白，课程卡也不再反复重扫卡顿。</div>
+      </div>
+    </section>
+
+    <div class="toolbar">
+      <div class="tabs" id="filterTabs">
+        <button class="tab-btn active" data-cat="all">全部变更</button>
+        <button class="tab-btn" data-cat="arch">架构与路径收口</button>
+        <button class="tab-btn" data-cat="sec">请求与解码安全</button>
+        <button class="tab-btn" data-cat="data">数据与缓存修复</button>
+        <button class="tab-btn" data-cat="ui">交互与渲染健壮性</button>
+        <button class="tab-btn" data-cat="chore">文档与仓库清理</button>
+      </div>
+      <input type="search" id="searchInput" class="search-input" placeholder="搜索关键词、函数名或 commit ID..." />
+    </div>
+
+    <h2 class="section-title">核心差异对比详情</h2>
+    <section class="cards" id="diffCards">
+
+      <article class="diff-card" data-cat="arch">
+        <div class="diff-header">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span class="tag-cat cat-arch">架构与路径收口</span>
+            <h3 class="diff-title">1. 瀑布流收口为 Vue 风格生命周期，并限定仅在视频搜索路径生效</h3>
+          </div>
+          <div class="commit-pills">
+            <span class="pill">c807f80</span>
+            <span class="pill">4d65e93</span>
+            <span class="pill">68a1240</span>
+            <span class="pill">5dc59bd</span>
+            <span class="pill">a476e3c</span>
+          </div>
+        </div>
+        <div class="compare-grid">
+          <div class="box before">
+            <div class="box-label">v3.1.0 (bdae9a6)</div>
+            <ul class="clean-list">
+              <li>瀑布流仅简单判断 URL 含 <code>keyword</code> 参数，缺少统一挂载/卸载生命周期控制。</li>
+              <li>品质筛选栏与 <code>filterDOMElements()</code> 过滤逻辑在非视频 Tab（如直播、番剧）下仍可能触发或隐藏全部卡片。</li>
+              <li><code>purifiedQuery</code> 缓存键未包含 <code>pathname</code>，相同搜索词跨 Tab 切换会命中旧缓存。</li>
+            </ul>
+          </div>
+          <div class="box after">
+            <div class="box-label">当前版本 (d369f6a)</div>
+            <ul class="clean-list">
+              <li>建立清晰的挂载/暂停/重置生命周期控制器并补齐详细注释。</li>
+              <li>引入 <code>isVideoSearchPath()</code>，统一将品质筛选栏与品质过滤限制在 <code>/all</code> 和 <code>/video</code> 路径。</li>
+              <li>将 <code>window.location.pathname</code> 纳入 <code>purifiedQuery</code> 缓存键，彻底消除跨 Tab 缓存串扰。</li>
+            </ul>
+          </div>
+        </div>
+      </article>
+
+      <article class="diff-card" data-cat="sec">
+        <div class="diff-header">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span class="tag-cat cat-sec">请求与解码安全</span>
+            <h3 class="diff-title">2. 修复 URL 二次解码崩溃与 + 号破坏，补齐 Hash 兜底</h3>
+          </div>
+          <div class="commit-pills">
+            <span class="pill">de9998e</span>
+            <span class="pill">97ae900</span>
+          </div>
+        </div>
+        <div class="compare-grid">
+          <div class="box before">
+            <div class="box-label">v3.1.0 (bdae9a6)</div>
+            <ul class="clean-list">
+              <li>在 <code>URLSearchParams.get('keyword')</code> 已自动解码后，又重复执行 <code>decodeURIComponent(rawParam.replace(/\+/g, ' '))</code>。</li>
+              <li>搜索 <code>100%</code> 等含 <code>%</code> 字符时抛出 <code>URIError</code> 导致过滤中断；搜索 <code>C++</code> 时加号被误删为空格。</li>
+              <li><code>location.hash</code> 解码无 <code>try/catch</code>，且 <code>getCleanApiKeyword()</code> 缺少 <code>hash</code> 兜底。</li>
+            </ul>
+          </div>
+          <div class="box after">
+            <div class="box-label">当前版本 (d369f6a)</div>
+            <ul class="clean-list">
+              <li>移除对 <code>URLSearchParams.get()</code> 返回值的二次 <code>decodeURIComponent</code> 与 <code>+</code> 替换，保留原始搜索词语义。</li>
+              <li>为 <code>window.location.hash</code> 解码补充 <code>try/catch</code> 容错，畸形编码不再中断脚本执行。</li>
+              <li>为 <code>getCleanApiKeyword()</code> 补齐 <code>location.hash</code> 拼接兜底，与本地语法提取保持一致。</li>
+            </ul>
+          </div>
+        </div>
+      </article>
+
+      <article class="diff-card" data-cat="sec">
+        <div class="diff-header">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span class="tag-cat cat-sec">请求与解码安全</span>
+            <h3 class="diff-title">3. fetch 拦截改写搜索词时同步重签 Wbi，并跳过内部已签名请求</h3>
+          </div>
+          <div class="commit-pills">
+            <span class="pill">df749f5</span>
+          </div>
+        </div>
+        <div class="compare-grid">
+          <div class="box before">
+            <div class="box-label">v3.1.0 (bdae9a6)</div>
+            <ul class="clean-list">
+              <li>拦截 <code>/wbi/search</code> 请求时仅正则替换 <code>keyword</code> 参数并采用 <code>encodeURIComponent</code>，未重算 <code>w_rid</code> / <code>wts</code>。</li>
+              <li>连带二次改写脚本自身瀑布流已带 <code>signWbi</code> 签名的请求，特殊字符 <code>[!'()*]</code> 编码不一致会破坏签名校验。</li>
+            </ul>
+          </div>
+          <div class="box after">
+            <div class="box-label">当前版本 (d369f6a)</div>
+            <ul class="clean-list">
+              <li>识别并跳过脚本内部已签名请求（通过内部请求信号标记），避免二次改写。</li>
+              <li>对页面原生发起的 Wbi 搜索请求在改写 <code>keyword</code> 后执行 <code>signWbi</code> 重签名，保障签名一致性。</li>
+            </ul>
+          </div>
+        </div>
+      </article>
+
+      <article class="diff-card" data-cat="ui">
+        <div class="diff-header">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span class="tag-cat cat-ui">交互与渲染健壮性</span>
+            <h3 class="diff-title">4. 修复初始化 TDZ 风险、关闭虚化后补页失效、SPA 防抖及输入法误触发</h3>
+          </div>
+          <div class="commit-pills">
+            <span class="pill">9b7b4de</span>
+            <span class="pill">6308dcf</span>
+            <span class="pill">7842c36</span>
+            <span class="pill">d369f6a</span>
+            <span class="pill">0fbaf88</span>
+            <span class="pill">2b592f9</span>
+          </div>
+        </div>
+        <div class="compare-grid">
+          <div class="box before">
+            <div class="box-label">v3.1.0 (bdae9a6)</div>
+            <ul class="clean-list">
+              <li>顶层同步调用 <code>applyFilterStickyState()</code>，若 DOM 已就绪可能提前访问未初始化的 <code>const stickyObserver</code>（TDZ）。</li>
+              <li><code>checkWaterfallFillScreen()</code> 以 <code>style.display !== 'none'</code> 计数，关闭虚化用 CSS 隐藏卡片后补页失效。</li>
+              <li>任意 <code>INPUT</code> 回车均触发重置（含页码输入框、中文输入法选词回车），SPA 路由延迟偏短。</li>
+              <li><code>showErrorLoader()</code> 多次失败会叠加绑定多个 click 监听器；<code>createCardElement()</code> 标题无空值兜底。</li>
+            </ul>
+          </div>
+          <div class="box after">
+            <div class="box-label">当前版本 (d369f6a)</div>
+            <ul class="clean-list">
+              <li>延迟顶层 <code>applyFilterStickyState()</code> 执行，消除 TDZ 风险。</li>
+              <li>补页计数改为 <code>offsetHeight > 0</code>，兼容 CSS 隐藏规则。</li>
+              <li>收窄回车监听至搜索输入框并检查 <code>!e.isComposing</code> 与 <code>e.target?.closest</code>；<code>scheduleRouteSync()</code> 引入 <code>pendingWithSticky</code> 累加防丢失。</li>
+              <li><code>showErrorLoader()</code> 清理/去重重试监听；<code>createCardElement()</code> 标题补充 <code>|| ''</code> 兜底。</li>
+            </ul>
+          </div>
+        </div>
+      </article>
+
+      <article class="diff-card" data-cat="data">
+        <div class="diff-header">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span class="tag-cat cat-data">数据与缓存修复</span>
+            <h3 class="diff-title">5. /search/all 广告清洗、Tag 字典小写统一与非视频卡缓存防重扫</h3>
+          </div>
+          <div class="commit-pills">
+            <span class="pill">94e3cb2</span>
+            <span class="pill">ff17cbc</span>
+            <span class="pill">482341c</span>
+            <span class="pill">2185ac9</span>
+          </div>
+        </div>
+        <div class="compare-grid">
+          <div class="box before">
+            <div class="box-label">v3.1.0 (bdae9a6)</div>
+            <ul class="clean-list">
+              <li><code>/search/all</code> 仅检查首项 <code>result[0].data</code>，当首个分类不含 <code>.data</code> 数组时后续分类跳过 <code>cleanAdsOnly()</code>。</li>
+              <li><code>videoTagMap</code> 键名未统一小写，且 <code>appendCards()</code> 写入时缺少 <code>item.bvid</code> 空值守卫。</li>
+              <li><code>/cheese/</code> 课程卡及未命中统计字典的卡片在开启品质标签时无法写入 <code>purifiedQuery</code>，导致每次 DOM 变更重复安检。</li>
+            </ul>
+          </div>
+          <div class="box after">
+            <div class="box-label">当前版本 (d369f6a)</div>
+            <ul class="clean-list">
+              <li>逐项检查分类中是否存在 <code>Array.isArray(cat.data)</code>，对齐首屏扫描逻辑。</li>
+              <li>统一 <code>videoTagMap</code> 读写键名为小写，并为 <code>appendCards()</code> 补齐 <code>if (item.bvid)</code> 保护。</li>
+              <li>课程卡与无完整统计卡片在数据就绪后允许写入 <code>purifiedQuery</code> 缓存，避免无效重复扫描。</li>
+            </ul>
+          </div>
+        </div>
+      </article>
+
+      <article class="diff-card" data-cat="chore">
+        <div class="diff-header">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span class="tag-cat cat-chore">文档与仓库清理</span>
+            <h3 class="diff-title">6. 同步 README 说明文档并清理历史冗余脚本</h3>
+          </div>
+          <div class="commit-pills">
+            <span class="pill">5271ffa</span>
+            <span class="pill">0566443</span>
+            <span class="pill">f077acb</span>
+          </div>
+        </div>
+        <div class="compare-grid">
+          <div class="box before">
+            <div class="box-label">v3.1.0 (bdae9a6)</div>
+            <ul class="clean-list">
+              <li>仓库根目录保留了 12 个历史遗留版本、一次性打补丁和辅助调试脚本，主文档与 v3.1.0 特性存在滞后。</li>
+            </ul>
+          </div>
+          <div class="box after">
+            <div class="box-label">当前版本 (d369f6a)</div>
+            <ul class="clean-list">
+              <li>移除 12 个历史冗余与一次性脚本，聚焦主实现维护。</li>
+              <li>同步更新 <code>README.md</code>，对齐 v3.1.0 视频品质体系与新特性说明。</li>
+            </ul>
+          </div>
+        </div>
+      </article>
+
+    </section>
+
+    <div class="empty-hint" id="emptyHint">没有匹配到相关变更记录，请更换筛选条件或搜索词。</div>
+
+    <h2 class="section-title">完整提交时间线（bdae9a6 → d369f6a）</h2>
+    <div class="timeline-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:110px;">Commit ID</th>
+            <th style="width:130px;">分类</th>
+            <th>提交说明</th>
+          </tr>
+        </thead>
+        <tbody id="timelineBody">
+          <tr><td class="hash">d369f6a</td><td><span class="tag-cat cat-ui">交互/路由</span></td><td>fix: 修复 scheduleRouteSync 防抖覆盖丢失 bindStickyObserver 及输入法回车误触发</td></tr>
+          <tr><td class="hash">482341c</td><td><span class="tag-cat cat-data">数据/缓存</span></td><td>fix: 为 appendCards() 中 videoTagMap 写入补充 item.bvid 空值保护</td></tr>
+          <tr><td class="hash">a476e3c</td><td><span class="tag-cat cat-arch">架构/路径</span></td><td>fix: 将 pathname 纳入 purifiedQuery 缓存键避免跨 Tab 切换命中陈旧品质筛选结果</td></tr>
+          <tr><td class="hash">97ae900</td><td><span class="tag-cat cat-sec">请求/解码</span></td><td>fix: 为 getCleanApiKeyword() 补充 location.hash 兜底解析</td></tr>
+          <tr><td class="hash">2b592f9</td><td><span class="tag-cat cat-ui">交互/渲染</span></td><td>fix: 为 createCardElement() 标题补充空值兜底防止渲染 undefined</td></tr>
+          <tr><td class="hash">0fbaf88</td><td><span class="tag-cat cat-ui">交互/渲染</span></td><td>fix: 避免 showErrorLoader() 重复绑定 click 重试监听器</td></tr>
+          <tr><td class="hash">2185ac9</td><td><span class="tag-cat cat-data">数据/缓存</span></td><td>fix: 课程卡与未命中统计字典卡片在数据就绪后写入 purifiedQuery 缓存避免重复安检</td></tr>
+          <tr><td class="hash">ff17cbc</td><td><span class="tag-cat cat-data">数据/缓存</span></td><td>fix: 统一 videoTagMap 键名小写以避免大小写不一致导致查表失败</td></tr>
+          <tr><td class="hash">94e3cb2</td><td><span class="tag-cat cat-data">数据/缓存</span></td><td>fix: 修复 /search/all 首分类无 .data 数组时跳过分类级 cleanAdsOnly() 的问题</td></tr>
+          <tr><td class="hash">7842c36</td><td><span class="tag-cat cat-ui">交互/路由</span></td><td>fix: 收窄搜索框回车触发范围并对 SPA 路由同步进行防抖延迟</td></tr>
+          <tr><td class="hash">9b7b4de</td><td><span class="tag-cat cat-ui">交互/初始化</span></td><td>fix: 延迟顶层 applyFilterStickyState() 绑定以消除 stickyObserver 等变量的 TDZ 风险</td></tr>
+          <tr><td class="hash">6308dcf</td><td><span class="tag-cat cat-ui">交互/补页</span></td><td>fix: 修复关闭虚化时 checkWaterfallFillScreen() 统计隐藏卡片导致补页失效的问题</td></tr>
+          <tr><td class="hash">5dc59bd</td><td><span class="tag-cat cat-arch">架构/路径</span></td><td>fix: 限制品质筛选过滤仅在视频搜索路径 isVideoSearchPath() 下生效</td></tr>
+          <tr><td class="hash">df749f5</td><td><span class="tag-cat cat-sec">请求/签名</span></td><td>fix: 改写 fetch 搜索词时重签 Wbi 并跳过脚本内部已签名请求</td></tr>
+          <tr><td class="hash">de9998e</td><td><span class="tag-cat cat-sec">请求/解码</span></td><td>fix: 移除 URL 参数二次 decodeURIComponent 与 + 替换，为 hash 解码补充 try/catch</td></tr>
+          <tr><td class="hash">f077acb</td><td><span class="tag-cat cat-chore">文档</span></td><td>docs: 根据手搓版 v3.1.0 同步更新 README.md</td></tr>
+          <tr><td class="hash">0566443</td><td><span class="tag-cat cat-chore">仓库清理</span></td><td>chore: 清理已删除的历史脚本文件</td></tr>
+          <tr><td class="hash">5271ffa</td><td><span class="tag-cat cat-chore">仓库清理</span></td><td>chore: 清理一次性生成与打补丁脚本</td></tr>
+          <tr><td class="hash">68a1240</td><td><span class="tag-cat cat-arch">文档/注释</span></td><td>docs: 为瀑布流 Vue 风格生命周期控制器补充详细注释</td></tr>
+          <tr><td class="hash">4d65e93</td><td><span class="tag-cat cat-arch">架构/路径</span></td><td>fix: 限制视频品质筛选栏仅在 /all 和 /video 路径下生效</td></tr>
+          <tr><td class="hash">c807f80</td><td><span class="tag-cat cat-arch">架构/重构</span></td><td>refactor: 瀑布流收口为 Vue 风格生命周期并限制仅视频搜索路径触发</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const tabs = document.querySelectorAll('#filterTabs .tab-btn');
+      const cards = document.querySelectorAll('#diffCards .diff-card');
+      const searchInput = document.getElementById('searchInput');
+      const emptyHint = document.getElementById('emptyHint');
+      let activeCat = 'all';
+
+      function applyFilter() {
+        const kw = searchInput.value.trim().toLowerCase();
+        let visibleCount = 0;
+
+        cards.forEach(card => {
+          const catMatch = activeCat === 'all' || card.dataset.cat === activeCat;
+          const textMatch = !kw || card.innerText.toLowerCase().includes(kw);
+          const show = catMatch && textMatch;
+          card.style.display = show ? '' : 'none';
+          if (show) visibleCount++;
+        });
+
+        emptyHint.style.display = visibleCount === 0 ? 'block' : 'none';
+      }
+
+      tabs.forEach(btn => {
+        btn.addEventListener('click', () => {
+          tabs.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          activeCat = btn.dataset.cat;
+          applyFilter();
+        });
+      });
+
+      searchInput.addEventListener('input', applyFilter);
+    })();
+  </script>
+</body>
+</html>
