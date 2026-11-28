@@ -20,6 +20,17 @@
 (function() {
     'use strict';
 
+    /**
+     * 【全局架构与核心数据流总览】
+     * 1. 配置与菜单：基于 localStorage 持久化开关，通过 GM_registerMenuCommand 动态维护油猴菜单。
+     * 2. 语法解析层：从 URL query + hash 提取普通词、-排除词、#Tag词、@UP主词，并做简繁归一化。
+     * 3. 数据拦截层：通过 SSR 状态轮询（__pinia / __INITIAL_STATE__）与 fetch 劫持捕获接口数据，
+     *    剔除广告条目后将 Tag 与完整互动指标写入 videoTagMap / videoStatMap（有界 LRU 式缓存）。
+     * 4. DOM 安检层：MutationObserver + rAF 节流触发 filterDOMElements()，执行五道过滤与封面徽章挂载。
+     * 5. 瀑布流引擎：由 WaterfallLifecycle 统一状态机调度，结合 Wbi 签名直连分页接口实现无缝续载。
+     * 6. 品质评价层：12 维象限漏斗判定 + 三层健康度评分模型（底分 + 赛道表现分 + 明码词条加减）。
+     */
+
     // 0. 窗口隔离：仅限顶层窗口（Top Window）执行，严禁在瀑布流子 iframe 中重复执行脚本与注册菜单
     if (window.self !== window.top) {
         return;
@@ -946,6 +957,7 @@
         bindStickyObserver();
     });
 
+    // 标记瀑布流内部发起的 fetch signal：跳过请求参数改写以防二次重签死循环，但仍保留响应体广告清理与数据采集
     const internalFetchSignals = new WeakSet();
     const originFetch = targetWindow.fetch;
     targetWindow.fetch = async function(...args) {
@@ -962,6 +974,8 @@
         );
         const isSearchReq = urlStr.includes('/wbi/search') || urlStr.includes('/search/type') || urlStr.includes('/search/all');
 
+        // 请求前拦截：开启语法过滤时，将发送给 B 站后端的 keyword 脱壳（剔除 -排除词，剥离 #/@ 前缀并转简体）
+        // 若接口带 Wbi 签名（/wbi/ 或 w_rid），修改参数后必须重新计算 wts 与 w_rid，否则会触发服务端校验失败
         if (isSearchReq && isSyntaxFilter && !isInternalReq) {
             const apiKeyword = getCleanApiKeyword();
             if (apiKeyword) {
@@ -1078,6 +1092,7 @@
                 scanInitialState();
             }
  
+            // 幂等缓存键：将当前搜索 URL、语法过滤开关及已选品质条件编码为指纹，用于跳过未变更卡片的重复计算
             const currentSearchQuery = window.location.pathname + window.location.search;
             const qualityFilterKey = Array.from(activeQualityFilters).sort().join(',');
             const currentQueryKey = currentSearchQuery + '_' + (isSyntaxFilter ? 'syn1' : 'syn0') + '_' + qualityFilterKey;
@@ -1556,6 +1571,7 @@
     }
 
     // 对请求参数进行 Wbi 签名并生成带 wts 与 w_rid 的查询字符串
+    // 协议要点：注入秒级时间戳 wts -> 按参数名 ASCII 升序排列 -> 过滤值中 [!'()*] 字符 -> URL 编码拼接后附加 mixin_key 计算 MD5
     function signWbi(params, img_key, sub_key, cachedMixinKey) {
         const mixin_key = cachedMixinKey || getMixinKey(img_key + sub_key);
         const curr_time = Math.round(Date.now() / 1000);
@@ -2314,6 +2330,7 @@
     }
 
     // 强制终止当前进行中的分页拉取事务并释放互斥锁
+    // 通过递增 pagingSessionSeq（会话代际锁）配合 AbortController，彻底杜绝切换搜索词或 Tab 后旧请求晚到污染新列表
     function abortRunningPaging() {
         pagingSessionSeq++;
         if (pagingAbortController) {
@@ -2939,9 +2956,11 @@
     }
 
     // 劫持单页路由与搜索操作，统一转发至 WaterfallLifecycle.sync()
+    // 覆盖 Vue Router 无刷新切换（pushState/replaceState/popstate）、原生分页按钮点击、回车与搜索按钮点击
     try {
         let routeSyncTimer = null;
         let pendingWithSticky = false;
+        // 合并短时间内连续触发的路由同步，并保留 sticky 观察者重绑标记避免被后续无 sticky 调度覆盖
         const scheduleRouteSync = (reason, delay = 150, withSticky = false) => {
             if (routeSyncTimer) clearTimeout(routeSyncTimer);
             if (withSticky) pendingWithSticky = true;
@@ -3457,10 +3476,12 @@
         const effectiveDur = (track.noDurPenalty || track.noBonus) ? 1.0 : metrics.durFactor;
         const effectivePlay = track.noBonus ? 1.0 : metrics.playFactor;
 
+        // 贝叶斯/拉普拉斯平滑：为播放量、点赞、收藏添加虚拟先验基数（+2000 / +40 / +20），防止低样本下比率虚高失真
         const smoothPlay = metrics.play + 2000;
         const smoothLikeRatio = ((metrics.like + 40) / smoothPlay) * effectiveDur * effectivePlay;
         const smoothFavRatio = ((metrics.favorites + 20) / smoothPlay) * effectiveDur * effectivePlay;
 
+        // 指数饱和函数 1 - exp(-x / k)：将各维指标平滑映射到 0~100 区间，避免单项极值无限拉爆总分
         const likeScore = 100 * (1 - Math.exp(-smoothLikeRatio / 0.06));
         const favScore = 100 * (1 - Math.exp(-smoothFavRatio / 0.035));
         const dmScore = 100 * (1 - Math.exp(-metrics.danmakuDensity / 18));
