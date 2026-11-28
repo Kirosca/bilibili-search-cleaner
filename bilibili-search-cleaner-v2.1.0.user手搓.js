@@ -1159,8 +1159,9 @@
                 const isLiveCard = card.matches('.bili-live-card') ||
                                    Boolean(matchLive) ||
                                    Boolean(card.querySelector('.bili-video-card__info--living, .v-inline-live-player'));
+                const isCheeseCard = link.includes('/cheese/');
                 const coverEl = card.querySelector('.v-img.bili-video-card__cover, .bili-video-card__cover');
-                if (coverEl && !isLiveCard) {
+                if (coverEl && !isLiveCard && !isCheeseCard) {
                     let stat = id ? (videoStatMap.get(id.toLowerCase()) || videoStatMap.get(id)) : null;
                     if (stat) {
                         hasFullStat = true;
@@ -1174,7 +1175,7 @@
                         quadrant = getQualityQuadrant(stat, metrics, evalCtx);
                     }
                     renderBadgeColumn(coverEl, stat, quadrant, metrics, evalCtx);
-                } else if (isLiveCard) {
+                } else if (isLiveCard || isCheeseCard) {
                     hasFullStat = true;
                     if (coverEl) {
                         const existingBadge = coverEl.querySelector(':scope > .bili-cleaner-badge-col');
@@ -1182,9 +1183,9 @@
                     }
                 }
 
-                // 只有在 Tag 数据就绪且品质全量数据就绪时，才记录缓存标记，避免半成品数据时被提前锁死
+                // 只有在 Tag 数据就绪且品质全量数据就绪（或统计字典已就绪/非视频卡）时，才记录缓存标记，避免半成品数据时被提前锁死，也避免未命中卡片无限重复安检
                 const isTagReady = !tags.length || videoTagMap.size > 0 || !isSyntaxFilter;
-                const isStatReady = !isEvaluationBadge || hasFullStat;
+                const isStatReady = !isEvaluationBadge || hasFullStat || !coverEl || videoStatMap.size > 0;
                 if (card.dataset.externalHidden === undefined && card.style.display !== 'none') {
                     card.dataset.externalHidden = getComputedStyle(card).display === 'none' ? '1' : '0';
                 }
