@@ -1926,16 +1926,18 @@
         if (spinner) {
             spinner.style.display = 'none';
         }
-        const onRetryClick = (e) => {
-            const btn = e.target.closest('.bili-waterfall-retry-btn');
-            if (btn) {
-                loader.removeEventListener('click', onRetryClick);
-                if (spinner) spinner.style.removeProperty('display');
-                updateLoader(true);
-                triggerLoadNextPage();
-            }
-        };
-        loader.addEventListener('click', onRetryClick);
+        if (!loader.dataset.retryBound) {
+            loader.dataset.retryBound = '1';
+            loader.addEventListener('click', (e) => {
+                const btn = e.target.closest('.bili-waterfall-retry-btn');
+                if (btn) {
+                    const sp = loader.querySelector('.bili-waterfall-spinner');
+                    if (sp) sp.style.removeProperty('display');
+                    updateLoader(true);
+                    triggerLoadNextPage();
+                }
+            });
+        }
     }
 
     // 生成动态加载文案：按请求过的原始视频总数展示实时进度
