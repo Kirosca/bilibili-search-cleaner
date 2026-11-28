@@ -1006,10 +1006,11 @@
             if (data?.data?.result) {
                 let hasAdRemoved = false;
                 if (Array.isArray(data.data.result)) {
-                    if (data.data.result.length > 0 && data.data.result[0].data && Array.isArray(data.data.result[0].data)) {
+                    const isCategorizedResult = data.data.result.some(cat => cat && typeof cat === 'object' && Array.isArray(cat.data));
+                    if (isCategorizedResult) {
                         for (const cat of data.data.result) {
-                            if (cat.result_type === 'video' || cat.result_type === 'live_room' || !cat.result_type) {
-                                const beforeLen = Array.isArray(cat.data) ? cat.data.length : 0;
+                            if (cat && Array.isArray(cat.data) && (cat.result_type === 'video' || cat.result_type === 'live_room' || !cat.result_type)) {
+                                const beforeLen = cat.data.length;
                                 cat.data = cleanAdsOnly(cat.data);
                                 if (Array.isArray(cat.data) && cat.data.length !== beforeLen) {
                                     hasAdRemoved = true;
