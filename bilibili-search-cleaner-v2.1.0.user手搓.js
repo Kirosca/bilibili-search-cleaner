@@ -1078,7 +1078,7 @@
                 scanInitialState();
             }
  
-            const currentSearchQuery = window.location.search;
+            const currentSearchQuery = window.location.pathname + window.location.search;
             const qualityFilterKey = Array.from(activeQualityFilters).sort().join(',');
             const currentQueryKey = currentSearchQuery + '_' + (isSyntaxFilter ? 'syn1' : 'syn0') + '_' + qualityFilterKey;
             let elements = [];
