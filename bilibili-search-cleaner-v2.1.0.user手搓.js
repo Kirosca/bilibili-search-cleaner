@@ -741,14 +741,7 @@
     `;
     (document.head || document.documentElement).appendChild(styleElement);
  
-    // 3. 解析当前 URL 中的关键词分类 (普通词 / -排除词 / #Tag词 / @UP主词)
-    let cachedSearchKwKey = null;
-    let cachedSearchKwResult = null;
-    function getSearchKeywords() {
-        const cacheKey = window.location.search + '||' + window.location.hash;
-        if (cachedSearchKwKey === cacheKey && cachedSearchKwResult) {
-            return cachedSearchKwResult;
-        }
+    function getRawSearchKeywordParam() {
         const params = new URLSearchParams(window.location.search);
         let rawParam = params.get('keyword') || '';
         // 兼容处理：若浏览器将未编码的 # 截断至 Hash Fragment，补充拼回
@@ -763,7 +756,18 @@
                 rawParam += ' #' + hashContent;
             }
         }
-        const rawKeyword = cleanText(rawParam);
+        return rawParam;
+    }
+
+    // 3. 解析当前 URL 中的关键词分类 (普通词 / -排除词 / #Tag词 / @UP主词)
+    let cachedSearchKwKey = null;
+    let cachedSearchKwResult = null;
+    function getSearchKeywords() {
+        const cacheKey = window.location.search + '||' + window.location.hash;
+        if (cachedSearchKwKey === cacheKey && cachedSearchKwResult) {
+            return cachedSearchKwResult;
+        }
+        const rawKeyword = cleanText(getRawSearchKeywordParam());
         if (!rawKeyword) {
             cachedSearchKwKey = cacheKey;
             cachedSearchKwResult = { normal: [], exclude: [], tags: [], ups: [] };
@@ -794,9 +798,7 @@
  
     // 4. 提取发给 B 站接口的搜索词（智能脱壳与繁简归一化）
     function getCleanApiKeyword() {
-        const params = new URLSearchParams(window.location.search);
-        const rawParam = params.get('keyword') || '';
-        const rawKeyword = rawParam.trim();
+        const rawKeyword = getRawSearchKeywordParam().trim();
         if (!rawKeyword) return '';
  
         const list = rawKeyword.split(/\s+/);
