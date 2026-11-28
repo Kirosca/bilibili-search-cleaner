@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>v3.1.0 现状全景与终极形态演进架构图</title>
+  <style>
+    :root {
+      --bg: #0a0f1d;
+      --panel: #11182b;
+      --panel-2: #172038;
+      --border: #273459;
+      --text: #e6edf7;
+      --muted: #94a3c4;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.14);
+      --green: #34d399;
+      --green-soft: rgba(52, 211, 153, 0.14);
+      --amber: #fbbf24;
+      --amber-soft: rgba(251, 191, 36, 0.14);
+      --rose: #fb7185;
+      --rose-soft: rgba(251, 113, 133, 0.14);
+      --violet: #a78bfa;
+      --violet-soft: rgba(167, 139, 250, 0.14);
+      --cyan: #22d3ee;
+      --cyan-soft: rgba(34, 211, 238, 0.14);
+      --line: #4b6194;
+      --shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    }
+
+    html[data-theme="light"] {
+      --bg: #f3f6fb;
+      --panel: #ffffff;
+      --panel-2: #f8fafc;
+      --border: #d4dfef;
+      --text: #0f172a;
+      --muted: #475569;
+      --accent: #0284c7;
+      --accent-soft: rgba(2, 132, 199, 0.1);
+      --green: #059669;
+      --green-soft: rgba(5, 150, 105, 0.1);
+      --amber: #d97706;
+      --amber-soft: rgba(217, 119, 6, 0.1);
+      --rose: #e11d48;
+      --rose-soft: rgba(225, 29, 72, 0.1);
+      --violet: #7c3aed;
+      --violet-soft: rgba(124, 58, 237, 0.1);
+      --cyan: #0891b2;
+      --cyan-soft: rgba(8, 145, 178, 0.1);
+      --line: #94a3b8;
+      --shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 24px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+
+    .title-group h1 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .title-group p {
+      margin: 2px 0 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 7px 13px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    button.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .container {
+      max-width: 1720px;
+      margin: 0 auto;
+      padding: 18px 24px 36px;
+    }
+
+    .view-section { display: none; }
+    .view-section.active { display: block; }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .kpi-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 13px 15px;
+      box-shadow: var(--shadow);
+    }
+
+    .kpi-card .k-title {
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .kpi-card .k-desc {
+      font-size: 12px;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 16px;
+      align-items: start;
+    }
+
+    @media (max-width: 1120px) {
+      .workspace { grid-template-columns: 1fr; }
+    }
+
+    .canvas-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel-2);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+
+    .svg-viewport {
+      overflow: auto;
+      background-image: radial-gradient(var(--border) 1px, transparent 1px);
+      background-size: 22px 22px;
+      padding: 16px;
+      min-height: 680px;
+    }
+
+    svg.diagram {
+      display: block;
+      margin: 0 auto;
+      transform-origin: top center;
+      transition: transform 0.15s ease;
+    }
+
+    .node { cursor: pointer; }
+    .node rect, .node polygon {
+      transition: filter 0.15s ease, stroke-width 0.15s ease;
+    }
+    .node:hover rect, .node:hover polygon {
+      filter: brightness(1.12);
+      stroke-width: 2.4;
+    }
+    .node.selected rect, .node.selected polygon {
+      stroke: var(--accent) !important;
+      stroke-width: 3 !important;
+      filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.45));
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .side-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .side-card h2 {
+      margin: 0 0 10px;
+      font-size: 14px;
+      color: var(--accent);
+    }
+
+    .detail-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin: 0 0 6px;
+    }
+
+    .detail-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 9px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+
+    .detail-desc {
+      font-size: 13px;
+      color: var(--muted);
+      margin: 0 0 10px;
+    }
+
+    .detail-list {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 12.5px;
+    }
+
+    .detail-list li { margin-bottom: 6px; }
+
+    .mermaid-box {
+      margin-top: 16px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .mermaid-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 16px;
+      background: var(--panel-2);
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    pre.mermaid-code {
+      margin: 0;
+      padding: 14px 16px;
+      overflow-x: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.55;
+      color: var(--text);
+    }
+
+    .matrix-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th, td {
+      padding: 13px 16px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--panel-2);
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    .tag-now {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      background: var(--green-soft);
+      color: var(--green);
+      margin-bottom: 4px;
+    }
+
+    .tag-next {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      background: var(--violet-soft);
+      color: var(--violet);
+      margin-bottom: 4px;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 11.5px;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="title-group">
+      <h1>搜索净化与质量引擎 · 现状全链路与终极形态全景图</h1>
+      <p>当前基线：<code>v3.1.0</code>（提交 <code>c008e70</code>） · 离线矢量渲染 · 支持节点交互与 Mermaid 源码导出</p>
+    </div>
+    <div class="tabs">
+      <button type="button" class="tab-btn active" data-tab="now">1. 目前已实现（v3.1.0 流程图）</button>
+      <button type="button" class="tab-btn" data-tab="future">2. 终极形态（比肩大厂架构）</button>
+      <button type="button" class="tab-btn" data-tab="matrix">3. 能力演进对比矩阵</button>
+    </div>
+    <div class="controls">
+      <button type="button" id="btnZoomOut">缩小 -</button>
+      <button type="button" id="btnZoomReset">100%</button>
+      <button type="button" id="btnZoomIn">放大 +</button>
+      <button type="button" id="btnTheme">深色 / 浅色</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- ================= 视图 1：目前已实现 ================= -->
+    <section id="tab-now" class="view-section active">
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="k-title" style="color:var(--accent)">🗝️ 搜索语法解析与脱壳</div>
+          <p class="k-desc">支持普通词、<code>-排除词</code>、<code>#Tag</code>、<code>@UP主</code> 与简繁归一化，自动改写后端参数并重算 Wbi 签名。</p>
+        </div>
+        <div class="kpi-card">
+          <div class="k-title" style="color:var(--green)">🛡️ 网络层 + SSR 双路拦截</div>
+          <p class="k-desc">结合 Pinia/SSR 首屏轮询与 <code>fetch</code> 劫持，接口级物理剔除广告并采集全量赞/藏/弹/评指标。</p>
+        </div>
+        <div class="kpi-card">
+          <div class="k-title" style="color:var(--amber)">🔍 DOM 五道安检与吸顶</div>
+          <p class="k-desc">幂等缓存 + 数据就绪门控，区分语法淘汰（虚化/隐藏）与品质淘汰（物理隐藏），筛选栏滚动吸顶常驻。</p>
+        </div>
+        <div class="kpi-card">
+          <div class="k-title" style="color:var(--violet)">🏆 12 维品质 + 三层评分</div>
+          <p class="k-desc">时长与播放量双修正，12 象限漏斗分级 + 0~100 健康度评分（品级底分 + 拉普拉斯平滑表现分 + 词条）。</p>
+        </div>
+        <div class="kpi-card">
+          <div class="k-title" style="color:var(--cyan)">🌊 WaterfallLifecycle 瀑布流</div>
+          <p class="k-desc">统一生命周期状态机、<code>sessionSeq</code> 防竞态锁、<code>-412/-403</code> 风控熔断与 60ms 连贯续载。</p>
+        </div>
+      </div>
+
+      <div class="workspace">
+        <div class="canvas-card">
+          <div class="legend">
+            <span class="legend-item"><i class="dot" style="background:#38bdf8"></i> 入口与语法解析</span>
+            <span class="legend-item"><i class="dot" style="background:#34d399"></i> 数据采集与去广告</span>
+            <span class="legend-item"><i class="dot" style="background:#fbbf24"></i> 安检过滤与判定</span>
+            <span class="legend-item"><i class="dot" style="background:#a78bfa"></i> 品质评分与瀑布流状态机</span>
+          </div>
+          <div class="svg-viewport">
+            <svg class="diagram" id="svg-now" width="1100" height="840" viewBox="0 0 1100 840" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <marker id="arrow-now" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                  <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--line)" />
+                </marker>
+              </defs>
+
+              <!-- 阶段框 -->
+              <rect x="20" y="16" width="1060" height="122" rx="12" fill="none" stroke="var(--border)" stroke-dasharray="6 4" />
+              <text x="34" y="36" fill="var(--muted)" font-size="12" font-weight="700">1. 输入解析与请求拦截层</text>
+
+              <rect x="20" y="158" width="1060" height="148" rx="12" fill="none" stroke="var(--border)" stroke-dasharray="6 4" />
+              <text x="34" y="178" fill="var(--muted)" font-size="12" font-weight="700">2. SSR 与接口数据清洗采集层</text>
+
+              <rect x="20" y="326" width="1060" height="214" rx="12" fill="none" stroke="var(--border)" stroke-dasharray="6 4" />
+              <text x="34" y="346" fill="var(--muted)" font-size="12" font-weight="700">3. DOM 五道安检与 12 维品质评分渲染层</text>
+
+              <rect x="20" y="560" width="1060" height="258" rx="12" fill="none" stroke="var(--border)" stroke-dasharray="6 4" />
+              <text x="34" y="580" fill="var(--muted)" font-size="12" font-weight="700">4. WaterfallLifecycle 瀑布流状态机与 Wbi 翻页闭环</text>
+
+              <!-- 连线 -->
+              <g fill="none" stroke="var(--line)" stroke-width="1.8" marker-end="url(#arrow-now)">
+                <path d="M 320 88 L 380 88" />
+                <path d="M 690 88 L 750 88" />
+
+                <path d="M 180 120 L 180 198" />
+                <path d="M 910 120 L 910 198" />
+                <path d="M 340 238 L 410 238" />
+                <path d="M 750 238 L 690 238" />
+
+                <path d="M 550 278 L 550 364" />
+                <path d="M 390 404 L 330 404" />
+                <path d="M 710 404 L 770 404" />
+                <path d="M 185 446 L 185 470 L 420 470" />
+                <path d="M 915 446 L 915 470 L 680 470" />
+
+                <path d="M 550 524 L 550 600" />
+                <path d="M 410 634 L 320 634" />
+                <path d="M 690 634 L 780 634" />
+                <path d="M 190 668 L 190 714" />
+                <path d="M 910 668 L 910 714" />
+                <path d="M 320 752 L 420 752" />
+                <path d="M 780 752 L 680 752" />
+                <!-- 翻页回环到清洗层 -->
+                <path d="M 550 790 L 550 806 L 44 806 L 44 238 L 60 238" stroke-dasharray="5 4" />
+              </g>
+
+              <!-- 节点：阶段 1 -->
+              <g class="node" data-group="now" data-id="now-url">
+                <rect x="60" y="54" width="260" height="66" rx="10" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.6" />
+                <text x="190" y="80" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">URL / Hash 语法解析</text>
+                <text x="190" y="100" text-anchor="middle" fill="var(--muted)" font-size="11">提取普通词 / -排除 / #Tag / @UP</text>
+              </g>
+
+              <g class="node" data-group="now" data-id="now-strip">
+                <rect x="380" y="54" width="310" height="66" rx="10" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.6" />
+                <text x="535" y="80" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">API 搜索词脱壳与简繁归一化</text>
+                <text x="535" y="100" text-anchor="middle" fill="var(--muted)" font-size="11">剔除 -词、剥离 #/@ 并转简体 (OpenCC)</text>
+              </g>
+
+              <g class="node" data-group="now" data-id="now-fetch-req">
+                <rect x="750" y="54" width="300" height="66" rx="10" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.6" />
+                <text x="900" y="80" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">fetch 请求前拦截与 Wbi 重签</text>
+                <text x="900" y="100" text-anchor="middle" fill="var(--muted)" font-size="11">改写 keyword 后重算 wts 与 w_rid</text>
+              </g>
+
+              <!-- 阶段 2 -->
+              <g class="node" data-group="now" data-id="now-ssr">
+                <rect x="60" y="198" width="280" height="80" rx="10" fill="var(--green-soft)" stroke="var(--green)" stroke-width="1.6" />
+                <text x="200" y="226" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">首屏 SSR 状态轮询</text>
+                <text x="200" y="246" text-anchor="middle" fill="var(--muted)" font-size="11">扫描 __pinia 与 __INITIAL_STATE__</text>
+                <text x="200" y="263" text-anchor="middle" fill="var(--muted)" font-size="11">80ms 高频补齐点赞/收藏全量数据</text>
+              </g>
+
+              <g class="node" data-group="now" data-id="now-clean">
+                <rect x="410" y="198" width="280" height="80" rx="10" fill="var(--green-soft)" stroke="var(--green)" stroke-width="1.8" />
+                <text x="550" y="226" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">cleanAdsOnly() 清洗与入库</text>
+                <text x="550" y="246" text-anchor="middle" fill="var(--muted)" font-size="11">物理剔除推广/广告条目</text>
+                <text x="550" y="263" text-anchor="middle" fill="var(--muted)" font-size="11">写入 videoTagMap / videoStatMap</text>
+              </g>
+
+              <g class="node" data-group="now" data-id="now-fetch-res">
+                <rect x="750" y="198" width="300" height="80" rx="10" fill="var(--green-soft)" stroke="var(--green)" stroke-width="1.6" />
+                <text x="900" y="226" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">fetch 响应体克隆改写</text>
+                <text x="900" y="246" text-anchor="middle" fill="var(--muted)" font-size="11">兼容 /search/all 分类与 /search/type</text>
+                <text x="900" y="263" text-anchor="middle" fill="var(--muted)" font-size="11">首屏返回后唤醒过滤与瀑布流同步</text>
+              </g>
+
+              <!-- 阶段 3 -->
+              <g class="node" data-group="now" data-id="now-filter">
+                <rect x="390" y="364" width="320" height="82" rx="10" fill="var(--amber-soft)" stroke="var(--amber)" stroke-width="1.8" />
+                <text x="550" y="392" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">filterDOMElements() 五道安检</text>
+                <text x="550" y="411" text-anchor="middle" fill="var(--muted)" font-size="11">1-4: 排除/标题/Tag/UP · 5: 品质多选</text>
+                <text x="550" y="428" text-anchor="middle" fill="var(--muted)" font-size="11">幂等缓存 + Tag/Stat 就绪门控</text>
+              </g>
+
+              <g class="node" data-group="now" data-id="now-quality">
+                <rect x="56" y="364" width="274" height="82" rx="10" fill="var(--violet-soft)" stroke="var(--violet)" stroke-width="1.6" />
+                <text x="193" y="392" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">12 维品质 + 三层评分</text>
+                <text x="193" y="411" text-anchor="middle" fill="var(--muted)" font-size="11">时长/播放加权 + 拉普拉斯平滑分</text>
+                <text x="193" y="428" text-anchor="middle" fill="var(--muted)" font-size="11">渲染封面右侧竖向勋章胶囊</text>
+              </g>
+
+              <g class="node" data-group="now" data-id="now-ui">
+                <rect x="770" y="364" width="280" height="82" rx="10" fill="var(--amber-soft)" stroke="var(--amber)" stroke-width="1.6" />
+                <text x="910" y="392" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">可见性渲染与吸顶常驻</text>
+                <text x="910" y="411" text-anchor="middle" fill="var(--muted)" font-size="11">语法淘汰→虚化/隐藏；品质淘汰→display:none</text>
+                <text x="910" y="428" text-anchor="middle" fill="var(--muted)" font-size="11">更新品质筛选计数与吸顶栏占位</text>
+              </g>
+
+              <g class="node" data-group="now" data-id="now-sync-bridge">
+                <rect x="420" y="466" width="260" height="58" rx="10" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.6" />
+                <text x="550" y="491" text-anchor="middle" fill="var(--text)" font-size="12" font-weight="700">通知 WaterfallLifecycle.sync('filter')</text>
+                <text x="550" y="509" text-anchor="middle" fill="var(--muted)" font-size="11">首屏卡片过少时自动触发补页</text>
+              </g>
+
+              <!-- 阶段 4 -->
+              <g class="node" data-group="now" data-id="now-wf-state">
+                <rect x="410" y="600" width="280" height="68" rx="10" fill="var(--violet-soft)" stroke="var(--violet)" stroke-width="1.8" />
+                <text x="550" y="627" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">WaterfallLifecycle 状态机</text>
+                <text x="550" y="646" text-anchor="middle" fill="var(--muted)" font-size="11">shouldMount() → 挂载 / 更新 / 卸载</text>
+              </g>
+
+              <g class="node" data-group="now" data-id="now-wf-mount">
+                <rect x="60" y="600" width="260" height="68" rx="10" fill="var(--violet-soft)" stroke="var(--violet)" stroke-width="1.6" />
+                <text x="190" y="627" text-anchor="middle" fill="var(--text)" font-size="12" font-weight="700">冷启动保护与监听绑定</text>
+                <text x="190" y="646" text-anchor="middle" fill="var(--muted)" font-size="11">page&gt;1 回首页 · 徽章/Observer/scroll</text>
+              </g>
+
+              <g class="node" data-group="now" data-id="now-wf-route">
+                <rect x="780" y="600" width="270" height="68" rx="10" fill="var(--violet-soft)" stroke="var(--violet)" stroke-width="1.6" />
+                <text x="915" y="627" text-anchor="middle" fill="var(--text)" font-size="12" font-weight="700">SPA 路由与搜索触发劫持</text>
+                <text x="915" y="646" text-anchor="middle" fill="var(--muted)" font-size="11">pushState / 分页点击 / 搜索防抖重置</text>
+              </g>
+
+              <g class="node" data-group="now" data-id="now-wf-fetch">
+                <rect x="60" y="714" width="260" height="76" rx="10" fill="var(--green-soft)" stroke="var(--green)" stroke-width="1.8" />
+                <text x="190" y="741" text-anchor="middle" fill="var(--text)" font-size="12" font-weight="700">Wbi 单例翻页请求</text>
+                <text x="190" y="759" text-anchor="middle" fill="var(--muted)" font-size="11">sessionSeq + AbortController 防竞态</text>
+                <text x="190" y="776" text-anchor="middle" fill="var(--muted)" font-size="11">请求 /wbi/search/type 下一页</text>
+              </g>
+
+              <g class="node" data-group="now" data-id="now-wf-append">
+                <rect x="420" y="714" width="260" height="76" rx="10" fill="var(--green-soft)" stroke="var(--green)" stroke-width="1.8" />
+                <text x="550" y="741" text-anchor="middle" fill="var(--text)" font-size="12" font-weight="700">appendCards() 增量追加</text>
+                <text x="550" y="759" text-anchor="middle" fill="var(--muted)" font-size="11">BV 号去重 + 增量安检 + 更新页码</text>
+                <text x="550" y="776" text-anchor="middle" fill="var(--muted)" font-size="11">空结果自动校准 maxWaterfallPage</text>
+              </g>
+
+              <g class="node" data-group="now" data-id="now-wf-finish">
+                <rect x="780" y="714" width="270" height="76" rx="10" fill="var(--amber-soft)" stroke="var(--amber)" stroke-width="1.6" />
+                <text x="915" y="741" text-anchor="middle" fill="var(--text)" font-size="12" font-weight="700">finishPaging() 闭环调度</text>
+                <text x="915" y="759" text-anchor="middle" fill="var(--muted)" font-size="11">-412/-403 风控熔断重试</text>
+                <text x="915" y="776" text-anchor="middle" fill="var(--muted)" font-size="11">仍在缓冲带则 60ms 连贯续载</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+
+        <aside class="sidebar">
+          <div class="side-card">
+            <h2>节点说明（点击左侧节点切换）</h2>
+            <div id="detail-now"></div>
+          </div>
+        </aside>
+      </div>
+
+      <div class="mermaid-box">
+        <div class="mermaid-head">
+          <span>Mermaid 流程图源码（当前 v3.1.0 全链路闭环）</span>
+          <button type="button" class="copy-btn" data-target="mermaid-now-text">复制 Mermaid 源码</button>
+        </div>
+        <pre class="mermaid-code" id="mermaid-now-text">flowchart TD
+    A["URL Query + Hash 语法解析 (普通词 / -排除 / #Tag / @UP)"] --> B["API 搜索词脱壳 + OpenCC 简繁归一化"]
+    B --> C["fetch 请求前拦截: 改写 keyword 并重算 Wbi 签名"]
+    D["首屏 SSR 状态轮询 (__pinia / __INITIAL_STATE__)"] --> E["cleanAdsOnly(): 剔除广告并写入 videoTagMap / videoStatMap"]
+    C --> F["fetch 响应体克隆改写 (/search/all 与 /search/type)"]
+    F --> E
+    E --> G["filterDOMElements() 五道安检 (幂等缓存 + 就绪门控)"]
+    G --> H["12 维品质象限 + 三层健康度评分 + 封面右侧竖向勋章"]
+    G --> I["差异化渲染: 语法淘汰虚化/隐藏, 品质淘汰物理隐藏, 筛选栏吸顶"]
+    I --> J["WaterfallLifecycle.sync('filter')"]
+    K["DOMContentLoaded / load / SPA路由 / MutationObserver"] --> J
+    J --> L{"shouldMount() 准入守卫"}
+    L -- "挂载" --> M["冷启动防尾页白屏 + 绑定 Observer/scroll/resize"]
+    L -- "更新" --> N["按 reason 分发局部刷新或重置"]
+    L -- "卸载" --> O["中止请求 / 解绑监听 / 清理 UI"]
+    M --> P["triggerLoadNextPage(): sessionSeq 防竞态 + Wbi 分页请求"]
+    N --> P
+    P --> Q["appendCards() 去重追加 + 增量过滤"]
+    Q --> R{"finishPaging() 收尾"}
+    R -- "仍在视口+1000px缓冲" --> P
+    R -- "-412/-403 风控或失败" --> S["showErrorLoader() 点击重试"]
+    R -- "达到末页/空数据" --> T["showEndedLoader() 已加载全部"]</pre>
+      </div>
+    </section>
+
+    <!-- ================= 视图 2：终极形态 ================= -->
+    <section id="tab-future" class="view-section">
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="k-title" style="color:var(--cyan)">🌐 跨平台统一内容质量协议</div>
+          <p class="k-desc">从单站脚本进化为浏览器扩展内核，横向适配 B 站、YouTube、小红书、知乎、GitHub，统一输出内容纯度标准。</p>
+        </div>
+        <div class="kpi-card">
+          <div class="k-title" style="color:var(--green)">🧠 多模态内容理解与反作弊</div>
+          <p class="k-desc">融合字幕/热评语义挖掘（省流/恰饭/勘误）、SponsorBlock 片段跳过与创作者长期信誉图谱。</p>
+        </div>
+        <div class="kpi-card">
+          <div class="k-title" style="color:var(--amber)">⚖️ 客户端多目标二次精排</div>
+          <p class="k-desc">并发召回多页候选集，按用户可调的“均衡器权重”在本地重排、同质化折叠，夺回排序权。</p>
+        </div>
+        <div class="kpi-card">
+          <div class="k-title" style="color:var(--violet)">🔒 Local-first 端侧智能与专业工作台</div>
+          <p class="k-desc">WebGPU 端侧意图识别 + IndexedDB 零上传个人画像，并延伸出学习路径导出与竞品调研工作台。</p>
+        </div>
+      </div>
+
+      <div class="workspace">
+        <div class="canvas-card">
+          <div class="legend">
+            <span class="legend-item"><i class="dot" style="background:#22d3ee"></i> 多平台适配器与社区规则</span>
+            <span class="legend-item"><i class="dot" style="background:#34d399"></i> 多模态与反作弊信号层</span>
+            <span class="legend-item"><i class="dot" style="background:#fbbf24"></i> 客户端重排与端侧智能</span>
+            <span class="legend-item"><i class="dot" style="background:#a78bfa"></i> 终局产品交付形态</span>
+          </div>
+          <div class="svg-viewport">
+            <svg class="diagram" id="svg-future" width="1100" height="820" viewBox="0 0 1100 820" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <marker id="arrow-future" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                  <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--line)" />
+                </marker>
+              </defs>
+
+              <!-- 4 层架构框 -->
+              <rect x="20" y="16" width="1060" height="128" rx="12" fill="none" stroke="var(--border)" stroke-dasharray="6 4" />
+              <text x="34" y="36" fill="var(--muted)" font-size="12" font-weight="700">L1 · 多平台接入与社区协作层（Browser Extension + 适配内核）</text>
+
+              <rect x="20" y="164" width="1060" height="154" rx="12" fill="none" stroke="var(--border)" stroke-dasharray="6 4" />
+              <text x="34" y="184" fill="var(--muted)" font-size="12" font-weight="700">L2 · 多模态信号抽取与创作者信誉层（超越单纯互动计数）</text>
+
+              <rect x="20" y="338" width="1060" height="232" rx="12" fill="none" stroke="var(--border)" stroke-dasharray="6 4" />
+              <text x="34" y="358" fill="var(--muted)" font-size="12" font-weight="700">L3 · 客户端个人精排与端侧智能层（Local-first 算法主权）</text>
+
+              <rect x="20" y="590" width="1060" height="206" rx="12" fill="none" stroke="var(--border)" stroke-dasharray="6 4" />
+              <text x="34" y="610" fill="var(--muted)" font-size="12" font-weight="700">L4 · 终局产品交付与知识工作流</text>
+
+              <!-- 连线 -->
+              <g fill="none" stroke="var(--line)" stroke-width="1.8" marker-end="url(#arrow-future)">
+                <path d="M 200 124 L 200 206" />
+                <path d="M 550 124 L 550 206" />
+                <path d="M 900 124 L 900 206" />
+
+                <path d="M 200 296 L 200 382" />
+                <path d="M 550 296 L 550 382" />
+                <path d="M 900 296 L 900 382" />
+
+                <path d="M 320 422 L 400 422" />
+                <path d="M 700 422 L 780 422" />
+                <path d="M 550 462 L 550 486" />
+
+                <path d="M 550 554 L 550 632" />
+                <path d="M 380 684 L 220 684 L 220 698" />
+                <path d="M 720 684 L 880 684 L 880 698" />
+              </g>
+
+              <!-- L1 -->
+              <g class="node" data-group="future" data-id="fut-adapters">
+                <rect x="56" y="54" width="290" height="70" rx="10" fill="var(--cyan-soft)" stroke="var(--cyan)" stroke-width="1.6" />
+                <text x="201" y="81" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">跨平台内容适配器</text>
+                <text x="201" y="101" text-anchor="middle" fill="var(--muted)" font-size="11">B站 / YouTube / 小红书 / 知乎 / GitHub</text>
+              </g>
+
+              <g class="node" data-group="future" data-id="fut-recall">
+                <rect x="400" y="54" width="300" height="70" rx="10" fill="var(--cyan-soft)" stroke="var(--cyan)" stroke-width="1.6" />
+                <text x="550" y="81" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">多页并发候选召回器</text>
+                <text x="550" y="101" text-anchor="middle" fill="var(--muted)" font-size="11">静默抓取 Top 60~150 条构建候选池</text>
+              </g>
+
+              <g class="node" data-group="future" data-id="fut-rules">
+                <rect x="756" y="54" width="290" height="70" rx="10" fill="var(--cyan-soft)" stroke="var(--cyan)" stroke-width="1.6" />
+                <text x="901" y="81" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">社区规则订阅源</text>
+                <text x="901" y="101" text-anchor="middle" fill="var(--muted)" font-size="11">可订阅行业白名单 / 搬运营销黑名单</text>
+              </g>
+
+              <!-- L2 -->
+              <g class="node" data-group="future" data-id="fut-nlp">
+                <rect x="56" y="206" width="290" height="90" rx="10" fill="var(--green-soft)" stroke="var(--green)" stroke-width="1.6" />
+                <text x="201" y="234" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">字幕与热评语义挖掘</text>
+                <text x="201" y="254" text-anchor="middle" fill="var(--muted)" font-size="11">识别“省流 / 空降 / 勘误 / 恰饭警告”</text>
+                <text x="201" y="273" text-anchor="middle" fill="var(--muted)" font-size="11">修正标题党高互动的指标失真</text>
+              </g>
+
+              <g class="node" data-group="future" data-id="fut-rep">
+                <rect x="400" y="206" width="300" height="90" rx="10" fill="var(--green-soft)" stroke="var(--green)" stroke-width="1.6" />
+                <text x="550" y="234" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">创作者长期信誉图谱</text>
+                <text x="550" y="254" text-anchor="middle" fill="var(--muted)" font-size="11">反矩阵洗稿 / 反 AI 批量念稿</text>
+                <text x="550" y="273" text-anchor="middle" fill="var(--muted)" font-size="11">异常刷量曲线检测与全站降权</text>
+              </g>
+
+              <g class="node" data-group="future" data-id="fut-sponsor">
+                <rect x="756" y="206" width="290" height="90" rx="10" fill="var(--green-soft)" stroke="var(--green)" stroke-width="1.6" />
+                <text x="901" y="234" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">片段级众包标记 (SponsorBlock)</text>
+                <text x="901" y="254" text-anchor="middle" fill="var(--muted)" font-size="11">标注片头废话 / 硬广植入 / 有效内容占比</text>
+                <text x="901" y="273" text-anchor="middle" fill="var(--muted)" font-size="11">联动播放页自动跳过水段</text>
+              </g>
+
+              <!-- L3 -->
+              <g class="node" data-group="future" data-id="fut-intent">
+                <rect x="56" y="382" width="264" height="80" rx="10" fill="var(--amber-soft)" stroke="var(--amber)" stroke-width="1.6" />
+                <text x="188" y="409" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">端侧自然语言意图理解</text>
+                <text x="188" y="429" text-anchor="middle" fill="var(--muted)" font-size="11">WebGPU / WASM 轻量模型</text>
+                <text x="188" y="446" text-anchor="middle" fill="var(--muted)" font-size="11">区分系统教程 vs 速通 vs 踩坑</text>
+              </g>
+
+              <g class="node" data-group="future" data-id="fut-rerank">
+                <rect x="400" y="382" width="300" height="80" rx="10" fill="var(--amber-soft)" stroke="var(--amber)" stroke-width="1.8" />
+                <text x="550" y="409" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">客户端多目标二次精排</text>
+                <text x="550" y="429" text-anchor="middle" fill="var(--muted)" font-size="11">打破原生页码 · 均衡器权重实时重排</text>
+                <text x="550" y="446" text-anchor="middle" fill="var(--muted)" font-size="11">相关性 × 纯度 × 时效 × 个人偏好</text>
+              </g>
+
+              <g class="node" data-group="future" data-id="fut-dedup">
+                <rect x="780" y="382" width="266" height="80" rx="10" fill="var(--amber-soft)" stroke="var(--amber)" stroke-width="1.6" />
+                <text x="913" y="409" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">语义同质化聚类折叠</text>
+                <text x="913" y="429" text-anchor="middle" fill="var(--muted)" font-size="11">识别同事件/切片的数十个搬运号</text>
+                <text x="913" y="446" text-anchor="middle" fill="var(--muted)" font-size="11">仅置顶最高分或原作者版本</text>
+              </g>
+
+              <g class="node" data-group="future" data-id="fut-profile">
+                <rect x="340" y="486" width="420" height="68" rx="10" fill="var(--amber-soft)" stroke="var(--amber)" stroke-width="1.6" />
+                <text x="550" y="513" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">IndexedDB 零上传本地隐私偏好模型</text>
+                <text x="550" y="533" text-anchor="middle" fill="var(--muted)" font-size="11">从点击 / 跳过 / 完播 / 屏蔽行为中学习，数据完全不出浏览器</text>
+              </g>
+
+              <!-- L4 -->
+              <g class="node" data-group="future" data-id="fut-feed">
+                <rect x="56" y="654" width="320" height="106" rx="10" fill="var(--violet-soft)" stroke="var(--violet)" stroke-width="1.6" />
+                <text x="216" y="684" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">用户主权级重排搜索流</text>
+                <text x="216" y="706" text-anchor="middle" fill="var(--muted)" font-size="11">无商业暗箱推广 · 所见即所得调参</text>
+                <text x="216" y="726" text-anchor="middle" fill="var(--muted)" font-size="11">可视化解释每条内容为何排在此处</text>
+              </g>
+
+              <g class="node" data-group="future" data-id="fut-protocol">
+                <rect x="404" y="632" width="292" height="128" rx="10" fill="var(--violet-soft)" stroke="var(--violet)" stroke-width="1.8" />
+                <text x="550" y="665" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700">全网统一内容质量基础设施</text>
+                <text x="550" y="688" text-anchor="middle" fill="var(--muted)" font-size="11">统一标准的「纯度分 / 干货度 / 避坑率」</text>
+                <text x="550" y="708" text-anchor="middle" fill="var(--muted)" font-size="11">桌面端与移动端浏览器扩展一致体验</text>
+                <text x="550" y="728" text-anchor="middle" fill="var(--muted)" font-size="11">规则加密同步 + 团队共享</text>
+              </g>
+
+              <g class="node" data-group="future" data-id="fut-saas">
+                <rect x="724" y="654" width="322" height="106" rx="10" fill="var(--violet-soft)" stroke="var(--violet)" stroke-width="1.6" />
+                <text x="885" y="684" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">专业知识检索与调研工作台</text>
+                <text x="885" y="706" text-anchor="middle" fill="var(--muted)" font-size="11">一键导出 Top N 硬核学习路径/摘要</text>
+                <text x="885" y="726" text-anchor="middle" fill="var(--muted)" font-size="11">赋能教研选课、赛道爆款归因与竞品分析</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+
+        <aside class="sidebar">
+          <div class="side-card">
+            <h2>架构演进说明（点击左侧模块）</h2>
+            <div id="detail-future"></div>
+          </div>
+        </aside>
+      </div>
+
+      <div class="mermaid-box">
+        <div class="mermaid-head">
+          <span>Mermaid 架构图源码（终极形态：个人搜索与内容质量引擎）</span>
+          <button type="button" class="copy-btn" data-target="mermaid-future-text">复制 Mermaid 源码</button>
+        </div>
+        <pre class="mermaid-code" id="mermaid-future-text">flowchart TD
+    subgraph L1["L1 · 多平台接入与规则层"]
+        A1["跨平台适配器 (B站 / YouTube / 小红书 / 知乎 / GitHub)"]
+        A2["多页并发候选召回器 (静默拉取 Top 60-150 条)"]
+        A3["社区规则订阅源 (行业白名单 / 营销黑名单)"]
+    end
+
+    subgraph L2["L2 · 多模态信号与反作弊层"]
+        B1["字幕与热评语义挖掘 (省流 / 空降 / 勘误 / 恰饭)"]
+        B2["创作者长期信誉图谱 (反矩阵洗稿 / AI念稿 / 刷量)"]
+        B3["片段级众包标记 (SponsorBlock 跳过水段)"]
+    end
+
+    subgraph L3["L3 · 客户端个人精排与端侧智能"]
+        C1["端侧意图理解 (WebGPU / WASM 轻量语义)"]
+        C2["客户端多目标二次精排 (权重均衡器实时重排)"]
+        C3["语义同质化聚类折叠 (合并搬运仅留高分原版)"]
+        C4["IndexedDB 本地零上传隐私偏好模型"]
+    end
+
+    subgraph L4["L4 · 终局产品交付"]
+        D1["用户主权级可解释搜索流"]
+        D2["跨平台统一纯度评分协议 (Browser Extension)"]
+        D3["专业知识清单导出与竞品调研工作台"]
+    end
+
+    A1 --> B1
+    A2 --> B2
+    A3 --> B3
+    B1 --> C1 --> C2
+    B2 --> C2
+    B3 --> C3
+    C2 --> C4
+    C3 --> C2
+    C4 --> D1
+    C2 --> D2
+    C2 --> D3</pre>
+      </div>
+    </section>
+
+    <!-- ================= 视图 3：对比矩阵 ================= -->
+    <section id="tab-matrix" class="view-section">
+      <div class="matrix-card">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:16%">演进维度</th>
+              <th style="width:40%">当前状态（v3.1.0）</th>
+              <th style="width:44%">终极形态（比肩大厂客户端引擎）</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>核心定位</strong></td>
+              <td><span class="tag-now">页面增强与过滤</span><br/>在 B 站原生排序结果之上执行精确语法剔除、品质标注与无缝滚动加载。</td>
+              <td><span class="tag-next">个人搜索重排引擎</span><br/>多页召回候选池 + 本地多目标精排，夺回排序权，直接替代平台商业排序。</td>
+            </tr>
+            <tr>
+              <td><strong>检索与意图</strong></td>
+              <td><span class="tag-now">显式语法</span><br/>依赖用户手写 <code>-排除词</code>、<code>#Tag</code>、<code>@UP主</code> 与简繁归一化匹配。</td>
+              <td><span class="tag-next">端侧语义理解</span><br/>自然语言直接识别学习/速通/避坑意图，自动匹配加权模型并折叠同质化搬运。</td>
+            </tr>
+            <tr>
+              <td><strong>质量信号来源</strong></td>
+              <td><span class="tag-now">单条视频互动指标</span><br/>播放、点赞、收藏、弹幕、评论、时长、发布时间（12 象限 + 三层评分）。</td>
+              <td><span class="tag-next">多模态 + 创作者信誉</span><br/>叠加字幕/热评情绪挖掘、片段级硬广识别（SponsorBlock）与创作者长期反作弊图谱。</td>
+            </tr>
+            <tr>
+              <td><strong>排序与筛选</strong></td>
+              <td><span class="tag-now">仅支持筛选（保留/隐藏）</span><br/>保留原生接口顺序，支持品质药丸多选过滤与虚化/隐藏切换。</td>
+              <td><span class="tag-next">动态均衡器重排</span><br/>实时拖动质量/干货/时效/冷门权重滑块，毫秒级重排已召回的百条候选结果。</td>
+            </tr>
+            <tr>
+              <td><strong>平台与载体</strong></td>
+              <td><span class="tag-now">B 站搜索页单文件脚本</span><br/>面向桌面端 <code>/all</code> 与 <code>/video</code> 搜索场景的 Tampermonkey 脚本。</td>
+              <td><span class="tag-next">跨平台扩展与调研台</span><br/>浏览器扩展（桌面+移动）适配 YouTube/小红书/知乎等，并支持学习清单导出与竞品调研。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const DETAILS = {
+      now: {
+        'now-url': {
+          title: 'URL / Hash 语法解析',
+          badge: '阶段 1 · 输入解析',
+          desc: '从 URL query 与 hash fragment 兼容提取完整搜索词，按空格拆分为普通词、-排除词、#Tag词、@UP主词。',
+          items: ['解决浏览器未编码 # 被截断到 location.hash 的问题', '带 query+hash 级记忆缓存']
+        },
+        'now-strip': {
+          title: 'API 搜索词脱壳与简繁归一化',
+          badge: '阶段 1 · 参数清洗',
+          desc: '把包含语法前缀的词还原为纯净关键词发给 B 站接口，避免后端把 - 或 @ 当作普通字面词导致搜不到结果。',
+          items: ['剔除 -排除词', '剥离 #/@ 前缀并调用 OpenCC 转为简体']
+        },
+        'now-fetch-req': {
+          title: 'fetch 请求前拦截与 Wbi 重签',
+          badge: '阶段 1 · 网络拦截',
+          desc: '拦截 B 站原生发起的搜索请求，修改 keyword 参数；若请求携带 /wbi/ 或 w_rid，自动重新签名。',
+          items: ['internalFetchSignals 放行瀑布流自身分页请求，避免死循环']
+        },
+        'now-ssr': {
+          title: '首屏 SSR 状态轮询',
+          badge: '阶段 2 · 首屏采集',
+          desc: '页面初载时以 80ms 间隔轮询 __pinia 与 __INITIAL_STATE__，第一时间提取完整赞/藏/弹/评与 Tag 数据。',
+          items: ['最多轮询 20 次后自动收手', '就绪后清除早期缓存并触发重扫']
+        },
+        'now-clean': {
+          title: 'cleanAdsOnly() 清洗与入库',
+          badge: '阶段 2 · 数据底座',
+          desc: '物理剔除商业推广和广告条目，同时将视频 Tag 与完整统计指标写入有界缓存 Map（上限 5000 条）。',
+          items: ['小写化 bvid / id 键名确保大小写一致命中', '跳过直播与付费课程条目']
+        },
+        'now-fetch-res': {
+          title: 'fetch 响应体克隆改写',
+          badge: '阶段 2 · 响应拦截',
+          desc: '克隆响应 JSON 清洗各分类下广告，若有删减则构造新 Response 返回给页面 Vue 层。',
+          items: ['首屏返回后延时 120ms 唤醒 WaterfallLifecycle.sync("official-search")']
+        },
+        'now-filter': {
+          title: 'filterDOMElements() 五道安检',
+          badge: '阶段 3 · 核心过滤',
+          desc: '对所有视频卡片执行 4 道语法过滤 + 1 道品质多选过滤，结合 currentQueryKey 跳过已判定卡片。',
+          items: ['isTagReady 与 isStatReady 双重就绪门控，避免数据未到前过早锁死缓存']
+        },
+        'now-quality': {
+          title: '12 维品质 + 三层健康度评分',
+          badge: '阶段 3 · 质量引擎',
+          desc: '在互动数据完整时计算时长与播放量修正因子，走 12 象限漏斗分级与 0~100 分明细计算。',
+          items: ['拉普拉斯平滑防止极低样本分数虚高', '分区权重微调与明码加减分解释']
+        },
+        'now-ui': {
+          title: '可见性渲染与吸顶常驻',
+          badge: '阶段 3 · 视觉呈现',
+          desc: '语法未通过交由根类名控制虚化或隐藏；品质未通过则物理 display:none，并同步刷新筛选统计计数。',
+          items: ['筛选栏吸顶与占位防抖，避免页面跳动']
+        },
+        'now-sync-bridge': {
+          title: '过滤联动瀑布流补页',
+          badge: '阶段 3 · 模块联动',
+          desc: '过滤淘汰大量卡片导致首屏变短时，通知状态机检查是否需要静默拉取下一页补齐视口。',
+          items: ['checkWaterfallFillScreen() 检测最后一个可见卡片位置']
+        },
+        'now-wf-state': {
+          title: 'WaterfallLifecycle 状态机',
+          badge: '阶段 4 · 核心调度',
+          desc: '收口所有页面挂载、路由切换、DOM 变动与过滤事件，由 shouldMount() 统一决定挂载、更新或卸载。',
+          items: ['彻底隔离非视频搜索页（如番剧/用户 Tab）']
+        },
+        'now-wf-mount': {
+          title: '冷启动保护与监听绑定',
+          badge: '阶段 4 · 挂载初始化',
+          desc: '发现 URL 残留 page>1 或 o>0 时强制重定向回纯净首页，随后创建悬浮微标与加载条。',
+          items: ['仅在挂载期间绑定 scroll / resize / IntersectionObserver']
+        },
+        'now-wf-route': {
+          title: 'SPA 路由与搜索触发劫持',
+          badge: '阶段 4 · 路由同步',
+          desc: '拦截 pushState / replaceState / popstate 及分页器与搜索框操作，防抖合并后比对搜索签名决定是否重置。',
+          items: ['保留 pendingWithSticky 标记防止吸顶观察者丢失']
+        },
+        'now-wf-fetch': {
+          title: 'Wbi 单例翻页请求',
+          badge: '阶段 4 · 分页拉取',
+          desc: '通过 isPaging 互斥锁防止重复翻页，利用 pagingSessionSeq + AbortController 防止切词后旧响应污染新列表。',
+          items: ['直连 /x/web-interface/wbi/search/type 接口']
+        },
+        'now-wf-append': {
+          title: 'appendCards() 增量追加',
+          badge: '阶段 4 · 渲染闭环',
+          desc: '克隆原生卡片结构批量渲染新页数据，BV 去重后直接触发增量过滤与品质勋章渲染。',
+          items: ['返回空数组时立即校准 maxWaterfallPage 并锁定到底']
+        },
+        'now-wf-finish': {
+          title: 'finishPaging() 闭环调度',
+          badge: '阶段 4 · 状态收尾',
+          desc: '识别 -412/-403 风控码提供点击重试；若仍在视口 + 1000px 缓冲带内，60ms 后连贯续载下一页。',
+          items: ['离开缓冲带则平滑收起加载条并在 300ms 后复检']
+        }
+      },
+      future: {
+        'fut-adapters': {
+          title: '跨平台内容适配器',
+          badge: 'L1 · 通用接入',
+          desc: '把目前耦合在 B 站 DOM 与 Wbi 接口上的逻辑抽象为“站点适配器”，输出标准化内容卡片 Schema。',
+          items: ['一套质量评价内核横向复用至 YouTube、小红书、知乎、GitHub']
+        },
+        'fut-recall': {
+          title: '多页并发候选召回器',
+          badge: 'L1 · 候选池扩增',
+          desc: '不再受限于单页 20～30 条的顺序分页，搜索瞬间静默并发拉取前 3～5 页构建本地候选池。',
+          items: ['为本地二次精排提供足够高质量样本（例如从第 4 页捞出殿堂神作）']
+        },
+        'fut-rules': {
+          title: '社区规则订阅源',
+          badge: 'L1 · 众包协作',
+          desc: '支持像 AdGuard / uBlock 一样订阅社区维护的领域规则源。',
+          items: ['一键订阅“编程优质 UP 主白名单”或“常见搬运营销矩阵黑名单”']
+        },
+        'fut-nlp': {
+          title: '字幕与热评语义挖掘',
+          badge: 'L2 · 内容穿透',
+          desc: '突破纯计数指标的上限，直接读取字幕文本与前排高赞评论语义。',
+          items: ['捕获“省流”“前 3 分钟废话”“硬广预警”“评论区勘误”等关键真实反馈']
+        },
+        'fut-rep': {
+          title: '创作者长期信誉图谱',
+          badge: 'L2 · 账号级反作弊',
+          desc: '建立 UP 主/作者维度的历史质量档案，而非每次孤立评估单条视频。',
+          items: ['识别高频洗稿、AI 批量念稿与异常互动比例，全站自动降权']
+        },
+        'fut-sponsor': {
+          title: '片段级众包标记 (SponsorBlock)',
+          badge: 'L2 · 时间轴降噪',
+          desc: '将质量评估精细到视频内部时间轴，预判有效干货时长占比。',
+          items: ['搜索卡片直接标出“含广/注水比例”，点击播放联动自动跳过']
+        },
+        'fut-intent': {
+          title: '端侧自然语言意图理解',
+          badge: 'L3 · 本地 AI',
+          desc: '借助浏览器 WebGPU / WASM 运行轻量级端侧语义模型，自动理解查询意图。',
+          items: ['无需手写语法即可区分“系统学习教程”与“3 分钟速通吐槽”']
+        },
+        'fut-rerank': {
+          title: '客户端多目标二次精排',
+          badge: 'L3 · 核心壁垒',
+          desc: '大厂搜索团队的核心能力下沉到用户浏览器：多维度加权实时重排已召回的候选集。',
+          items: ['提供可视化“均衡器滑块”，让用户自己决定相关性、纯度、时效与冷门权重']
+        },
+        'fut-dedup': {
+          title: '语义同质化聚类折叠',
+          badge: 'L3 · 信息去噪',
+          desc: '针对热点事件或热门切片被大量营销号重复搬运的问题，在本地做标题与文本相似聚类。',
+          items: ['同质内容自动折叠为一组，默认只展示最高分或原作者版本']
+        },
+        'fut-profile': {
+          title: 'IndexedDB 零上传本地隐私模型',
+          badge: 'L3 · 隐私优先',
+          desc: '在本地记录用户的跳过、屏蔽、收藏与完播偏好，持续微调排序权重。',
+          items: ['既实现千人千面精准度，又保证行为数据 100% 留存本地不上传云端']
+        },
+        'fut-feed': {
+          title: '用户主权级重排搜索流',
+          badge: 'L4 · 体验终局',
+          desc: '彻底取代平台以商业变现和总时长为核心的黑盒排序，给用户透明、可控的检索信息流。',
+          items: ['每条推荐理由与评分组成完全透明可解释']
+        },
+        'fut-protocol': {
+          title: '全网统一内容质量基础设施',
+          badge: 'L4 · 生态标准',
+          desc: '成为浏览器端的通用质量层（Browser Extension），覆盖桌面端与移动端。',
+          items: ['跨站点统一口径的纯度分、干货标签与避坑预警']
+        },
+        'fut-saas': {
+          title: '专业知识检索与调研工作台',
+          badge: 'L4 · 专业增值',
+          desc: '从“看视频省时间”升级为知识整理与内容调研生产力工具。',
+          items: ['支持一键导出某主题 Top N 高分学习路径、字幕摘要与竞品分析报表']
+        }
+      }
+    };
+
+    function renderDetail(group, id) {
+      const info = DETAILS[group]?.[id];
+      if (!info) return;
+      document.querySelectorAll(`.node[data-group="${group}"]`).forEach(n => {
+        n.classList.toggle('selected', n.dataset.id === id);
+      });
+      const target = document.getElementById(`detail-${group}`);
+      target.innerHTML = `
+        <div class="detail-title">${info.title}</div>
+        <span class="detail-badge">${info.badge}</span>
+        <p class="detail-desc">${info.desc}</p>
+        <ul class="detail-list">${info.items.map(i => `<li>${i}</li>`).join('')}</ul>
+      `;
+    }
+
+    document.querySelectorAll('.node').forEach(node => {
+      node.addEventListener('click', () => renderDetail(node.dataset.group, node.dataset.id));
+    });
+
+    // Tab 切换
+    let activeTab = 'now';
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeTab = btn.dataset.tab;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+        document.querySelectorAll('.view-section').forEach(s => s.classList.toggle('active', s.id === `tab-${activeTab}`));
+      });
+    });
+
+    // 缩放与主题
+    let zoom = 1;
+    function applyZoom() {
+      document.querySelectorAll('svg.diagram').forEach(s => {
+        s.style.transform = `scale(${zoom})`;
+      });
+    }
+    document.getElementById('btnZoomIn').addEventListener('click', () => {
+      zoom = Math.min(1.6, +(zoom + 0.1).toFixed(2));
+      applyZoom();
+    });
+    document.getElementById('btnZoomOut').addEventListener('click', () => {
+      zoom = Math.max(0.6, +(zoom - 0.1).toFixed(2));
+      applyZoom();
+    });
+    document.getElementById('btnZoomReset').addEventListener('click', () => {
+      zoom = 1;
+      applyZoom();
+    });
+    document.getElementById('btnTheme').addEventListener('click', () => {
+      const root = document.documentElement;
+      root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+    });
+
+    // 复制 Mermaid 源码
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const text = document.getElementById(btn.dataset.target)?.textContent || '';
+        try {
+          await navigator.clipboard.writeText(text);
+          const old = btn.textContent;
+          btn.textContent = '已复制';
+          setTimeout(() => { btn.textContent = old; }, 1500);
+        } catch {
+          btn.textContent = '请手动框选复制';
+        }
+      });
+    });
+
+    renderDetail('now', 'now-filter');
+    renderDetail('future', 'fut-rerank');
+  </script>
+</body>
+</html>
