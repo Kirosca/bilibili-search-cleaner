@@ -750,12 +750,17 @@
         let rawParam = params.get('keyword') || '';
         // 兼容处理：若浏览器将未编码的 # 截断至 Hash Fragment，补充拼回
         if (window.location.hash && !rawParam.includes('#')) {
-            const hashContent = decodeURIComponent(window.location.hash.replace(/^#/, ''));
+            let hashContent = '';
+            try {
+                hashContent = decodeURIComponent(window.location.hash.replace(/^#/, ''));
+            } catch {
+                hashContent = window.location.hash.replace(/^#/, '');
+            }
             if (hashContent) {
                 rawParam += ' #' + hashContent;
             }
         }
-        const rawKeyword = cleanText(decodeURIComponent(rawParam.replace(/\+/g, ' ')));
+        const rawKeyword = cleanText(rawParam);
         if (!rawKeyword) {
             cachedSearchKwKey = cacheKey;
             cachedSearchKwResult = { normal: [], exclude: [], tags: [], ups: [] };
@@ -788,7 +793,7 @@
     function getCleanApiKeyword() {
         const params = new URLSearchParams(window.location.search);
         const rawParam = params.get('keyword') || '';
-        const rawKeyword = decodeURIComponent(rawParam.replace(/\+/g, ' ')).trim();
+        const rawKeyword = rawParam.trim();
         if (!rawKeyword) return '';
  
         const list = rawKeyword.split(/\s+/);
