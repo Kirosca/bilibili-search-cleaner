@@ -2271,7 +2271,7 @@
             const rawTagText = [item.tag, item.keywords, item.tags, item.typename].filter(Boolean).join(',');
             if (rawTagText) {
                 const cleanedTagText = cleanText(rawTagText);
-                setBoundedMap(videoTagMap, String(item.bvid).toLowerCase(), cleanedTagText);
+                if (item.bvid) setBoundedMap(videoTagMap, String(item.bvid).toLowerCase(), cleanedTagText);
                 if (item.aid) {
                     setBoundedMap(videoTagMap, String(item.aid), cleanedTagText);
                     setBoundedMap(videoTagMap, 'av' + item.aid, cleanedTagText);
