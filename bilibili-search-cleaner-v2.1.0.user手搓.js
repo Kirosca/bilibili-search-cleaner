@@ -31,21 +31,6 @@
     let isDimmed = localStorage.getItem('bili_cleaner_dimmed') !== 'false';
     let isFilterSticky = localStorage.getItem('bili_cleaner_sticky_filter') !== 'false';
     let isWaterfall = localStorage.getItem('bili_cleaner_waterfall') !== 'false';
-
-    // 判断当前 URL 是否包含有效搜索关键词（无 keyword 参数时不触发瀑布流）
-    function hasUrlKeyword() {
-        try {
-            const kw = new URLSearchParams(window.location.search).get('keyword');
-            return Boolean(kw && kw.trim());
-        } catch (e) {
-            return false;
-        }
-    }
-
-    // 瀑布流在当前页面是否实际生效（需同时满足菜单开启且 URL 包含 keyword 参数）
-    function isWaterfallEffective() {
-        return isWaterfall && hasUrlKeyword();
-    }
     let isEvaluationBadge = localStorage.getItem('bili_cleaner_eval_badge') !== 'false';
     let isEvalFullMode = localStorage.getItem('bili_cleaner_eval_full_mode') !== 'false';
     let isEvalScoreEnabled = localStorage.getItem('bili_cleaner_eval_score') !== 'false';
@@ -270,8 +255,8 @@
         if (isEvaluationBadge && typeof updateQualityFilterCounts === 'function') {
             updateQualityFilterCounts();
         }
-        if (isWaterfallEffective() && typeof updateViewportPage === 'function') {
-            requestAnimationFrame(() => updateViewportPage(true));
+        if (typeof WaterfallLifecycle !== 'undefined') {
+            requestAnimationFrame(() => WaterfallLifecycle.sync('filter'));
         }
     }
 
@@ -1005,11 +990,9 @@
 
                 // 官方搜索响应握手：当检测到 B 站发起官方搜索（非瀑布流内部翻页请求）并返回数据时，
                 // 延时等待 Vue 将新搜索首屏结果与新分页器渲染挂载到 DOM 树，再唤醒瀑布流状态同步
-                if (!isInternalPaging && !isPaging && isWaterfallEffective()) {
+                if (!isInternalPaging && !isPaging && typeof WaterfallLifecycle !== 'undefined') {
                     setTimeout(() => {
-                        if (typeof onOfficialSearchMounted === 'function') {
-                            onOfficialSearchMounted();
-                        }
+                        WaterfallLifecycle.sync('official-search');
                     }, 120);
                 }
 
@@ -1194,8 +1177,8 @@
                 if (isEvaluationBadge && typeof updateQualityFilterCounts === 'function') {
                     updateQualityFilterCounts();
                 }
-                if (isWaterfallEffective() && typeof updateViewportPage === 'function') {
-                    updateViewportPage(true);
+                if (typeof WaterfallLifecycle !== 'undefined') {
+                    WaterfallLifecycle.sync('filter');
                 }
             }
         } finally {
@@ -1262,14 +1245,8 @@
             // B 站 Vue 在单页切换结果时会直接销毁旧分页器并创建新节点，
             // 此时旧 IntersectionObserver 会停留在脱离文档流的孤立节点上导致失效，
             // 通过监测活跃节点的 isConnected 状态与引用一致性，实现无感自愈重绑
-            if (isWaterfallEffective() && typeof bindWaterfallObserver === 'function') {
-                const currentPager = document.querySelector('.vui_pagenation, .vui_pagenation--btns');
-                if (currentPager && (!currentObservedPager || currentObservedPager !== currentPager || !currentObservedPager.isConnected)) {
-                    bindWaterfallObserver();
-                }
-            }
-            if (typeof checkSearchChange === 'function') {
-                checkSearchChange();
+            if (typeof WaterfallLifecycle !== 'undefined') {
+                WaterfallLifecycle.sync('dom');
             }
         });
     });
@@ -1392,6 +1369,7 @@
     // ==========================================
     // 10. 无缝瀑布流独立模块（Wbi API 驱动）
     // ==========================================
+    let isWaterfallMounted = false;
     let isWaterfallPaused = false;
     let isPaging = false;
     let currentPagingPromise = null;
@@ -1559,7 +1537,7 @@
 
     // 获取或创建瀑布流状态悬浮微标 DOM 元素
     function getOrCreateBadge() {
-        if (!isWaterfallEffective()) return null;
+        if (!isWaterfallMounted) return null;
         let badge = document.getElementById('bili-waterfall-badge');
         if (!badge) {
             badge = document.createElement('div');
@@ -1636,7 +1614,7 @@
 
     // 依据可视窗口内卡片的物理行数实时计算当前所在页（二分查找 + 视口局部遍历，每 6 行为一页）
     function updateViewportPage(forceRecomputeRows = false) {
-        if (!isWaterfallEffective()) return;
+        if (!isWaterfallMounted) return;
         const mainContainer = getMainListContainer(document);
         if (!mainContainer) return;
 
@@ -1711,7 +1689,7 @@
 
     // 维护加载器位置：保证 loader 节点始终插在当前活跃分页器的正前方（避免因 Vue 重新渲染导致 loader 脱落或位移）
     function ensureLoaderPosition(pager) {
-        if (!isWaterfallEffective()) return null;
+        if (!isWaterfallMounted) return null;
         let loader = document.getElementById('bili-waterfall-loader');
         if (!loader) {
             loader = document.createElement('div');
@@ -2012,7 +1990,7 @@
 
     // 检测当前屏幕卡片是否充盈，不足时触发瀑布流增补
     function checkWaterfallFillScreen() {
-        if (!isWaterfallEffective() || isWaterfallPaused || isPaging || isAllLoaded) return;
+        if (!isWaterfallMounted || isWaterfallPaused || isPaging || isAllLoaded) return;
         const mainContainer = getMainListContainer(document);
         if (!mainContainer) return;
 
@@ -2292,7 +2270,7 @@
 
     // 异步请求下一页视频数据并驱动瀑布流追加渲染（严格单例互斥：一次只能运行一个）
     async function triggerLoadNextPage() {
-        if (!isWaterfallEffective() || isWaterfallPaused || isAllLoaded) return null;
+        if (!isWaterfallMounted || isWaterfallPaused || isAllLoaded) return null;
         if (currentPagingPromise || isPaging) return currentPagingPromise;
 
         updateDynamicMaxPage();
@@ -2419,7 +2397,7 @@
 
     // 判定当前是否满足触发下一页加载的条件（视口进入预加载缓冲带且尚未全部加载完毕）
     function isPagingConditionMet() {
-        if (!isWaterfallEffective() || isWaterfallPaused || isAllLoaded) return false;
+        if (!isWaterfallMounted || isWaterfallPaused || isAllLoaded) return false;
         if (currentRequestedPage >= maxWaterfallPage) return false;
         const target = document.querySelector('.vui_pagenation, .vui_pagenation--btns') || document.getElementById('bili-waterfall-loader');
         if (!target) return false;
@@ -2470,7 +2448,7 @@
 
     // 视口相交检测与分页拉取触发器：兼备监听器离线脱落自愈功能
     function checkAndTriggerPaging() {
-        if (!isWaterfallEffective() || isWaterfallPaused || isPaging || currentPagingPromise || isAllLoaded) return;
+        if (!isWaterfallMounted || isWaterfallPaused || isPaging || currentPagingPromise || isAllLoaded) return;
         const pager = document.querySelector('.vui_pagenation, .vui_pagenation--btns') || document.getElementById('bili-waterfall-loader');
         if (!pager) return;
 
@@ -2487,7 +2465,7 @@
     // 绑定瀑布流交叉观察者（IntersectionObserver）：
     // 监听分页器触底可见性，并严格维护单例与活跃节点引用，杜绝在孤立脱轨节点上无效监听
     function bindWaterfallObserver() {
-        if (!isWaterfallEffective()) return;
+        if (!isWaterfallMounted) return;
 
         const pager = document.querySelector('.vui_pagenation, .vui_pagenation--btns');
         if (!pager) return;
@@ -2542,7 +2520,7 @@
     // 1. isNewSearch = true 时，彻底解除旧搜索（如 34 页）的所有已加载完状态，归零到第 1 页并清洗 URL 参数
     // 2. 外部切页时同步校准当前页数并刷新去重字典
     function resetWaterfallForNewSearch(isNewSearch = false) {
-        if (!isWaterfallEffective()) return;
+        if (!isWaterfallMounted) return;
         const currentSign = getSearchSignature();
         const signChanged = !lastSearchSign || currentSign !== lastSearchSign;
         lastSearchSign = currentSign;
@@ -2604,7 +2582,7 @@
 
     // B 站官方搜索响应首屏渲染完成钩子：重新采样 DOM 首屏卡片并接管新挂载的分页器
     function onOfficialSearchMounted() {
-        if (!isWaterfallEffective()) return;
+        if (!isWaterfallMounted) return;
         updateDynamicMaxPage();
         const p = parseInt(new URLSearchParams(window.location.search).get('page') || '1', 10);
         const urlPage = isNaN(p) ? 1 : p;
@@ -2632,21 +2610,7 @@
 
     // 侦测当前搜索或页码变化并智能分流分发重置逻辑
     function checkSearchChange() {
-        if (!isWaterfall) return;
-        if (isInternalPaging) return;
-
-        if (!hasUrlKeyword()) {
-            if (document.documentElement.classList.contains('bili-waterfall-enabled') || lastSearchSign) {
-                lastSearchSign = '';
-                syncWaterfallLifecycle();
-            }
-            return;
-        }
-
-        if (!document.documentElement.classList.contains('bili-waterfall-enabled')) {
-            syncWaterfallLifecycle();
-            return;
-        }
+        if (!isWaterfallMounted || isInternalPaging) return;
 
         const currentSign = getSearchSignature();
         const p = parseInt(new URLSearchParams(window.location.search).get('page') || '1', 10);
@@ -2665,103 +2629,74 @@
         }
     }
 
-    // 劫持单页路由变更，确保重新搜索或外部切页时立即重置瀑布流状态
-    try {
-        const originPushState = targetWindow.history.pushState;
-        if (originPushState) {
-            targetWindow.history.pushState = function(...args) {
-                const res = originPushState.apply(this, args);
-                setTimeout(checkSearchChange, 50);
-                return res;
-            };
-        }
-        const originReplaceState = targetWindow.history.replaceState;
-        if (originReplaceState) {
-            targetWindow.history.replaceState = function(...args) {
-                const res = originReplaceState.apply(this, args);
-                setTimeout(checkSearchChange, 50);
-                return res;
-            };
-        }
-        targetWindow.addEventListener('popstate', () => {
-            setTimeout(checkSearchChange, 50);
-        });
-
-        // 委托监听分页按钮点击，单页切页时实时校准瀑布流页码
-        document.addEventListener('click', (e) => {
-            const btn = e.target.closest('button.vui_pagenation--btn, button.vui_pagenation--btn-num');
-            if (btn) {
-                setTimeout(checkSearchChange, 80);
-            }
-        }, true);
-
-        // 监听搜索框回车与搜索按钮点击，前置触发瀑布流状态复位
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                const active = document.activeElement;
-                if (active && (active.tagName === 'INPUT' || active.classList.contains('search-input'))) {
-                    setTimeout(() => {
-                        resetWaterfallForNewSearch(true);
-                    }, 100);
+    // 视口滚动与尺寸变化句柄（随生命周期动态挂载/卸载）
+    let scrollRafId = null;
+    function onWaterfallScroll() {
+        if (!isWaterfallMounted) return;
+        if (!scrollRafId) {
+            scrollRafId = requestAnimationFrame(() => {
+                scrollRafId = null;
+                if (!isWaterfallMounted) return;
+                updateViewportPage();
+                if (!isWaterfallPaused && !isPaging && !isAllLoaded) {
+                    checkAndTriggerPaging();
                 }
+            });
+        }
+    }
+
+    let resizeTimer = null;
+    function onWaterfallResize() {
+        if (!isWaterfallMounted) return;
+        if (resizeTimer) clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            resizeTimer = null;
+            if (!isWaterfallMounted) return;
+            updateViewportPage(true);
+
+            const curLoader = document.getElementById('bili-waterfall-loader');
+            if (curLoader && curLoader.classList.contains('ended')) return;
+
+            // 重新解析分页器提取当前最大页数（基于前两行轻量测量列数 × 6）
+            updateDynamicMaxPage();
+
+            // 动态重校终态边界状态
+            if (!isAllLoaded && currentRequestedPage >= maxWaterfallPage) {
+                isAllLoaded = true;
+                showEndedLoader();
             }
-        }, true);
+        }, 150);
+    }
 
-        document.addEventListener('click', (e) => {
-            const searchBtn = e.target.closest('.search-button, .search-btn, .nav-search-btn, button[class*="search"]');
-            if (searchBtn) {
-                setTimeout(() => {
-                    resetWaterfallForNewSearch(true);
-                }, 100);
+    // Vue 风格瀑布流生命周期控制器：统一收口准入条件、挂载、更新与卸载清理
+    const WaterfallLifecycle = {
+        // 唯一准入守卫：菜单开启 && 仅视频搜索路径（/all、/video） && URL 含有效 keyword 参数
+        shouldMount() {
+            if (!isWaterfall) return false;
+            try {
+                const path = window.location.pathname || '';
+                if (!/^\/(all|video)\/?$/i.test(path)) return false;
+                const kw = new URLSearchParams(window.location.search).get('keyword');
+                return Boolean(kw && kw.trim());
+            } catch (e) {
+                return false;
             }
-        }, true);
+        },
 
-        // 视口滚动兜底监听：加入 rAF 调度防止高频触发引发掉帧
-        let scrollRafId = null;
-        window.addEventListener('scroll', () => {
-            if (!isWaterfallEffective()) return;
-            if (!scrollRafId) {
-                scrollRafId = requestAnimationFrame(() => {
-                    scrollRafId = null;
-                    updateViewportPage();
-                    if (!isWaterfallPaused && !isPaging && !isAllLoaded) {
-                        checkAndTriggerPaging();
-                    }
-                });
+        // 统一外部入口：根据准入状态自动调度 onMounted / onUnmounted / onUpdated
+        sync(reason = 'sync') {
+            if (!document.body) return;
+            const targetMount = this.shouldMount();
+            if (targetMount && !isWaterfallMounted) {
+                this.onMounted();
+            } else if (!targetMount && isWaterfallMounted) {
+                this.onUnmounted();
+            } else if (targetMount && isWaterfallMounted) {
+                this.onUpdated(reason);
             }
-        }, { passive: true });
+        },
 
-        // 视口尺寸变化监听（响应式栅格切换自适应）：
-        // 居中与响应式栅格完全交由 CSS 引擎处理，拖拽过程中零 JS 排版介入；
-        // 引入 150ms 防抖，待窗口尺寸稳定后统一校准视口页码与最大翻页边界：
-        let resizeTimer = null;
-        window.addEventListener('resize', () => {
-            if (!isWaterfallEffective()) return;
-
-            if (resizeTimer) clearTimeout(resizeTimer);
-            resizeTimer = setTimeout(() => {
-                updateViewportPage(true);
-
-                const curLoader = document.getElementById('bili-waterfall-loader');
-                if (curLoader && curLoader.classList.contains('ended')) return;
-
-                // 重新解析分页器提取当前最大页数（基于前两行轻量测量列数 × 6）
-                updateDynamicMaxPage();
-
-                // 动态重校终态边界状态
-                if (!isAllLoaded && currentRequestedPage >= maxWaterfallPage) {
-                    isAllLoaded = true;
-                    showEndedLoader();
-                }
-            }, 150);
-        }, { passive: true });
-    } catch (e) {}
-
-    // 初始化或同步瀑布流生命周期与状态绑定
-    function syncWaterfallLifecycle() {
-        if (!document.body) return;
-
-        if (isWaterfallEffective()) {
+        onMounted() {
             // 瀑布流防白屏冷启动保护：若打开或刷新页面的 URL 残留有非第 1 页参数（例如历史记录或从尾页刷新留存的 ?page=34 或分类页 ?o=30），
             // 立即重定向至纯净首页流，杜绝直接渲染尾页导致的前置缺失与空数据白屏
             const currentUrl = new URL(window.location.href);
@@ -2775,16 +2710,19 @@
             }
 
             abortRunningPaging();
+            isWaterfallMounted = true;
             document.documentElement.classList.add('bili-waterfall-enabled');
 
             lastSearchSign = getSearchSignature();
             refreshSeenBvidsFromDOM();
 
+            const hasPager = Boolean(document.querySelector('.vui_pagenation, .vui_pagenation--btns'));
             updateDynamicMaxPage();
             currentRequestedPage = 1;
             currentViewportPage = 1;
             totalViewportPages = 1;
-            isAllLoaded = maxWaterfallPage <= 1;
+            // 仅当分页器已存在或首屏卡片已挂载时才判定是否只有 1 页，避免 Vue 尚未渲染完就被误判为 isAllLoaded = true
+            isAllLoaded = (hasPager || seenBvidMap.size > 0) ? (maxWaterfallPage <= 1) : false;
             isPaging = false;
 
             updateViewportPage(true);
@@ -2797,10 +2735,91 @@
                 updateLoader(false);
             }
             bindWaterfallObserver();
+
+            window.addEventListener('scroll', onWaterfallScroll, { passive: true });
+            window.addEventListener('resize', onWaterfallResize, { passive: true });
+
             // 首屏初始化后校验视口高度，若大屏或首屏卡片较少导致缓冲不足，提前静默预载下一页
-            setTimeout(checkAndTriggerPaging, 300);
-        } else {
+            setTimeout(() => {
+                if (isWaterfallMounted) checkAndTriggerPaging();
+            }, 300);
+        },
+
+        onUpdated(reason) {
+            if (!isWaterfallMounted) return;
+            switch (reason) {
+                case 'filter':
+                    updateViewportPage(true);
+                    checkWaterfallFillScreen();
+                    break;
+                case 'official-search':
+                    onOfficialSearchMounted();
+                    break;
+                case 'dom': {
+                    const currentPager = document.querySelector('.vui_pagenation, .vui_pagenation--btns');
+                    const pagerChanged = currentPager && (!currentObservedPager || currentObservedPager !== currentPager || !currentObservedPager.isConnected);
+                    if (pagerChanged) {
+                        if (seenBvidMap.size === 0) {
+                            refreshSeenBvidsFromDOM();
+                        }
+                        updateDynamicMaxPage();
+                        if (currentRequestedPage <= 1) {
+                            isAllLoaded = maxWaterfallPage <= 1;
+                            if (isAllLoaded) {
+                                showEndedLoader();
+                            } else {
+                                updateLoader(false);
+                            }
+                        }
+                        bindWaterfallObserver();
+                        updateViewportPage(true);
+                        updateBadge();
+                    }
+                    checkSearchChange();
+                    break;
+                }
+                case 'search-trigger':
+                    resetWaterfallForNewSearch(true);
+                    break;
+                case 'route':
+                    checkSearchChange();
+                    break;
+                default: {
+                    if (seenBvidMap.size === 0) {
+                        refreshSeenBvidsFromDOM();
+                    }
+                    const hasPager = Boolean(document.querySelector('.vui_pagenation, .vui_pagenation--btns'));
+                    updateDynamicMaxPage();
+                    if (currentRequestedPage <= 1 && (hasPager || seenBvidMap.size > 0)) {
+                        isAllLoaded = maxWaterfallPage <= 1;
+                        if (isAllLoaded) {
+                            showEndedLoader();
+                        } else {
+                            updateLoader(false);
+                        }
+                    }
+                    updateViewportPage(true);
+                    updateBadge();
+                    bindWaterfallObserver();
+                    break;
+                }
+            }
+        },
+
+        onUnmounted() {
+            isWaterfallMounted = false;
             abortRunningPaging();
+            window.removeEventListener('scroll', onWaterfallScroll);
+            window.removeEventListener('resize', onWaterfallResize);
+            if (scrollRafId) {
+                cancelAnimationFrame(scrollRafId);
+                scrollRafId = null;
+            }
+            if (resizeTimer) {
+                clearTimeout(resizeTimer);
+                resizeTimer = null;
+            }
+
             document.documentElement.classList.remove('bili-waterfall-enabled');
             if (waterfallObserver) {
                 waterfallObserver.disconnect();
@@ -2810,19 +2829,74 @@
             cachedVisibleCards = [];
             cachedTotalRows = 0;
             cachedRowContainer = null;
+            lastSearchSign = '';
+
             const badge = document.getElementById('bili-waterfall-badge');
             if (badge) badge.remove();
 
             const loader = document.getElementById('bili-waterfall-loader');
             if (loader) loader.remove();
         }
+    };
+
+    // 兼容顶部 applyWaterfallState() 调用
+    function syncWaterfallLifecycle() {
+        WaterfallLifecycle.sync('sync');
     }
 
+    // 劫持单页路由与搜索操作，统一转发至 WaterfallLifecycle.sync()
+    try {
+        const originPushState = targetWindow.history.pushState;
+        if (originPushState) {
+            targetWindow.history.pushState = function(...args) {
+                const res = originPushState.apply(this, args);
+                setTimeout(() => WaterfallLifecycle.sync('route'), 50);
+                return res;
+            };
+        }
+        const originReplaceState = targetWindow.history.replaceState;
+        if (originReplaceState) {
+            targetWindow.history.replaceState = function(...args) {
+                const res = originReplaceState.apply(this, args);
+                setTimeout(() => WaterfallLifecycle.sync('route'), 50);
+                return res;
+            };
+        }
+        targetWindow.addEventListener('popstate', () => {
+            setTimeout(() => WaterfallLifecycle.sync('route'), 50);
+        });
+
+        // 委托监听分页按钮点击，单页切页时实时校准瀑布流页码
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('button.vui_pagenation--btn, button.vui_pagenation--btn-num');
+            if (btn) {
+                setTimeout(() => WaterfallLifecycle.sync('route'), 80);
+            }
+        }, true);
+
+        // 监听搜索框回车与搜索按钮点击，前置触发瀑布流状态同步
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const active = document.activeElement;
+                if (active && (active.tagName === 'INPUT' || active.classList.contains('search-input'))) {
+                    setTimeout(() => WaterfallLifecycle.sync('search-trigger'), 100);
+                }
+            }
+        }, true);
+
+        document.addEventListener('click', (e) => {
+            const searchBtn = e.target.closest('.search-button, .search-btn, .nav-search-btn, button[class*="search"]');
+            if (searchBtn) {
+                setTimeout(() => WaterfallLifecycle.sync('search-trigger'), 100);
+            }
+        }, true);
+    } catch (e) {}
+
     window.addEventListener('DOMContentLoaded', () => {
-        syncWaterfallLifecycle();
+        WaterfallLifecycle.sync('mount');
     });
     window.addEventListener('load', () => {
-        syncWaterfallLifecycle();
+        WaterfallLifecycle.sync('load');
     });
 
     // ==========================================
@@ -3047,13 +3121,8 @@
         if (isEvaluationBadge && typeof updateQualityFilterCounts === 'function') {
             updateQualityFilterCounts();
         }
-        if (isWaterfallEffective() && typeof updateViewportPage === 'function') {
-            updateViewportPage(true);
-        }
-
-        // 若开启瀑布流，检测当前屏幕如果卡片变少不足以撑满一屏，主动尝试静默增补拉取
-        if (isWaterfallEffective() && typeof checkWaterfallFillScreen === 'function') {
-            checkWaterfallFillScreen();
+        if (typeof WaterfallLifecycle !== 'undefined') {
+            WaterfallLifecycle.sync('filter');
         }
     }
 
