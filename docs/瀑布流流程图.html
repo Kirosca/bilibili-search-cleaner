@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>v3.1.0 (c008e70) 无缝瀑布流流程图</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #121a2f;
+      --panel-2: #18223d;
+      --border: #28365c;
+      --text: #e6edf7;
+      --muted: #93a4c7;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.14);
+      --green: #34d399;
+      --green-soft: rgba(52, 211, 153, 0.14);
+      --amber: #fbbf24;
+      --amber-soft: rgba(251, 191, 36, 0.14);
+      --rose: #fb7185;
+      --rose-soft: rgba(251, 113, 133, 0.14);
+      --violet: #a78bfa;
+      --violet-soft: rgba(167, 139, 250, 0.14);
+      --line: #4b6194;
+      --shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    }
+
+    html[data-theme="light"] {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --panel-2: #f8fafc;
+      --border: #d5dfef;
+      --text: #0f172a;
+      --muted: #475569;
+      --accent: #0284c7;
+      --accent-soft: rgba(2, 132, 199, 0.1);
+      --green: #059669;
+      --green-soft: rgba(5, 150, 105, 0.1);
+      --amber: #d97706;
+      --amber-soft: rgba(217, 119, 6, 0.1);
+      --rose: #e11d48;
+      --rose-soft: rgba(225, 29, 72, 0.1);
+      --violet: #7c3aed;
+      --violet-soft: rgba(124, 58, 237, 0.1);
+      --line: #94a3b8;
+      --shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 24px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+
+    .title-group h1 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+
+    .title-group p {
+      margin: 2px 0 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+
+    button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    button.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 330px;
+      gap: 18px;
+      padding: 18px 24px 28px;
+      max-width: 1720px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 1120px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+
+    .canvas-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel-2);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+
+    .svg-viewport {
+      position: relative;
+      overflow: auto;
+      background-image: radial-gradient(var(--border) 1px, transparent 1px);
+      background-size: 22px 22px;
+      min-height: 760px;
+      padding: 16px;
+    }
+
+    svg#flow {
+      display: block;
+      margin: 0 auto;
+      transform-origin: top center;
+      transition: transform 0.15s ease;
+    }
+
+    .node { cursor: pointer; }
+    .node rect, .node polygon {
+      transition: filter 0.15s ease, stroke-width 0.15s ease;
+    }
+    .node:hover rect, .node:hover polygon {
+      filter: brightness(1.12);
+      stroke-width: 2.4;
+    }
+    .node.selected rect, .node.selected polygon {
+      stroke: var(--accent) !important;
+      stroke-width: 3 !important;
+      filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.45));
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .side-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .side-card h2 {
+      margin: 0 0 10px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .detail-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin: 0 0 6px;
+    }
+
+    .detail-stage {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+
+    .detail-desc {
+      font-size: 13px;
+      color: var(--muted);
+      margin: 0 0 10px;
+    }
+
+    .detail-list {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 12.5px;
+      color: var(--text);
+    }
+
+    .detail-list li { margin-bottom: 6px; }
+
+    .kv-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 7px 0;
+      border-bottom: 1px dashed var(--border);
+      font-size: 12.5px;
+    }
+
+    .kv-row:last-child { border-bottom: none; }
+    .kv-k { color: var(--muted); }
+    .kv-v { font-weight: 600; text-align: right; }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 11.5px;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="title-group">
+      <h1>无缝瀑布流状态机与 Wbi 分页流程图</h1>
+      <p>适用版本：v3.1.0（基线提交 <code>c008e70</code>） · 点击任意节点可查看职责与核心守卫条件</p>
+    </div>
+    <div class="controls">
+      <button type="button" id="btnZoomOut">缩小 -</button>
+      <button type="button" id="btnZoomReset">100%</button>
+      <button type="button" id="btnZoomIn">放大 +</button>
+      <button type="button" id="btnTheme">切换浅色/深色</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="canvas-card">
+      <div class="legend">
+        <span class="legend-item"><i class="dot" style="background:#38bdf8"></i> 外部触发 / 调度入口</span>
+        <span class="legend-item"><i class="dot" style="background:#a78bfa"></i> 生命周期状态分支</span>
+        <span class="legend-item"><i class="dot" style="background:#fbbf24"></i> 准入 / 并发 / 竞态判断</span>
+        <span class="legend-item"><i class="dot" style="background:#34d399"></i> 接口拉取与卡片渲染</span>
+        <span class="legend-item"><i class="dot" style="background:#fb7185"></i> 卸载 / 熔断 / 异常处理</span>
+      </div>
+      <div class="svg-viewport">
+        <svg id="flow" width="1140" height="1220" viewBox="0 0 1140 1220" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--line)" />
+            </marker>
+          </defs>
+
+          <!-- 分区背景框 -->
+          <rect x="20" y="16" width="1100" height="118" rx="12" fill="none" stroke="var(--border)" stroke-dasharray="6 4" />
+          <text x="34" y="36" fill="var(--muted)" font-size="12" font-weight="700">阶段 1 · 外部触发源与统一调度入口</text>
+
+          <rect x="20" y="152" width="1100" height="330" rx="12" fill="none" stroke="var(--border)" stroke-dasharray="6 4" />
+          <text x="34" y="172" fill="var(--muted)" font-size="12" font-weight="700">阶段 2 · WaterfallLifecycle 生命周期状态机</text>
+
+          <rect x="20" y="502" width="1100" height="440" rx="12" fill="none" stroke="var(--border)" stroke-dasharray="6 4" />
+          <text x="34" y="522" fill="var(--muted)" font-size="12" font-weight="700">阶段 3 · Wbi 分页引擎与并发/竞态控制</text>
+
+          <rect x="20" y="962" width="1100" height="236" rx="12" fill="none" stroke="var(--border)" stroke-dasharray="6 4" />
+          <text x="34" y="982" fill="var(--muted)" font-size="12" font-weight="700">阶段 4 · 事务收尾与连贯续载闭环</text>
+
+          <!-- 连线 -->
+          <g fill="none" stroke="var(--line)" stroke-width="1.8" marker-end="url(#arrow)">
+            <!-- 触发源 -> sync -->
+            <path d="M 140 94 L 140 126 L 455 126 L 455 186" />
+            <path d="M 380 94 L 380 126 L 515 126 L 515 186" />
+            <path d="M 640 94 L 640 126 L 565 126 L 565 186" />
+            <path d="M 920 94 L 920 126 L 620 126 L 620 186" />
+
+            <!-- sync -> shouldMount -->
+            <path d="M 550 238 L 550 264" />
+
+            <!-- shouldMount -> 三个生命周期 -->
+            <path d="M 430 302 L 195 302 L 195 344" />
+            <path d="M 550 338 L 550 344" />
+            <path d="M 670 302 L 945 302 L 945 344" />
+
+            <!-- onMounted / onUpdated -> checkAndTriggerPaging -->
+            <path d="M 195 456 L 195 546 L 450 546" />
+            <path d="M 550 456 L 550 526" />
+
+            <!-- checkAndTriggerPaging -> isPagingConditionMet -->
+            <path d="M 550 574 L 550 604" />
+
+            <!-- 条件满足 -> triggerLoadNextPage; 不满足 -> 待机 -->
+            <path d="M 665 642 L 895 642" />
+            <path d="M 550 680 L 550 706" />
+
+            <!-- triggerLoadNextPage -> 互斥锁 -> Wbi 请求 -->
+            <path d="M 435 734 L 220 734 L 220 778" />
+            <path d="M 550 762 L 550 784" />
+
+            <!-- Wbi 请求 -> 竞态/风控/卡片 -->
+            <path d="M 550 842 L 550 866" />
+            <path d="M 445 894 L 220 894 L 220 872" />
+            <path d="M 655 894 L 835 894" />
+
+            <!-- 响应处理 -> finishPaging -->
+            <path d="M 550 924 L 550 996" />
+            <path d="M 960 924 L 960 1022 L 680 1022" />
+
+            <!-- finishPaging -> 3 个收尾出口 -->
+            <path d="M 420 1022 L 195 1022 L 195 1086" />
+            <path d="M 550 1052 L 550 1086" />
+            <path d="M 680 1022 L 905 1022 L 905 1086" />
+
+            <!-- 60ms 连贯续载回环 -->
+            <path d="M 1030 1118 L 1094 1118 L 1094 734 L 665 734" stroke-dasharray="5 4" />
+          </g>
+
+          <!-- 连线文字 -->
+          <g fill="var(--muted)" font-size="11" font-weight="600">
+            <text x="248" y="294">未挂载且通过</text>
+            <text x="560" y="343">已挂载且通过</text>
+            <text x="742" y="294">已挂载但不再满足</text>
+            <text x="738" y="634">不满足（暂停/到底/未入缓冲）</text>
+            <text x="560" y="698">满足条件</text>
+            <text x="275" y="726">已有请求进行中</text>
+            <text x="560" y="778">空闲取锁</text>
+            <text x="280" y="886">aborted / 过期</text>
+            <text x="692" y="886">-412/-403 风控或异常</text>
+            <text x="255" y="1014">isAllLoaded = true</text>
+            <text x="560" y="1074">success = false</text>
+            <text x="742" y="1014">成功且未到底</text>
+            <text x="980" y="724">60ms 续载</text>
+          </g>
+
+          <!-- 节点：阶段 1 -->
+          <g class="node" data-id="triggers-dom">
+            <rect x="44" y="48" width="192" height="46" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.6" />
+            <text x="140" y="68" text-anchor="middle" fill="var(--text)" font-size="12" font-weight="700">页面挂载 / 资源就绪</text>
+            <text x="140" y="84" text-anchor="middle" fill="var(--muted)" font-size="11">DOMContentLoaded / load</text>
+          </g>
+
+          <g class="node" data-id="triggers-route">
+            <rect x="264" y="48" width="232" height="46" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.6" />
+            <text x="380" y="68" text-anchor="middle" fill="var(--text)" font-size="12" font-weight="700">SPA 路由与搜索触发</text>
+            <text x="380" y="84" text-anchor="middle" fill="var(--muted)" font-size="11">pushState / 分页点击 / 回车</text>
+          </g>
+
+          <g class="node" data-id="triggers-observer">
+            <rect x="524" y="48" width="232" height="46" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.6" />
+            <text x="640" y="68" text-anchor="middle" fill="var(--text)" font-size="12" font-weight="700">DOM 变化与过滤完成</text>
+            <text x="640" y="84" text-anchor="middle" fill="var(--muted)" font-size="11">MutationObserver / filter</text>
+          </g>
+
+          <g class="node" data-id="triggers-fetch">
+            <rect x="784" y="48" width="272" height="46" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.6" />
+            <text x="920" y="68" text-anchor="middle" fill="var(--text)" font-size="12" font-weight="700">fetch 拦截官方搜索响应</text>
+            <text x="920" y="84" text-anchor="middle" fill="var(--muted)" font-size="11">official-search (延迟 120ms)</text>
+          </g>
+
+          <!-- 节点：阶段 2 -->
+          <g class="node" data-id="sync">
+            <rect x="405" y="186" width="290" height="52" rx="10" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.8" />
+            <text x="550" y="209" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700">WaterfallLifecycle.sync(reason)</text>
+            <text x="550" y="227" text-anchor="middle" fill="var(--muted)" font-size="11">唯一外部调度入口 · 对比目标状态与挂载状态</text>
+          </g>
+
+          <g class="node" data-id="should-mount">
+            <polygon points="550,264 672,302 550,338 428,302" fill="var(--amber-soft)" stroke="var(--amber)" stroke-width="1.8" />
+            <text x="550" y="298" text-anchor="middle" fill="var(--text)" font-size="12" font-weight="700">shouldMount()</text>
+            <text x="550" y="314" text-anchor="middle" fill="var(--muted)" font-size="10.5">开关 && /all|/video && keyword</text>
+          </g>
+
+          <g class="node" data-id="on-mounted">
+            <rect x="44" y="344" width="302" height="112" rx="10" fill="var(--violet-soft)" stroke="var(--violet)" stroke-width="1.8" />
+            <text x="195" y="366" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700">onMounted() 挂载初始化</text>
+            <text x="195" y="386" text-anchor="middle" fill="var(--muted)" font-size="11">1. 若 URL 含 page&gt;1 或 o&gt;0，重定向回首页</text>
+            <text x="195" y="403" text-anchor="middle" fill="var(--muted)" font-size="11">2. abortRunningPaging() + 首屏采样 BV 号</text>
+            <text x="195" y="420" text-anchor="middle" fill="var(--muted)" font-size="11">3. 挂载徽章/加载条 + 绑定 Observer/scroll/resize</text>
+            <text x="195" y="437" text-anchor="middle" fill="var(--muted)" font-size="11">4. 300ms 后首次调用 checkAndTriggerPaging()</text>
+          </g>
+
+          <g class="node" data-id="on-updated">
+            <rect x="386" y="344" width="328" height="112" rx="10" fill="var(--violet-soft)" stroke="var(--violet)" stroke-width="1.8" />
+            <text x="550" y="366" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700">onUpdated(reason) 增量同步</text>
+            <text x="550" y="386" text-anchor="middle" fill="var(--muted)" font-size="11">• filter：重算页码 + checkWaterfallFillScreen()</text>
+            <text x="550" y="403" text-anchor="middle" fill="var(--muted)" font-size="11">• search-trigger / 路由变化：重置为新搜索</text>
+            <text x="550" y="420" text-anchor="middle" fill="var(--muted)" font-size="11">• official-search / dom：补齐首屏与重绑分页器</text>
+            <text x="550" y="437" text-anchor="middle" fill="var(--muted)" font-size="11">• default：兜底校准 maxWaterfallPage 与状态条</text>
+          </g>
+
+          <g class="node" data-id="on-unmounted">
+            <rect x="784" y="344" width="312" height="112" rx="10" fill="var(--rose-soft)" stroke="var(--rose)" stroke-width="1.8" />
+            <text x="940" y="366" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700">onUnmounted() 彻底卸载</text>
+            <text x="940" y="388" text-anchor="middle" fill="var(--muted)" font-size="11">1. 置 isWaterfallMounted = false</text>
+            <text x="940" y="406" text-anchor="middle" fill="var(--muted)" font-size="11">2. abortRunningPaging() 中止未完成请求</text>
+            <text x="940" y="424" text-anchor="middle" fill="var(--muted)" font-size="11">3. 解绑 scroll / resize / Observer / 定时器</text>
+            <text x="940" y="442" text-anchor="middle" fill="var(--muted)" font-size="11">4. 移除悬浮徽章、加载条并清空行高缓存</text>
+          </g>
+
+          <!-- 节点：阶段 3 -->
+          <g class="node" data-id="check-paging">
+            <rect x="450" y="526" width="200" height="48" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.6" />
+            <text x="550" y="547" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">checkAndTriggerPaging()</text>
+            <text x="550" y="564" text-anchor="middle" fill="var(--muted)" font-size="11">统一预加载检查入口</text>
+          </g>
+
+          <g class="node" data-id="cond-met">
+            <polygon points="550,604 666,642 550,680 434,642" fill="var(--amber-soft)" stroke="var(--amber)" stroke-width="1.8" />
+            <text x="550" y="638" text-anchor="middle" fill="var(--text)" font-size="12" font-weight="700">isPagingConditionMet()</text>
+            <text x="550" y="654" text-anchor="middle" fill="var(--muted)" font-size="10.5">未暂停/未到底 && 距底 &lt; 1000px</text>
+          </g>
+
+          <g class="node" data-id="idle">
+            <rect x="895" y="618" width="180" height="48" rx="8" fill="var(--panel-2)" stroke="var(--border)" stroke-width="1.6" />
+            <text x="985" y="639" text-anchor="middle" fill="var(--text)" font-size="12" font-weight="700">保持待机</text>
+            <text x="985" y="655" text-anchor="middle" fill="var(--muted)" font-size="11">等待滚动 / 筛选补页触发</text>
+          </g>
+
+          <g class="node" data-id="trigger-load">
+            <rect x="435" y="706" width="230" height="56" rx="10" fill="var(--amber-soft)" stroke="var(--amber)" stroke-width="1.8" />
+            <text x="550" y="728" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">triggerLoadNextPage()</text>
+            <text x="550" y="746" text-anchor="middle" fill="var(--muted)" font-size="11">检查 isPaging 互斥锁与 maxWaterfallPage</text>
+          </g>
+
+          <g class="node" data-id="reuse-promise">
+            <rect x="96" y="778" width="248" height="48" rx="8" fill="var(--panel-2)" stroke="var(--border)" stroke-width="1.6" />
+            <text x="220" y="799" text-anchor="middle" fill="var(--text)" font-size="12" font-weight="700">复用 currentPagingPromise</text>
+            <text x="220" y="815" text-anchor="middle" fill="var(--muted)" font-size="11">防并发重入与重复翻页</text>
+          </g>
+
+          <g class="node" data-id="wbi-fetch">
+            <rect x="378" y="784" width="344" height="58" rx="10" fill="var(--green-soft)" stroke="var(--green)" stroke-width="1.8" />
+            <text x="550" y="806" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">Wbi 签名请求 /wbi/search/type</text>
+            <text x="550" y="824" text-anchor="middle" fill="var(--muted)" font-size="11">sessionSeq + AbortController + internalFetchSignals</text>
+          </g>
+
+          <g class="node" data-id="append-cards">
+            <rect x="445" y="866" width="210" height="58" rx="10" fill="var(--green-soft)" stroke="var(--green)" stroke-width="1.8" />
+            <text x="550" y="889" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">appendCards() 追加卡片</text>
+            <text x="550" y="907" text-anchor="middle" fill="var(--muted)" font-size="11">BV 去重 / 增量过滤 / 空数据判到底</text>
+          </g>
+
+          <g class="node" data-id="discard-stale">
+            <rect x="96" y="840" width="248" height="44" rx="8" fill="var(--rose-soft)" stroke="var(--rose)" stroke-width="1.6" />
+            <text x="220" y="866" text-anchor="middle" fill="var(--text)" font-size="12" font-weight="700">静默丢弃过期响应</text>
+          </g>
+
+          <g class="node" data-id="risk-error">
+            <rect x="835" y="868" width="250" height="54" rx="8" fill="var(--rose-soft)" stroke="var(--rose)" stroke-width="1.6" />
+            <text x="960" y="891" text-anchor="middle" fill="var(--text)" font-size="12" font-weight="700">风控熔断 / 异常捕获</text>
+            <text x="960" y="908" text-anchor="middle" fill="var(--muted)" font-size="11">识别 -412 / -403，不误判到底</text>
+          </g>
+
+          <!-- 节点：阶段 4 -->
+          <g class="node" data-id="finish-paging">
+            <rect x="420" y="996" width="260" height="56" rx="10" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.8" />
+            <text x="550" y="1018" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">finally -> finishPaging()</text>
+            <text x="550" y="1036" text-anchor="middle" fill="var(--muted)" font-size="11">释放互斥锁 + 更新悬浮微标页码</text>
+          </g>
+
+          <g class="node" data-id="show-ended">
+            <rect x="64" y="1086" width="262" height="62" rx="10" fill="var(--green-soft)" stroke="var(--green)" stroke-width="1.8" />
+            <text x="195" y="1111" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">showEndedLoader()</text>
+            <text x="195" y="1130" text-anchor="middle" fill="var(--muted)" font-size="11">展示「已加载全部」结束提示</text>
+          </g>
+
+          <g class="node" data-id="show-error">
+            <rect x="415" y="1086" width="270" height="62" rx="10" fill="var(--rose-soft)" stroke="var(--rose)" stroke-width="1.8" />
+            <text x="550" y="1111" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">showErrorLoader()</text>
+            <text x="550" y="1130" text-anchor="middle" fill="var(--muted)" font-size="11">提示失败或风控 · 绑定点击重试</text>
+          </g>
+
+          <g class="node" data-id="continue-loop">
+            <rect x="780" y="1086" width="250" height="62" rx="10" fill="var(--amber-soft)" stroke="var(--amber)" stroke-width="1.8" />
+            <text x="905" y="1111" text-anchor="middle" fill="var(--text)" font-size="12.5" font-weight="700">连贯续载 / 收起加载条</text>
+            <text x="905" y="1130" text-anchor="middle" fill="var(--muted)" font-size="11">仍在缓冲带则 60ms 续载，否则 300ms 复检</text>
+          </g>
+        </svg>
+      </div>
+    </section>
+
+    <aside class="sidebar">
+      <section class="side-card" id="detailCard">
+        <h2>节点详情</h2>
+        <div id="detailBody">
+          <div class="detail-title">WaterfallLifecycle.sync(reason)</div>
+          <span class="detail-stage">阶段 2 · 生命周期调度</span>
+          <p class="detail-desc">瀑布流唯一外部调度入口。所有页面事件只负责上报 reason，由状态机根据当前挂载状态自动决定挂载、更新或卸载。</p>
+          <ul class="detail-list">
+            <li>未挂载 + 准入通过 → <code>onMounted()</code></li>
+            <li>已挂载 + 准入不通过 → <code>onUnmounted()</code></li>
+            <li>已挂载 + 准入通过 → <code>onUpdated(reason)</code></li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="side-card">
+        <h2>关键机制速查</h2>
+        <div class="kv-row"><span class="kv-k">防重入互斥锁</span><span class="kv-v"><code>isPaging</code> / Promise</span></div>
+        <div class="kv-row"><span class="kv-k">防过期响应竞态</span><span class="kv-v"><code>pagingSessionSeq</code> + Abort</span></div>
+        <div class="kv-row"><span class="kv-k">预加载缓冲带</span><span class="kv-v">视口底部 + 1000px</span></div>
+        <div class="kv-row"><span class="kv-k">风控熔断识别</span><span class="kv-v">code -412 / -403</span></div>
+        <div class="kv-row"><span class="kv-k">Fetch 环路隔离</span><span class="kv-v"><code>internalFetchSignals</code></span></div>
+      </section>
+    </aside>
+  </main>
+
+  <script>
+    const NODE_DETAILS = {
+      'triggers-dom': {
+        title: '页面挂载与资源就绪',
+        stage: '阶段 1 · 外部触发',
+        desc: '在 DOMContentLoaded 与 load 时分别触发一次 sync，覆盖不同时机下的 Vue 首屏挂载延迟。',
+        items: ['reason 为 mount 或 load', '确保首屏卡片与分页器就绪后再采样']
+      },
+      'triggers-route': {
+        title: 'SPA 路由与搜索触发',
+        stage: '阶段 1 · 外部触发',
+        desc: '劫持 history.pushState / replaceState / popstate，并委托监听分页点击、搜索框回车和搜索按钮。',
+        items: ['使用 150~250ms 防抖合并连续事件', '保留 pendingWithSticky 防止吸顶监听丢失']
+      },
+      'triggers-observer': {
+        title: 'DOM 变化与过滤完成',
+        stage: '阶段 1 · 外部触发',
+        desc: '当 MutationObserver 捕获页面重绘，或 filterDOMElements 完成过滤导致可见卡片变化时唤醒状态机。',
+        items: ['filter 会触发可见页码重算', '可见卡片过少时自动触发补页']
+      },
+      'triggers-fetch': {
+        title: 'fetch 拦截官方搜索响应',
+        stage: '阶段 1 · 外部触发',
+        desc: '仅拦截 B 站原生发起的搜索请求，延迟 120ms 等待 Vue 挂载新分页器与卡片后同步状态。',
+        items: ['通过 internalFetchSignals 排除瀑布流自身分页请求']
+      },
+      'sync': {
+        title: 'WaterfallLifecycle.sync(reason)',
+        stage: '阶段 2 · 生命周期调度',
+        desc: '瀑布流唯一外部调度入口。统一对比目标准入状态与当前挂载状态，避免零散事件直接互相调用。',
+        items: ['未挂载且通过 → onMounted()', '已挂载且通过 → onUpdated(reason)', '已挂载且不通过 → onUnmounted()']
+      },
+      'should-mount': {
+        title: 'shouldMount() 准入守卫',
+        stage: '阶段 2 · 准入判断',
+        desc: '决定当前页面是否具备运行瀑布流的条件。',
+        items: ['菜单开关 isWaterfall 为开启状态', '路径为 /all 或 /video', 'URL 查询参数中包含非空 keyword']
+      },
+      'on-mounted': {
+        title: 'onMounted() 挂载初始化',
+        stage: '阶段 2 · 生命周期',
+        desc: '冷启动或切入视频搜索页时执行完整初始化。',
+        items: ['检测残留 page>1 或 o>0 参数，强制跳回纯净首页防止尾页白屏', '中止旧事务、初始化页码/徽章/加载条并绑定监听']
+      },
+      'on-updated': {
+        title: 'onUpdated(reason) 增量同步',
+        stage: '阶段 2 · 生命周期',
+        desc: '已挂载状态下按 reason 精细分发局部更新，避免整页重建。',
+        items: ['filter：重算视口页码并检查是否需要首屏补页', 'search-trigger / 路由切换：比对搜索签名并重置状态']
+      },
+      'on-unmounted': {
+        title: 'onUnmounted() 彻底卸载',
+        stage: '阶段 2 · 生命周期',
+        desc: '离开视频搜索页或关闭开关时彻底清理全部副作用。',
+        items: ['中止在途分页请求与定时器', '解绑 scroll / resize / IntersectionObserver', '移除徽章与加载条 DOM']
+      },
+      'check-paging': {
+        title: 'checkAndTriggerPaging()',
+        stage: '阶段 3 · 分页调度',
+        desc: '统一校验当前视口是否接近分页底部，决定是否发起下一页拉取。',
+        items: ['由滚动、缩放、Observer、首屏补页及收尾复检共同调用']
+      },
+      'cond-met': {
+        title: 'isPagingConditionMet()',
+        stage: '阶段 3 · 准入判断',
+        desc: '校验预加载条件是否满足。',
+        items: ['已挂载、未暂停、未加载完毕且 currentRequestedPage < maxWaterfallPage', '分页器或加载条进入 window.innerHeight + 1000px 预加载缓冲带']
+      },
+      'idle': {
+        title: '保持待机',
+        stage: '阶段 3 · 状态等待',
+        desc: '当前未触发预加载条件，继续等待用户向下滚动或过滤触发补页。',
+        items: ['零额外网络请求开销']
+      },
+      'trigger-load': {
+        title: 'triggerLoadNextPage()',
+        stage: '阶段 3 · 并发控制',
+        desc: '单例分页拉取入口，严格保证同一时刻最多只有 1 个分页事务执行。',
+        items: ['若 isPaging 为真则直接复用 currentPagingPromise', '每次启动记录当前 pagingSessionSeq 与 AbortController']
+      },
+      'reuse-promise': {
+        title: '复用 currentPagingPromise',
+        stage: '阶段 3 · 并发去重',
+        desc: '高频滚动、Observer 与定时器同时命中时，直接返回在途 Promise 防止重复请求同一页。',
+        items: ['避免重复插入相同页码卡片']
+      },
+      'wbi-fetch': {
+        title: 'Wbi 签名请求',
+        stage: '阶段 3 · 数据拉取',
+        desc: '获取 img_key / sub_key 并按 B 站 Wbi 协议计算 wts 与 w_rid，直连 /x/web-interface/wbi/search/type。',
+        items: ['将 AbortSignal 加入 internalFetchSignals，避免被 fetch 拦截器再次改写 URL']
+      },
+      'append-cards': {
+        title: 'appendCards() 追加卡片',
+        stage: '阶段 3 · 渲染与过滤',
+        desc: '将接口返回的新视频批量构建为原生风格卡片并注入列表容器。',
+        items: ['基于 seenBvidMap 去重', '写入后立即触发增量 DOM 过滤与品质勋章渲染', '若返回空数组则校准 maxWaterfallPage 并标记到底']
+      },
+      'discard-stale': {
+        title: '静默丢弃过期响应',
+        stage: '阶段 3 · 竞态防护',
+        desc: '当请求返回时发现 signal.aborted 为真或 sessionSeq 已过期，说明期间已切换搜索词或卸载。',
+        items: ['直接 return 丢弃结果，不污染新搜索列表']
+      },
+      'risk-error': {
+        title: '风控熔断 / 异常捕获',
+        stage: '阶段 3 · 异常处理',
+        desc: '识别 B 站 -412 / -403 风控码或网络异常，不将其误判为“已加载全部”。',
+        items: ['记录 riskMsg 并在 finishPaging 中转为可点击重试状态']
+      },
+      'finish-paging': {
+        title: 'finally -> finishPaging()',
+        stage: '阶段 4 · 事务收尾',
+        desc: '无论成功或失败都在 finally 中释放互斥锁并清理 AbortController，再根据结果切换加载条状态。',
+        items: ['同步刷新右上角悬浮微标的当前总页数与进度']
+      },
+      'show-ended': {
+        title: 'showEndedLoader()',
+        stage: '阶段 4 · 终态展示',
+        desc: '达到动态最大页数或接口返回空数据时，固定显示“已加载全部”提示。',
+        items: ['不再触发后续自动翻页']
+      },
+      'show-error': {
+        title: 'showErrorLoader()',
+        stage: '阶段 4 · 异常恢复',
+        desc: '展示具体错误或风控提示文案，并绑定单次点击重试回调。',
+        items: ['重置监听器防重复绑定，点击后立即重新调用 triggerLoadNextPage()']
+      },
+      'continue-loop': {
+        title: '连贯续载 / 收起加载条',
+        stage: '阶段 4 · 闭环调度',
+        desc: '若追加卡片后分页器仍在视口预加载缓冲带内（如过滤淘汰大量卡片后），60ms 后连贯续载下一页；否则收起加载条并在 300ms 后复检一次。',
+        items: ['保持加载条 active 状态不断闪，提供平滑滚动体验']
+      }
+    };
+
+    const flowSvg = document.getElementById('flow');
+    const detailBody = document.getElementById('detailBody');
+    let zoom = 1;
+
+    function renderDetail(id) {
+      const info = NODE_DETAILS[id];
+      if (!info) return;
+      document.querySelectorAll('.node').forEach(n => n.classList.toggle('selected', n.dataset.id === id));
+      detailBody.innerHTML = `
+        <div class="detail-title">${info.title}</div>
+        <span class="detail-stage">${info.stage}</span>
+        <p class="detail-desc">${info.desc}</p>
+        <ul class="detail-list">${info.items.map(i => `<li>${i}</li>`).join('')}</ul>
+      `;
+    }
+
+    document.querySelectorAll('.node').forEach(node => {
+      node.addEventListener('click', () => renderDetail(node.dataset.id));
+    });
+
+    function applyZoom() {
+      flowSvg.style.transform = `scale(${zoom})`;
+    }
+    document.getElementById('btnZoomIn').addEventListener('click', () => {
+      zoom = Math.min(1.6, +(zoom + 0.1).toFixed(2));
+      applyZoom();
+    });
+    document.getElementById('btnZoomOut').addEventListener('click', () => {
+      zoom = Math.max(0.6, +(zoom - 0.1).toFixed(2));
+      applyZoom();
+    });
+    document.getElementById('btnZoomReset').addEventListener('click', () => {
+      zoom = 1;
+      applyZoom();
+    });
+    document.getElementById('btnTheme').addEventListener('click', () => {
+      const root = document.documentElement;
+      root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+    });
+
+    renderDetail('sync');
+  </script>
+</body>
+</html>
