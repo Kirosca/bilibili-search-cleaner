@@ -2677,9 +2677,21 @@
         }, 150);
     }
 
-    // Vue 风格瀑布流生命周期控制器：统一收口准入条件、挂载、更新与卸载清理
+    // =========================================================================
+    // Vue 风格瀑布流生命周期控制器
+    // -------------------------------------------------------------------------
+    // 设计思路：将原本分散在各处的事件与跨模块调用统一收口为单一生命周期状态机：
+    //   1. 唯一准入：shouldMount()       —— 决定当前页面是否允许运行瀑布流
+    //   2. 唯一入口：sync(reason)        —— 外部仅需通知“发生了什么”，自动分发挂载/更新/卸载
+    //   3. 生命周期：onMounted()         —— 初始化状态、创建 UI、按需绑定滚动/缩放监听
+    //                onUpdated(reason)   —— 响应筛选、接口返回、DOM 重绘、路由或搜索变化
+    //                onUnmounted()       —— 中断请求、解绑监听、销毁 UI 与缓存
+    // =========================================================================
     const WaterfallLifecycle = {
-        // 唯一准入守卫：菜单开启 && 仅视频搜索路径（/all、/video） && URL 含有效 keyword 参数
+        /**
+         * 唯一准入守卫（相当于 Vue 的条件渲染 v-if）：
+         * 必须同时满足：菜单开关已开启 && 位于 /all 或 /video 视频搜索页 && URL 含有效 keyword 参数
+         */
         shouldMount() {
             if (!isWaterfall || !isVideoSearchPath()) return false;
             try {
@@ -2690,19 +2702,29 @@
             }
         },
 
-        // 统一外部入口：根据准入状态自动调度 onMounted / onUnmounted / onUpdated
+        /**
+         * 统一外部调度入口：根据「目标准入状态」与「当前挂载状态 isWaterfallMounted」自动切换阶段
+         * @param {'mount'|'load'|'route'|'dom'|'filter'|'official-search'|'search-trigger'|'sync'} reason 触发来源
+         */
         sync(reason = 'sync') {
             if (!document.body) return;
             const targetMount = this.shouldMount();
             if (targetMount && !isWaterfallMounted) {
+                // 未挂载 -> 满足条件：执行挂载
                 this.onMounted();
             } else if (!targetMount && isWaterfallMounted) {
+                // 已挂载 -> 不再满足条件（如切到番剧/用户 Tab 或无词页）：执行卸载清理
                 this.onUnmounted();
             } else if (targetMount && isWaterfallMounted) {
+                // 已挂载 -> 仍然满足条件：按触发来源执行局部更新
                 this.onUpdated(reason);
             }
         },
 
+        /**
+         * 挂载阶段（类似 Vue onMounted）：
+         * 初始化首屏状态、注入样式类与悬浮微标/加载条，并动态绑定 scroll / resize / IntersectionObserver
+         */
         onMounted() {
             // 瀑布流防白屏冷启动保护：若打开或刷新页面的 URL 残留有非第 1 页参数（例如历史记录或从尾页刷新留存的 ?page=34 或分类页 ?o=30），
             // 立即重定向至纯净首页流，杜绝直接渲染尾页导致的前置缺失与空数据白屏
@@ -2743,6 +2765,7 @@
             }
             bindWaterfallObserver();
 
+            // 仅在挂载期间监听全局滚动与视口缩放，卸载时通过 removeEventListener 彻底释放
             window.addEventListener('scroll', onWaterfallScroll, { passive: true });
             window.addEventListener('resize', onWaterfallResize, { passive: true });
 
@@ -2752,17 +2775,24 @@
             }, 300);
         },
 
+        /**
+         * 更新阶段（类似 Vue onUpdated）：
+         * 仅在已挂载状态下响应各类运行时事件，避免无关状态变化触发全量重建
+         */
         onUpdated(reason) {
             if (!isWaterfallMounted) return;
             switch (reason) {
                 case 'filter':
+                    // 筛选或品质过滤导致可见卡片数变化：重算视口页码并在首屏卡片过少时自动补页
                     updateViewportPage(true);
                     checkWaterfallFillScreen();
                     break;
                 case 'official-search':
+                    // 拦截到 B 站官方搜索接口返回：重新采样首屏卡片与分页器
                     onOfficialSearchMounted();
                     break;
                 case 'dom': {
+                    // MutationObserver 检测到 DOM 变动：若 Vue 首屏延迟渲染或替换了分页器节点，补齐采样并重绑观察者
                     const currentPager = document.querySelector('.vui_pagenation, .vui_pagenation--btns');
                     const pagerChanged = currentPager && (!currentObservedPager || currentObservedPager !== currentPager || !currentObservedPager.isConnected);
                     if (pagerChanged) {
@@ -2786,12 +2816,15 @@
                     break;
                 }
                 case 'search-trigger':
+                    // 用户主动按回车或点击搜索按钮：重置为新一轮搜索
                     resetWaterfallForNewSearch(true);
                     break;
                 case 'route':
+                    // SPA 路由或分页器点击导致 URL 变化：比对搜索特征决定是否重置
                     checkSearchChange();
                     break;
                 default: {
+                    // load / sync 等兜底同步：补全首屏采样、重算总页数并确保观察者处于绑定状态
                     if (seenBvidMap.size === 0) {
                         refreshSeenBvidsFromDOM();
                     }
@@ -2813,6 +2846,10 @@
             }
         },
 
+        /**
+         * 卸载阶段（类似 Vue onUnmounted）：
+         * 彻底回收请求、定时器、全局监听器、交叉观察器以及页面挂载的 UI 节点
+         */
         onUnmounted() {
             isWaterfallMounted = false;
             abortRunningPaging();
