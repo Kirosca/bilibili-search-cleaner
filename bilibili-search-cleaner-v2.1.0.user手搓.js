@@ -2038,7 +2038,12 @@
         const mainContainer = getMainListContainer(document);
         if (!mainContainer) return;
 
-        const visibleCards = Array.from(mainContainer.children).filter(c => c.style.display !== 'none' && !c.classList.contains('flex_center'));
+        const visibleCards = Array.from(mainContainer.children).filter(c =>
+            c.style.display !== 'none' &&
+            !c.classList.contains('flex_center') &&
+            (isDimmed || c.dataset.syntaxPass !== '0') &&
+            getComputedStyle(c).display !== 'none'
+        );
         // 可视卡片少于 10 张时，触发一次下一页静默抓取
         if (visibleCards.length < 10) {
             triggerLoadNextPage();
